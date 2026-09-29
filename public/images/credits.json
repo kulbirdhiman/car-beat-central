@@ -1,0 +1,82 @@
+{
+  "hero-interior": {
+    "photographer": "Luca Freddi",
+    "url": "https://unsplash.com/photos/SZzWIxsMOZg"
+  },
+  "hero-subwoofer-build": {
+    "photographer": "Jake",
+    "url": "https://unsplash.com/photos/7imtSmp3EQk"
+  },
+  "hero-ranger": {
+    "photographer": "4Wheelhouse",
+    "url": "https://unsplash.com/photos/fHwDQ1G6ATg"
+  },
+  "stereo-android": {
+    "photographer": "Erik Mclean",
+    "url": "https://unsplash.com/photos/jux_vlSu8wo"
+  },
+  "stereo-carplay": {
+    "photographer": "Mick Haupt",
+    "url": "https://unsplash.com/photos/o2LE7SWjQTw"
+  },
+  "speaker-component": {
+    "photographer": "D Z",
+    "url": "https://unsplash.com/photos/qYIA0KjNDZs"
+  },
+  "speaker-coaxial": {
+    "photographer": "Scott Major",
+    "url": "https://unsplash.com/photos/ZP2iqHtUtyc"
+  },
+  "subwoofer-underseat": {
+    "photographer": "Willian Cittadin",
+    "url": "https://unsplash.com/photos/IlEhGJrjIb0"
+  },
+  "subwoofer-tube": {
+    "photographer": "Kevin Solbrig",
+    "url": "https://unsplash.com/photos/6nv0kWvJXfQ"
+  },
+  "amplifier": {
+    "photographer": "Andrey Matveev",
+    "url": "https://unsplash.com/photos/yhtFZpYArVk"
+  },
+  "dashcam": {
+    "photographer": "0xk",
+    "url": "https://unsplash.com/photos/N5Tn8I0OfIE"
+  },
+  "dashcam-mount": {
+    "photographer": "leoon liang",
+    "url": "https://unsplash.com/photos/V3iAg86XwBo"
+  },
+  "ambient-light": {
+    "photographer": "Prend",
+    "url": "https://unsplash.com/photos/QtcKGnOOqiA"
+  },
+  "headlights": {
+    "photographer": "Mathew Antony",
+    "url": "https://unsplash.com/photos/oqw8zg1wC78"
+  },
+  "headlights-red": {
+    "photographer": "Samuel-Elias Nadler",
+    "url": "https://unsplash.com/photos/w8RT-3E61Ys"
+  },
+  "phone-mount": {
+    "photographer": "Emely",
+    "url": "https://unsplash.com/photos/S29vUVfh7Wc"
+  },
+  "floor-mats": {
+    "photographer": "Jalal Ajmal",
+    "url": "https://unsplash.com/photos/m6brRzQ-UjI"
+  },
+  "air-vents": {
+    "photographer": "Luca Freddi",
+    "url": "https://unsplash.com/photos/Lgiha3FBAr0"
+  },
+  "trunk-audio": {
+    "photographer": "Hoyoun Lee",
+    "url": "https://unsplash.com/photos/km3i2DsbUd4"
+  },
+  "coast-road": {
+    "photographer": "Joshua Hibbert",
+    "url": "https://unsplash.com/photos/gwzj_ftMpWM"
+  }
+}
