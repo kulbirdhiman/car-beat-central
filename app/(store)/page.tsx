@@ -21,14 +21,15 @@ export default function Home() {
   return (
     <>
       <Hero fitCounts={fitCounts} />
+      {/* Deals lead: time-limited price drops, then promo codes, then browsing. */}
       <Offers />
+      <TodayDeals />
       <TrustBar />
       <CategoryGrid counts={getCategoryCounts()} />
-      <HowItWorks />
-      <GarageSection products={products} />
       <Trending />
-      <TodayDeals />
+      <GarageSection products={products} />
       <TopProducts products={listProducts({ sort: "rating" })} />
+      <HowItWorks />
       <FittingCta />
       <Faq />
     </>

@@ -52,7 +52,7 @@ export function Hero({ fitCounts }: { fitCounts: Record<string, number> }) {
       </div>
 
       <div
-        className="mx-auto grid min-h-[min(92vh,860px)] max-w-7xl items-center gap-10 px-4 pb-28 pt-36 sm:px-6 lg:grid-cols-[1.25fr_1fr] lg:pb-32"
+        className="mx-auto grid min-h-[min(80vh,760px)] max-w-7xl items-center gap-10 px-4 pb-24 pt-36 sm:px-6 lg:grid-cols-[1.25fr_1fr] lg:pb-32"
         onPointerEnter={() => setPaused(true)}
         onPointerLeave={() => setPaused(false)}
       >
@@ -78,7 +78,7 @@ export function Hero({ fitCounts }: { fitCounts: Record<string, number> }) {
               </a>
             </Button>
             <Button asChild size="lg" variant="outline" className="h-12 rounded-full border-white/30 bg-white/5 px-6 text-base text-white backdrop-blur hover:bg-white hover:text-foreground">
-              <a href="/shop">Browse all parts</a>
+              <a href="#deals">See today&apos;s deals</a>
             </Button>
           </div>
         </div>
