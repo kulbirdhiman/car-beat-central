@@ -5,32 +5,32 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Workshop palette: warm paper base, one signal-orange accent, near-black "ink"
- * for inset panels. All neutrals share hue 60-75 so nothing reads cold.
+ * Garage palette: cool light-grey floor, white cards, graphite "ink" for feature
+ * panels, and one electric-blue accent reserved for prices, deals and actions.
  */
 :root {
   --radius: 0.625rem;
-  --background: oklch(0.975 0.005 75);
-  --foreground: oklch(0.18 0.01 60);
-  --card: oklch(0.995 0.002 75);
-  --card-foreground: oklch(0.18 0.01 60);
-  --popover: oklch(0.995 0.002 75);
-  --popover-foreground: oklch(0.18 0.01 60);
-  --primary: oklch(0.65 0.175 42);
-  --primary-foreground: oklch(0.99 0.003 75);
-  --secondary: oklch(0.945 0.007 75);
-  --secondary-foreground: oklch(0.22 0.01 60);
-  --muted: oklch(0.945 0.007 75);
-  --muted-foreground: oklch(0.48 0.012 60);
-  --accent: oklch(0.945 0.007 75);
-  --accent-foreground: oklch(0.22 0.01 60);
-  --destructive: oklch(0.56 0.2 28);
-  --border: oklch(0.89 0.007 75);
-  --input: oklch(0.87 0.008 75);
-  --ring: oklch(0.65 0.175 42);
-  --ink: oklch(0.165 0.008 60);
-  --ink-foreground: oklch(0.96 0.005 75);
-  --success: oklch(0.56 0.12 155);
+  --background: oklch(0.968 0.004 255);
+  --foreground: oklch(0.2 0.018 260);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.2 0.018 260);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.2 0.018 260);
+  --primary: oklch(0.56 0.22 262);
+  --primary-foreground: oklch(0.99 0.003 255);
+  --secondary: oklch(0.945 0.005 255);
+  --secondary-foreground: oklch(0.24 0.018 260);
+  --muted: oklch(0.948 0.005 255);
+  --muted-foreground: oklch(0.5 0.016 260);
+  --accent: oklch(0.945 0.005 255);
+  --accent-foreground: oklch(0.24 0.018 260);
+  --destructive: oklch(0.58 0.21 27);
+  --border: oklch(0.905 0.006 255);
+  --input: oklch(0.88 0.008 255);
+  --ring: oklch(0.56 0.22 262);
+  --ink: oklch(0.19 0.02 262);
+  --ink-foreground: oklch(0.97 0.004 255);
+  --success: oklch(0.57 0.13 155);
 }
 
 @theme inline {

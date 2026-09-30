@@ -46,7 +46,7 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
       ]}
     >
       <div className="grid gap-10 lg:grid-cols-[1.15fr_1fr] lg:gap-16">
-        <div className="relative aspect-[4/3] overflow-clip rounded-2xl bg-muted lg:sticky lg:top-28 lg:self-start">
+        <div className="relative aspect-[4/3] overflow-clip rounded-2xl bg-muted lg:sticky lg:top-32 lg:self-start">
           <Image src={product.image} alt={product.name} fill preload sizes="(min-width: 1024px) 55vw, 100vw" className="object-cover animate-in fade-in zoom-in-105 duration-700" />
           <div className="absolute left-4 top-4 flex gap-2">
             {product.deal && <span className="label-mono rounded-sm bg-destructive px-2 py-1 text-white">Today&apos;s deal</span>}
@@ -96,7 +96,7 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
             ))}
           </ul>
 
-          <section id="details" className="mt-12 scroll-mt-28">
+          <section id="details" className="mt-12 scroll-mt-36">
             <h2 className="label-mono border-t border-foreground/15 pt-4 text-muted-foreground">About this product</h2>
             <p className="mt-4 max-w-prose leading-relaxed">{product.description}</p>
             <ul className="mt-6 grid gap-3">

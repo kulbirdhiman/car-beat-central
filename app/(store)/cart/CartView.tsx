@@ -96,7 +96,7 @@ export function CartView() {
         })}
       </ul>
 
-      <Card className="h-fit lg:sticky lg:top-28">
+      <Card className="h-fit lg:sticky lg:top-32">
         <CardHeader>
           <CardTitle className="font-display text-2xl font-bold">Order summary</CardTitle>
         </CardHeader>

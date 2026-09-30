@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 
 type Crumb = { label: string; href?: string };
 
-/** Inner-page wrapper: clears the fixed header and renders breadcrumbs + title. */
+/** Inner-page wrapper: renders breadcrumbs + title. */
 export function PageShell({
   crumbs,
   title,
@@ -26,7 +26,7 @@ export function PageShell({
   className?: string;
 }) {
   return (
-    <div className={cn("mx-auto max-w-[1600px] px-4 pb-24 pt-36 sm:px-6 lg:px-8", className)}>
+    <div className={cn("mx-auto max-w-[1600px] px-4 pb-24 pt-8 sm:px-6 lg:px-8", className)}>
       {crumbs && (
         <Breadcrumb className="mb-8 [&_a]:transition-colors">
           <BreadcrumbList>

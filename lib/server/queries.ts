@@ -1,4 +1,5 @@
 import "server-only";
+import { CAR_BRANDS } from "../data";
 import type { Category, Product } from "../types";
 import { db } from "./db";
 
@@ -73,10 +74,22 @@ export function listProducts(filters: ProductFilters = {}): Product[] {
   const where: string[] = [];
   const params: (string | number)[] = [];
 
-  if (filters.q) {
-    where.push("(p.name LIKE ? OR p.brand LIKE ? OR p.category LIKE ?)");
-    const like = `%${filters.q}%`;
-    params.push(like, like, like);
+  // Every word must match something, so "hilux stereo" means stereos that fit a HiLux.
+  // A word naming a make or model matches by fitment; other words match name, brand or category.
+  for (const word of searchWords(filters.q)) {
+    // Prefix match only, so "sub" doesn't count as Mitsubishi.
+    const models = CAR_BRANDS.flatMap((b) =>
+      b.name.toLowerCase().startsWith(word) ? b.models : b.models.filter((m) => m.name.toLowerCase().replace(/[^a-z0-9]/g, "").startsWith(word)),
+    );
+    const like = `%${word}%`;
+    if (models.length > 0) {
+      const ids = models.map(() => "?").join(",");
+      where.push(`(p.fits = '"universal"' OR EXISTS (SELECT 1 FROM json_each(p.fits) WHERE value IN (${ids})))`);
+      params.push(...models.map((m) => m.id));
+    } else {
+      where.push("(p.name LIKE ? OR p.brand LIKE ? OR p.category LIKE ?)");
+      params.push(like, like, like);
+    }
   }
   if (filters.category) {
     where.push("p.category = ?");
@@ -101,6 +114,17 @@ export function listProducts(filters: ProductFilters = {}): Product[] {
   const order = SORTS[filters.sort ?? "popular"].sql;
   const limit = filters.limit ? ` LIMIT ${Math.floor(filters.limit)}` : "";
   return all(`${SELECT} ${where.length ? `WHERE ${where.join(" AND ")}` : ""} ORDER BY ${order}${limit}`, ...params);
+}
+
+/** Lower-cased search words with simple plural stripping ("stereos" -> "stereo", "dash cams" -> "dash", "cam"). */
+function searchWords(q: string | undefined): string[] {
+  if (!q) return [];
+  return q
+    .toLowerCase()
+    .split(/[^a-z0-9-]+/)
+    .filter((w) => w.length > 1)
+    .map((w) => (w.length > 3 && w.endsWith("s") && !w.endsWith("ss") ? w.slice(0, -1) : w))
+    .slice(0, 6);
 }
 
 export function getProductBySlug(slug: string): Product | null {

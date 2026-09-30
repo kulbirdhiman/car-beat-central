@@ -11,12 +11,14 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   interior: "Interior",
 };
 
-export const CATEGORY_IMAGES: Partial<Record<Category, string>> = {
+export const CATEGORY_IMAGES: Record<Category, string> = {
   stereo: "/images/stereo-android.jpg",
   speaker: "/images/speaker-coaxial.jpg",
   subwoofer: "/images/hero-subwoofer-build.jpg",
+  amplifier: "/images/amplifier.jpg",
   dashcam: "/images/dashcam-mount.jpg",
   lighting: "/images/headlights-red.jpg",
+  mount: "/images/phone-mount.jpg",
   interior: "/images/air-vents.jpg",
 };
 
