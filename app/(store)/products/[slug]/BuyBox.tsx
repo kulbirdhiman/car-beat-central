@@ -13,20 +13,20 @@ export function BuyBox({ productId, name }: { productId: string; name: string })
 
   return (
     <div className="mt-6 flex flex-wrap gap-3">
-      <div className="flex h-12 items-center rounded-full border">
-        <Button variant="ghost" size="icon-lg" className="rounded-full" aria-label="Decrease quantity" disabled={qty <= 1} onClick={() => setQty((q) => q - 1)}>
+      <div className="flex h-12 items-center rounded-md border bg-card">
+        <Button variant="ghost" size="icon-lg" aria-label="Decrease quantity" disabled={qty <= 1} onClick={() => setQty((q) => q - 1)}>
           <Minus />
         </Button>
         <span className="w-8 text-center font-medium tabular-nums" aria-live="polite">
           {qty}
         </span>
-        <Button variant="ghost" size="icon-lg" className="rounded-full" aria-label="Increase quantity" disabled={qty >= 20} onClick={() => setQty((q) => q + 1)}>
+        <Button variant="ghost" size="icon-lg" aria-label="Increase quantity" disabled={qty >= 20} onClick={() => setQty((q) => q + 1)}>
           <Plus />
         </Button>
       </div>
       <Button
-        size="lg"
-        className="h-12 flex-1 rounded-full text-base"
+        size="xl"
+        className="flex-1"
         onClick={() => {
           addToCart(productId, qty);
           toast.success(`Added ${qty} to cart`, { description: name, action: { label: "View cart", onClick: () => router.push("/cart") } });
@@ -35,9 +35,9 @@ export function BuyBox({ productId, name }: { productId: string; name: string })
         <ShoppingBag /> Add to cart
       </Button>
       <Button
-        size="lg"
-        variant="outline"
-        className="h-12 w-full rounded-full text-base sm:w-auto"
+        size="xl"
+        variant="ink"
+        className="w-full sm:w-auto"
         onClick={() => {
           addToCart(productId, qty);
           router.push("/checkout");

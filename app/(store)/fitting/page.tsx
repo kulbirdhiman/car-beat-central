@@ -28,22 +28,25 @@ export default function FittingPage() {
         <BookingForm />
 
         <aside className="space-y-6">
-          <div className="relative aspect-[4/3] overflow-clip rounded-2xl">
+          <div className="relative aspect-[4/3] overflow-clip rounded-xl">
             <Image src="/images/trunk-audio.jpg" alt="Finished custom audio install" fill sizes="(min-width: 1024px) 40vw, 100vw" className="object-cover" />
           </div>
-          <div className="rounded-2xl border bg-card p-6">
-            <h2 className="font-display text-2xl font-bold uppercase">Fitting prices</h2>
-            <p className="text-sm text-muted-foreground">Guide prices, confirmed before we start.</p>
-            <ul className="mt-4 divide-y text-sm">
+          <div className="rounded-xl bg-card p-6 ring-1 ring-foreground/[0.07]">
+            <p className="label-mono text-muted-foreground">Guide prices</p>
+            <h2 className="mt-2 font-display text-2xl font-bold">Fitting prices</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Confirmed before we start.</p>
+            <ul className="mt-5 divide-y text-sm">
               {PRICES.map((p) => (
-                <li key={p.job} className="flex justify-between py-2.5">
+                <li key={p.job} className="flex items-baseline justify-between gap-3 py-3">
                   <span>{p.job}</span>
-                  <span className="font-medium">from ${p.from}</span>
+                  <span className="shrink-0 font-mono">
+                    <span className="text-xs text-muted-foreground">from </span>${p.from}
+                  </span>
                 </li>
               ))}
             </ul>
           </div>
-          <ul className="space-y-3 text-sm">
+          <ul className="space-y-3 px-1 text-sm">
             <li className="flex gap-3">
               <MapPin className="size-5 shrink-0 text-primary" /> Sydney, Melbourne, Brisbane, Perth, Adelaide, Hobart, Canberra and Darwin
             </li>

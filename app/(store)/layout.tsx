@@ -7,7 +7,7 @@ export default function StoreLayout({ children }: LayoutProps<"/">) {
     <>
       <AnnouncementBar />
       <SiteHeader />
-      <main className="flex-1">{children}</main>
+      <main id="main" className="flex-1">{children}</main>
       <SiteFooter />
     </>
   );

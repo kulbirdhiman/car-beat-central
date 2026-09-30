@@ -18,7 +18,7 @@ export function SortSelect({ value, options }: { value: string; options: { value
         router.push(`${pathname}?${next}`, { scroll: false });
       }}
     >
-      <SelectTrigger className="h-10! w-48" aria-label="Sort by">
+      <SelectTrigger className="h-10! w-48 bg-card" aria-label="Sort by">
         <SelectValue />
       </SelectTrigger>
       <SelectContent align="end">

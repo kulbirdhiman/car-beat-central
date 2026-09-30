@@ -3,7 +3,6 @@
 import { BookmarkCheck, BookmarkPlus, CarFront } from "lucide-react";
 import { useState } from "react";
 import { ProductCard } from "@/components/product/ProductCard";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Reveal } from "@/components/ui/Reveal";
@@ -26,14 +25,17 @@ export function GarageSection({ products }: { products: Product[] }) {
   );
 
   return (
-    <section id="garage" className="scroll-mt-20 bg-secondary/60 py-20 sm:py-28">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <Reveal className="mb-10 grid gap-6 lg:grid-cols-[1fr_auto] lg:items-end">
-          <div>
-            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.25em] text-primary">
-              <CarFront className="size-4" /> {garage.car ? "My garage" : "Shop by car"}
-            </p>
-            <h2 className="mt-2 font-display text-4xl font-bold uppercase leading-none tracking-tight sm:text-5xl">
+    <section id="garage" className="scroll-mt-20 pb-20 pt-16 sm:pb-28 sm:pt-20">
+      <div className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-8">
+        <Reveal className="mb-10">
+          <div className="flex items-center gap-3 border-t border-foreground/15 pt-4 text-muted-foreground">
+            <span className="label-mono text-primary">03</span>
+            <span className="label-mono flex items-center gap-2">
+              <CarFront className="size-3.5" /> {garage.car ? "My garage" : "Shop by car"}
+            </span>
+          </div>
+          <div className="mt-6 grid gap-6 lg:grid-cols-[1.5fr_auto] lg:items-end">
+            <h2 className="font-display text-4xl font-bold leading-[1.02] sm:text-5xl">
               {isSaved ? (
                 <>
                   Picked for your <span className="text-primary">{brand.name} {model.name}</span>
@@ -42,59 +44,53 @@ export function GarageSection({ products }: { products: Product[] }) {
                 <>Parts that fit. No guesswork.</>
               )}
             </h2>
-          </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <Select value={brand.id} onValueChange={(id) => setPicked(CAR_BRANDS.find((b) => b.id === id)!.models[0].id)}>
-              <SelectTrigger className="h-11! w-40 bg-background" aria-label="Make">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {CAR_BRANDS.map((b) => (
-                  <SelectItem key={b.id} value={b.id}>
-                    {b.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={model.id} onValueChange={setPicked}>
-              <SelectTrigger className="h-11! w-40 bg-background" aria-label="Model">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {brand.models.map((m) => (
-                  <SelectItem key={m.id} value={m.id}>
-                    {m.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button
-              variant={isSaved ? "secondary" : "default"}
-              className="h-11 px-4"
-              onClick={() => (isSaved ? garage.clear() : garage.save(model.id))}
-            >
-              {isSaved ? <BookmarkCheck /> : <BookmarkPlus />}
-              {isSaved ? "Saved to garage" : `Save my ${model.name}`}
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Select value={brand.id} onValueChange={(id) => setPicked(CAR_BRANDS.find((b) => b.id === id)!.models[0].id)}>
+                <SelectTrigger className="h-11! w-40 bg-card" aria-label="Make">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CAR_BRANDS.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                variant={isSaved ? "outline" : "ink"}
+                className="h-11 px-4"
+                onClick={() => (isSaved ? garage.clear() : garage.save(model.id))}
+              >
+                {isSaved ? <BookmarkCheck className="text-primary" /> : <BookmarkPlus />}
+                {isSaved ? "Saved to garage" : `Save my ${model.name}`}
+              </Button>
+            </div>
           </div>
         </Reveal>
 
-        <div className="mb-6 flex flex-wrap items-center gap-2">
-          {brand.models.map((m) => (
-            <Badge
-              key={m.id}
-              asChild
-              variant={m.id === model.id ? "default" : "outline"}
-              className={cn("h-8 cursor-pointer px-3.5 text-sm", m.id !== model.id && "bg-background")}
-            >
-              <button type="button" onClick={() => setPicked(m.id)}>
+        {/* Model switcher: segmented control on the left, "see all" link on the right. */}
+        <div className="mb-6 flex flex-wrap items-center gap-3">
+          <div role="group" aria-label={`${brand.name} models`} className="no-scrollbar flex max-w-full gap-1 overflow-x-auto rounded-lg bg-muted p-1">
+            {brand.models.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => setPicked(m.id)}
+                aria-pressed={m.id === model.id}
+                className={cn(
+                  "h-9 shrink-0 rounded-md px-4 text-sm font-medium transition-all",
+                  m.id === model.id ? "bg-card text-foreground shadow-sm ring-1 ring-foreground/5" : "text-muted-foreground hover:text-foreground",
+                )}
+              >
                 {m.name}
               </button>
-            </Badge>
-          ))}
-          <Link href={`/shop?model=${model.id}`} className="ml-auto text-sm text-muted-foreground hover:text-foreground">
-            See all <span className="font-semibold text-foreground">{matches.length}</span> parts for the {brand.name} {model.name} →
+            ))}
+          </div>
+          <Link href={`/shop?model=${model.id}`} className="group ml-auto text-sm text-muted-foreground transition-colors hover:text-foreground">
+            See all <span className="font-mono font-semibold text-foreground">{matches.length}</span> parts for the {brand.name} {model.name}{" "}
+            <span className="inline-block transition-transform group-hover:translate-x-0.5">→</span>
           </Link>
         </div>
 

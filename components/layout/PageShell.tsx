@@ -26,9 +26,9 @@ export function PageShell({
   className?: string;
 }) {
   return (
-    <div className={cn("mx-auto max-w-7xl px-4 pb-24 pt-36 sm:px-6", className)}>
+    <div className={cn("mx-auto max-w-[1600px] px-4 pb-24 pt-36 sm:px-6 lg:px-8", className)}>
       {crumbs && (
-        <Breadcrumb className="mb-6">
+        <Breadcrumb className="mb-8 [&_a]:transition-colors">
           <BreadcrumbList>
             {crumbs.map((c, i) => (
               <span key={c.label} className="contents">
@@ -42,9 +42,9 @@ export function PageShell({
         </Breadcrumb>
       )}
       {title && (
-        <header className="mb-10">
-          <h1 className="font-display text-5xl font-bold uppercase leading-none tracking-tight sm:text-6xl">{title}</h1>
-          {description && <p className="mt-3 max-w-2xl text-muted-foreground">{description}</p>}
+        <header className="mb-10 border-b pb-8">
+          <h1 className="font-display text-4xl font-bold leading-[1.02] sm:text-6xl">{title}</h1>
+          {description && <p className="mt-4 max-w-2xl text-muted-foreground">{description}</p>}
         </header>
       )}
       {children}

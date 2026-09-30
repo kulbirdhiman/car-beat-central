@@ -16,7 +16,7 @@ export function AddToCartButton({ productId, name }: { productId: string; name: 
       size="icon-lg"
       variant={added ? "default" : "outline"}
       aria-label={`Add ${name} to cart`}
-      className="rounded-full transition-all hover:border-primary hover:bg-primary hover:text-primary-foreground"
+      className="size-10 hover:border-primary hover:bg-primary hover:text-primary-foreground"
       onClick={() => {
         addToCart(productId);
         setAdded(true);

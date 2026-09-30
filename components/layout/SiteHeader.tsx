@@ -64,16 +64,20 @@ export function SiteHeader() {
   // Transparent with light text only while over the home page hero.
   const solid = scrolled || pathname !== "/";
   const onDark = !solid && "text-white hover:bg-white/10 hover:text-white focus:bg-white/10 focus:text-white";
+  // Only path-level links can be marked current without reading search params.
+  const isCurrent = (href: string) => !href.includes("?") && !href.includes("#") && pathname.startsWith(href);
 
   return (
     <header
       className={cn(
         "fixed inset-x-0 z-40 transition-all duration-500",
-        solid ? "border-b bg-background/85 text-foreground shadow-sm backdrop-blur-xl" : "text-white",
+        solid
+          ? "border-b border-foreground/[0.06] bg-background/80 text-foreground shadow-[0_1px_12px_-6px_oklch(0.3_0.02_60/0.15)] backdrop-blur-xl backdrop-saturate-150"
+          : "text-white",
         scrolled ? "top-0" : "top-9",
       )}
     >
-      <div className={cn("mx-auto flex max-w-7xl items-center gap-4 px-4 transition-all sm:px-6", scrolled ? "h-16" : "h-20")}>
+      <div className={cn("mx-auto flex max-w-[1600px] items-center gap-4 px-4 transition-all sm:px-6 lg:px-8", scrolled ? "h-16" : "h-20")}>
         <Sheet>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon-lg" className={cn("-ml-2 lg:hidden", onDark)} aria-label="Open menu">
@@ -86,19 +90,23 @@ export function SiteHeader() {
                 <Logo />
               </SheetTitle>
             </SheetHeader>
-            <nav className="grid gap-1 px-4 pb-6">
+            <nav className="grid gap-0.5 px-4 pb-6">
               {LINKS.map((l) => (
                 <SheetClose asChild key={l.href}>
-                  <Link href={l.href} className="rounded-lg px-3 py-2.5 font-medium hover:bg-muted">
+                  <Link
+                    href={l.href}
+                    aria-current={isCurrent(l.href) ? "page" : undefined}
+                    className="rounded-md px-3 py-2.5 font-medium hover:bg-muted aria-[current=page]:bg-muted aria-[current=page]:text-primary"
+                  >
                     {l.label}
                   </Link>
                 </SheetClose>
               ))}
               <Separator className="my-3" />
-              <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Categories</p>
+              <p className="label-mono px-3 pb-1 text-muted-foreground">Categories</p>
               {(Object.keys(CATEGORY_LABELS) as Category[]).map((c) => (
                 <SheetClose asChild key={c}>
-                  <Link href={`/shop?category=${c}`} className="rounded-lg px-3 py-2 text-sm hover:bg-muted">
+                  <Link href={`/shop?category=${c}`} className="rounded-md px-3 py-2 text-sm hover:bg-muted">
                     {CATEGORY_LABELS[c]}
                   </Link>
                 </SheetClose>
@@ -107,7 +115,7 @@ export function SiteHeader() {
           </SheetContent>
         </Sheet>
 
-        <Link href="/" aria-label="CarBeat home">
+        <Link href="/" aria-label="CarBeat home" className="rounded-md">
           <Logo />
         </Link>
 
@@ -120,26 +128,45 @@ export function SiteHeader() {
                 Shop
               </NavigationMenuTrigger>
               <NavigationMenuContent>
-                <ul className="grid w-[560px] grid-cols-3 gap-2 p-2">
-                  {FEATURED.map((c) => (
-                    <li key={c}>
-                      <NavigationMenuLink asChild className="group/cat block p-1.5">
-                        <Link href={`/shop?category=${c}`}>
-                          <span className="relative block aspect-[4/3] w-full overflow-hidden rounded-md">
-                            <Image src={CATEGORY_IMAGES[c]!} alt="" fill sizes="180px" className="object-cover transition-transform duration-500 group-hover/cat:scale-110" />
-                          </span>
-                          <span className="block px-1 pb-1 pt-2 text-sm font-medium">{CATEGORY_LABELS[c]}</span>
-                        </Link>
-                      </NavigationMenuLink>
-                    </li>
-                  ))}
-                </ul>
+                <div className="grid w-[640px] grid-cols-[1fr_180px] gap-2 p-2">
+                  <ul className="grid grid-cols-3 gap-1">
+                    {FEATURED.map((c) => (
+                      <li key={c}>
+                        <NavigationMenuLink asChild className="group/cat block p-1.5">
+                          <Link href={`/shop?category=${c}`}>
+                            <span className="relative block aspect-[4/3] w-full overflow-hidden rounded-sm">
+                              <Image src={CATEGORY_IMAGES[c]!} alt="" fill sizes="140px" className="object-cover transition-transform duration-500 group-hover/cat:scale-110" />
+                            </span>
+                            <span className="block px-0.5 pb-0.5 pt-2 text-sm font-medium">{CATEGORY_LABELS[c]}</span>
+                          </Link>
+                        </NavigationMenuLink>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="flex flex-col justify-between rounded-md bg-muted p-4">
+                    <div>
+                      <p className="label-mono text-muted-foreground">Not sure what fits?</p>
+                      <p className="mt-2 text-sm leading-snug">Search by your make and model and we&apos;ll only show compatible parts.</p>
+                    </div>
+                    <NavigationMenuLink asChild className="mt-4 p-0 text-sm font-medium text-primary hover:bg-transparent">
+                      <Link href="/shop">Browse all parts →</Link>
+                    </NavigationMenuLink>
+                  </div>
+                </div>
               </NavigationMenuContent>
             </NavigationMenuItem>
             {LINKS.slice(1).map((l) => (
               <NavigationMenuItem key={l.href}>
-                <NavigationMenuLink asChild className={cn("bg-transparent", onDark)}>
-                  <Link href={l.href}>{l.label}</Link>
+                <NavigationMenuLink
+                  asChild
+                  className={cn(
+                    "relative bg-transparent after:absolute after:inset-x-2.5 after:-bottom-0.5 after:h-0.5 after:scale-x-0 after:rounded-full after:bg-primary after:transition-transform aria-[current=page]:after:scale-x-100",
+                    onDark,
+                  )}
+                >
+                  <Link href={l.href} aria-current={isCurrent(l.href) ? "page" : undefined}>
+                    {l.label}
+                  </Link>
                 </NavigationMenuLink>
               </NavigationMenuItem>
             ))}
@@ -153,36 +180,36 @@ export function SiteHeader() {
             onPointerEnter={loadSearch}
             onFocus={loadSearch}
             className={cn(
-              "h-10 rounded-full px-3 md:w-60 md:justify-start",
-              !solid && "border-white/25 bg-white/10 text-white backdrop-blur hover:bg-white/20 hover:text-white",
+              "h-10 px-3 md:w-64 md:justify-start",
+              solid ? "bg-card/70" : "border-white/20 bg-white/10 text-white backdrop-blur hover:bg-white/20 hover:text-white",
             )}
             aria-label="Search products"
           >
             <Search />
             <span className={cn("hidden md:inline", solid ? "text-muted-foreground" : "text-white/70")}>Search parts or car…</span>
-            <kbd className="ml-auto hidden rounded border px-1.5 font-mono text-[10px] opacity-70 md:inline">⌘K</kbd>
+            <kbd className={cn("ml-auto hidden rounded-sm border px-1.5 font-mono text-[10px] md:inline", solid ? "bg-muted text-muted-foreground" : "border-white/20 text-white/60")}>⌘K</kbd>
           </Button>
 
           {car ? (
-            <Button asChild variant="ghost" className={cn("hidden h-10 rounded-full md:inline-flex", onDark)}>
+            <Button asChild variant="ghost" className={cn("hidden h-10 md:inline-flex", onDark)}>
               <Link href={`/shop?model=${car.model.id}`} title="Parts for my car">
                 <CarFront className="text-primary" />
                 {car.model.name}
               </Link>
             </Button>
           ) : (
-            <Button asChild variant="ghost" size="icon-lg" className={cn("hidden rounded-full md:inline-flex xl:hidden", onDark)}>
+            <Button asChild variant="ghost" size="icon-lg" className={cn("hidden size-10 md:inline-flex xl:hidden", onDark)}>
               <Link href="/fitting" aria-label="Book a fitting">
                 <Wrench />
               </Link>
             </Button>
           )}
 
-          <Button asChild variant="ghost" size="icon-lg" className={cn("relative rounded-full", onDark)}>
+          <Button asChild variant="ghost" size="icon-lg" className={cn("relative size-10", onDark)}>
             <Link href="/cart" aria-label={`Cart, ${cartCount} items`}>
               <ShoppingBag />
               {cartCount > 0 && (
-                <span key={cartCount} className="absolute -right-0.5 -top-0.5 grid size-5 place-items-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground animate-in zoom-in">
+                <span key={cartCount} className="absolute -right-0.5 -top-0.5 grid size-5 place-items-center rounded-full bg-primary font-mono text-[10px] font-semibold text-primary-foreground ring-2 ring-background animate-in zoom-in">
                   {cartCount}
                 </span>
               )}

@@ -1,21 +1,16 @@
 "use client";
 
-import { ArrowRight, BadgeCheck, Truck, Wrench } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState, type CSSProperties } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { SLIDE_MS, SLIDES } from "./slides";
 import { VehicleFinder } from "./VehicleFinder";
 
-const PERKS = [
-  { icon: Truck, label: "Free shipping over $99" },
-  { icon: Wrench, label: "Pro fitting, every capital" },
-  { icon: BadgeCheck, label: "Guaranteed fitment" },
-];
+type Stats = { rating: number; reviews: number; cities: number };
 
-export function Hero({ fitCounts }: { fitCounts: Record<string, number> }) {
+export function Hero({ fitCounts, stats }: { fitCounts: Record<string, number>; stats: Stats }) {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const slide = SLIDES[index];
@@ -27,7 +22,7 @@ export function Hero({ fitCounts }: { fitCounts: Record<string, number> }) {
   }, [index, paused]);
 
   return (
-    <section className="relative isolate overflow-clip bg-ink text-ink-foreground" aria-roledescription="carousel" aria-label="Featured">
+    <section className="grain relative isolate overflow-clip bg-ink text-ink-foreground" aria-roledescription="carousel" aria-label="Featured">
       {/* Photos: all mounted, only the active one visible, so switching is a crossfade. */}
       <div className="absolute inset-0 -z-10">
         {SLIDES.map((s, i) => (
@@ -47,40 +42,64 @@ export function Hero({ fitCounts }: { fitCounts: Record<string, number> }) {
             />
           </div>
         ))}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/10" />
-        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/70 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-ink via-ink/70 to-ink/10" />
+        <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-ink via-ink/60 to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-ink/70 to-transparent" />
       </div>
 
       <div
-        className="mx-auto grid min-h-[min(80vh,760px)] max-w-7xl items-center gap-10 px-4 pb-24 pt-36 sm:px-6 lg:grid-cols-[1.25fr_1fr] lg:pb-32"
+        className="mx-auto grid min-h-[min(100dvh,860px)] max-w-[1600px] items-center gap-12 px-4 pb-36 pt-40 sm:px-6 lg:px-8 lg:grid-cols-[1.35fr_1fr] lg:pb-40"
         onPointerEnter={() => setPaused(true)}
         onPointerLeave={() => setPaused(false)}
       >
-        <div key={index} aria-live="polite">
-          <Badge variant="outline" className="intro h-7 border-white/25 bg-white/10 px-3 text-white backdrop-blur" style={{ "--delay": "0ms" } as CSSProperties}>
-            <span className="size-1.5 rounded-full bg-primary" /> {slide.eyebrow}
-          </Badge>
-          <h1 className="mt-5 font-display text-6xl font-extrabold uppercase leading-[0.88] tracking-tight sm:text-8xl">
-            {slide.title.map((line, i) => (
-              <span key={line} className="intro block" style={{ "--delay": `${100 + i * 110}ms` } as CSSProperties}>
-                {i === 1 ? <span className="text-primary">{line}</span> : line}
+        <div>
+          <div key={index} aria-live="polite">
+            <p className="intro label-mono flex items-center gap-3 text-white/60" style={{ "--delay": "0ms" } as CSSProperties}>
+              <span className="text-primary">
+                {String(index + 1).padStart(2, "0")} / {String(SLIDES.length).padStart(2, "0")}
               </span>
-            ))}
-          </h1>
-          <p className="intro mt-6 max-w-lg text-lg text-white/75 text-pretty" style={{ "--delay": "340ms" } as CSSProperties}>
-            {slide.body}
-          </p>
-          <div className="intro mt-8 flex flex-wrap gap-3" style={{ "--delay": "440ms" } as CSSProperties}>
-            <Button asChild size="lg" className="group h-12 rounded-full px-6 text-base">
-              <a href={slide.cta.href}>
-                {slide.cta.label}
-                <ArrowRight className="transition-transform group-hover:translate-x-1" />
+              <span className="h-px w-8 bg-white/30" />
+              {slide.eyebrow}
+            </p>
+            <h1 className="mt-6 font-display text-5xl font-extrabold leading-[0.95] sm:text-7xl xl:text-[6.25rem] 2xl:text-[7rem]">
+              {slide.title.map((line, i) => (
+                <span key={line} className="intro block" style={{ "--delay": `${100 + i * 110}ms` } as CSSProperties}>
+                  {i === 1 ? <span className="text-primary">{line}</span> : line}
+                </span>
+              ))}
+            </h1>
+            <p className="intro mt-7 max-w-md text-lg leading-relaxed text-white/70" style={{ "--delay": "340ms" } as CSSProperties}>
+              {slide.body}
+            </p>
+            <div className="intro mt-9 flex flex-wrap items-center gap-x-6 gap-y-3" style={{ "--delay": "440ms" } as CSSProperties}>
+              <Button asChild size="xl" className="group">
+                <a href={slide.cta.href}>
+                  {slide.cta.label}
+                  <ArrowRight className="transition-transform group-hover:translate-x-1" />
+                </a>
+              </Button>
+              <a href="#deals" className="text-[15px] font-medium text-white/80 underline decoration-white/30 underline-offset-[6px] transition-colors hover:text-white hover:decoration-primary">
+                See today&apos;s deals
               </a>
-            </Button>
-            <Button asChild size="lg" variant="outline" className="h-12 rounded-full border-white/30 bg-white/5 px-6 text-base text-white backdrop-blur hover:bg-white hover:text-foreground">
-              <a href="#deals">See today&apos;s deals</a>
-            </Button>
+            </div>
           </div>
+
+          {/* Proof row: computed from the live catalogue, so it stays static across slides. */}
+          <dl className="intro mt-14 grid max-w-xl grid-cols-3 border-t border-white/15" style={{ "--delay": "560ms" } as CSSProperties}>
+            {[
+              { value: stats.rating.toFixed(1), label: "Average rating", star: true },
+              { value: stats.reviews.toLocaleString("en-AU"), label: "Driver reviews" },
+              { value: String(stats.cities), label: "Fitting cities" },
+            ].map((s) => (
+              <div key={s.label} className="flex flex-col-reverse border-r border-white/15 pr-4 pt-4 last:border-r-0 [&:not(:first-child)]:pl-4 sm:[&:not(:first-child)]:pl-6">
+                <dt className="label-mono mt-1 text-white/45">{s.label}</dt>
+                <dd className="font-display text-2xl font-bold sm:text-3xl">
+                  {s.value}
+                  {s.star && <span className="ml-1 text-primary">★</span>}
+                </dd>
+              </div>
+            ))}
+          </dl>
         </div>
 
         <div className="intro lg:justify-self-end" style={{ "--delay": "300ms" } as CSSProperties}>
@@ -91,9 +110,9 @@ export function Hero({ fitCounts }: { fitCounts: Record<string, number> }) {
       </div>
 
       {/* Slide controls */}
-      <div className="absolute inset-x-0 bottom-0">
-        <div className="mx-auto flex max-w-7xl items-end justify-between gap-6 px-4 pb-8 sm:px-6">
-          <div className="flex flex-1 gap-3 sm:max-w-md">
+      <div className="absolute inset-x-0 bottom-0 z-10">
+        <div className="mx-auto flex max-w-[1600px] items-end justify-between gap-6 px-4 pb-8 sm:px-6 lg:px-8">
+          <div className="flex flex-1 gap-4 sm:max-w-lg">
             {SLIDES.map((s, i) => (
               <button
                 key={s.alt}
@@ -101,9 +120,9 @@ export function Hero({ fitCounts }: { fitCounts: Record<string, number> }) {
                 onClick={() => setIndex(i)}
                 aria-label={`Show slide ${i + 1}: ${s.eyebrow}`}
                 aria-current={i === index}
-                className="group flex-1 text-left"
+                className="group flex-1 py-2 text-left"
               >
-                <span className="relative block h-0.5 overflow-hidden rounded-full bg-white/25">
+                <span className="relative block h-0.5 overflow-hidden rounded-full bg-white/20">
                   {i === index && (
                     <span
                       key={`${index}-${paused}`}
@@ -111,21 +130,14 @@ export function Hero({ fitCounts }: { fitCounts: Record<string, number> }) {
                       style={{ animation: paused ? "none" : `fill ${SLIDE_MS}ms linear both` }}
                     />
                   )}
-                  {i < index && <span className="absolute inset-0 bg-white/70" />}
+                  {i < index && <span className="absolute inset-0 bg-white/60" />}
                 </span>
-                <span className={cn("mt-2 hidden text-xs transition-colors sm:block", i === index ? "text-white" : "text-white/50 group-hover:text-white/80")}>
+                <span className={cn("label-mono mt-3 hidden transition-colors sm:block", i === index ? "text-white" : "text-white/40 group-hover:text-white/70")}>
                   {s.eyebrow}
                 </span>
               </button>
             ))}
           </div>
-          <ul className="hidden gap-6 text-sm text-white/75 lg:flex">
-            {PERKS.map(({ icon: Icon, label }) => (
-              <li key={label} className="flex items-center gap-2">
-                <Icon className="size-4 text-primary" /> {label}
-              </li>
-            ))}
-          </ul>
         </div>
       </div>
     </section>

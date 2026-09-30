@@ -5,8 +5,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/components/layout/PageShell";
 import { ProductCard } from "@/components/product/ProductCard";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { CAR_BRANDS, CATEGORY_LABELS, discountPercent, formatPrice } from "@/lib/data";
 import { getProductBySlug, getRelated, listProducts } from "@/lib/server/queries";
 import { BuyBox } from "./BuyBox";
@@ -47,75 +45,94 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
         { label: product.name },
       ]}
     >
-      <div className="grid gap-10 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
-        <div className="relative aspect-[4/3] overflow-clip rounded-3xl bg-muted lg:sticky lg:top-28 lg:self-start">
+      <div className="grid gap-10 lg:grid-cols-[1.15fr_1fr] lg:gap-16">
+        <div className="relative aspect-[4/3] overflow-clip rounded-2xl bg-muted lg:sticky lg:top-28 lg:self-start">
           <Image src={product.image} alt={product.name} fill preload sizes="(min-width: 1024px) 55vw, 100vw" className="object-cover animate-in fade-in zoom-in-105 duration-700" />
           <div className="absolute left-4 top-4 flex gap-2">
-            {product.deal && <Badge className="h-7 bg-destructive px-3 text-white">Today&apos;s deal</Badge>}
-            {product.badge && <Badge className="h-7 bg-background/90 px-3 text-foreground">{product.badge}</Badge>}
+            {product.deal && <span className="label-mono rounded-sm bg-destructive px-2 py-1 text-white">Today&apos;s deal</span>}
+            {product.badge && <span className="label-mono rounded-sm bg-background/90 px-2 py-1 text-foreground backdrop-blur">{product.badge}</span>}
           </div>
         </div>
 
         <div>
-          <p className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
-            {product.brand} · {CATEGORY_LABELS[product.category]}
+          <p className="label-mono text-muted-foreground">
+            {product.brand} <span className="text-foreground/25">/</span> {CATEGORY_LABELS[product.category]}
           </p>
-          <h1 className="mt-2 font-display text-5xl font-bold uppercase leading-[0.95] tracking-tight">{product.name}</h1>
-          <a href="#details" className="mt-3 inline-flex items-center gap-1.5 text-sm">
+          <h1 className="mt-3 font-display text-4xl font-bold leading-[1.02] sm:text-5xl">{product.name}</h1>
+          <a href="#details" className="mt-4 inline-flex items-center gap-1.5 text-sm transition-opacity hover:opacity-80">
             {Array.from({ length: 5 }, (_, i) => (
               <Star key={i} className={`size-4 ${i < Math.round(product.rating) ? "fill-primary text-primary" : "text-muted-foreground/40"}`} />
             ))}
-            <span className="font-medium">{product.rating}</span>
-            <span className="text-muted-foreground">({product.reviews.toLocaleString("en-AU")} reviews)</span>
+            <span className="ml-1 font-medium">{product.rating}</span>
+            <span className="text-muted-foreground underline decoration-foreground/20 underline-offset-4">{product.reviews.toLocaleString("en-AU")} reviews</span>
           </a>
 
-          <div className="mt-6 flex items-end gap-3">
-            <p className="font-display text-5xl font-bold">{formatPrice(price)}</p>
-            <p className="pb-1.5 text-muted-foreground">
-              RRP <span className="line-through">{formatPrice(product.rrp)}</span>
-            </p>
-            <Badge className="mb-2">Save {discountPercent(price, product.rrp)}%</Badge>
+          <div className="mt-8 border-y py-6">
+            <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
+              <p className="font-display text-5xl font-bold leading-none tabular-nums">{formatPrice(price)}</p>
+              {price < product.rrp && (
+                <>
+                  <p className="pb-1 text-muted-foreground">
+                    RRP <span className="line-through">{formatPrice(product.rrp)}</span>
+                  </p>
+                  <span className="mb-1 rounded-sm bg-primary px-1.5 py-0.5 font-mono text-xs font-semibold text-primary-foreground">
+                    Save {discountPercent(price, product.rrp)}%
+                  </span>
+                </>
+              )}
+            </div>
+            <p className="mt-2 text-sm text-muted-foreground">Includes GST. Free shipping on orders over $99.</p>
+
+            <FitmentCheck fits={product.fits} />
+
+            <BuyBox productId={product.id} name={product.name} />
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">Includes GST. Free shipping on orders over $99.</p>
 
-          <FitmentCheck fits={product.fits} />
-
-          <BuyBox productId={product.id} name={product.name} />
-
-          <ul className="mt-8 grid grid-cols-2 gap-3 text-sm">
+          <ul className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-lg bg-border text-sm ring-1 ring-border">
             {PERKS.map(({ icon: Icon, label }) => (
-              <li key={label} className="flex items-center gap-2 text-muted-foreground">
+              <li key={label} className="flex items-center gap-2.5 bg-card p-3.5 text-muted-foreground">
                 <Icon className="size-4 shrink-0 text-primary" /> {label}
               </li>
             ))}
           </ul>
 
-          <Separator className="my-8" />
-
-          <section id="details" className="scroll-mt-28">
-            <h2 className="font-display text-2xl font-bold uppercase">About this product</h2>
-            <p className="mt-3 leading-relaxed text-muted-foreground">{product.description}</p>
-            <ul className="mt-5 grid gap-2.5">
+          <section id="details" className="mt-12 scroll-mt-28">
+            <h2 className="label-mono border-t border-foreground/15 pt-4 text-muted-foreground">About this product</h2>
+            <p className="mt-4 max-w-prose leading-relaxed">{product.description}</p>
+            <ul className="mt-6 grid gap-3">
               {product.features.map((f) => (
-                <li key={f} className="flex items-start gap-2.5">
+                <li key={f} className="flex items-start gap-3 text-[15px]">
                   <Check className="mt-0.5 size-4 shrink-0 text-success" /> {f}
                 </li>
               ))}
             </ul>
-            <h3 className="mt-8 font-display text-xl font-bold uppercase">Fits</h3>
-            <p className="mt-2 text-sm text-muted-foreground">{fitsNames ? fitsNames.join(", ") : "Universal fit: works with most vehicles."}</p>
+            <h3 className="label-mono mt-10 border-t border-foreground/15 pt-4 text-muted-foreground">Fits</h3>
+            {fitsNames ? (
+              <ul className="mt-4 flex flex-wrap gap-1.5">
+                {fitsNames.map((n) => (
+                  <li key={n} className="rounded-md bg-muted px-2.5 py-1 text-sm">
+                    {n}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-4 text-sm text-muted-foreground">Universal fit: works with most vehicles.</p>
+            )}
           </section>
         </div>
       </div>
 
-      <section className="mt-24">
-        <div className="mb-8 flex items-end justify-between">
-          <h2 className="font-display text-4xl font-bold uppercase">You might also like</h2>
-          <Link href={`/shop?category=${product.category}`} className="text-sm text-muted-foreground hover:text-foreground">
-            More {CATEGORY_LABELS[product.category].toLowerCase()} →
+      <section className="mt-28">
+        <div className="mb-8 flex flex-wrap items-end justify-between gap-4 border-t border-foreground/15 pt-4">
+          <div>
+            <p className="label-mono text-muted-foreground">Related</p>
+            <h2 className="mt-4 font-display text-3xl font-bold sm:text-4xl">You might also like</h2>
+          </div>
+          <Link href={`/shop?category=${product.category}`} className="group text-sm text-muted-foreground transition-colors hover:text-foreground">
+            More {CATEGORY_LABELS[product.category].toLowerCase()} <span className="inline-block transition-transform group-hover:translate-x-0.5">→</span>
           </Link>
         </div>
-        <ul className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
+        <ul className="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-4">
           {getRelated(product).map((p) => (
             <li key={p.id}>
               <ProductCard product={p} />
