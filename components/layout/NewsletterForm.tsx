@@ -26,16 +26,17 @@ export function NewsletterForm({ tone = "dark", className }: { tone?: "dark" | "
           name="email"
           defaultValue={state.values?.email}
           required
-          placeholder="Email for price-drop alerts"
+          placeholder="you@example.com"
           aria-label="Email address"
           aria-invalid={!!state.errors?.email}
-          className={cn("h-11 rounded-full px-4", tone === "dark" && "border-white/15 bg-white/5 text-white placeholder:text-white/40")}
+          className={cn("h-11 px-3.5", tone === "dark" && "border-white/15 bg-white/5 text-white placeholder:text-white/35")}
         />
-        <Button type="submit" disabled={pending} className="h-11 rounded-full px-5">
+        <Button type="submit" disabled={pending} variant={tone === "dark" ? "outline" : "default"}
+          className={cn("h-11 px-5", tone === "dark" && "border-white/15 bg-white text-foreground hover:bg-white/85")}>
           {pending ? <Loader2 className="animate-spin" /> : "Subscribe"}
         </Button>
       </div>
-      {state.errors?.email && <p className="mt-2 pl-4 text-xs text-destructive">{state.errors.email}</p>}
+      {state.errors?.email && <p className="mt-2 text-xs text-destructive">{state.errors.email}</p>}
     </form>
   );
 }

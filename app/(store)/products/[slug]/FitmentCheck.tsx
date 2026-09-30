@@ -13,7 +13,7 @@ export function FitmentCheck({ fits }: { fits: Product["fits"] }) {
 
   if (!car) {
     return (
-      <div className="mt-6 flex items-center gap-3 rounded-xl border border-dashed p-4 text-sm">
+      <div className="mt-5 flex items-center gap-3 rounded-lg border border-dashed border-foreground/20 p-4 text-sm">
         <CarFront className="size-5 shrink-0 text-muted-foreground" />
         <span>
           {fits === "universal" ? "Universal fit." : "Model-specific part."}{" "}
@@ -31,7 +31,7 @@ export function FitmentCheck({ fits }: { fits: Product["fits"] }) {
   return (
     <div
       className={cn(
-        "mt-6 flex items-center gap-3 rounded-xl p-4 text-sm animate-in fade-in",
+        "mt-5 flex items-center gap-3 rounded-lg p-4 text-sm animate-in fade-in",
         ok ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive",
       )}
     >

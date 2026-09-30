@@ -23,8 +23,10 @@ export default async function OrderPage(props: PageProps<"/order/[id]">) {
     <PageShell className="max-w-3xl">
       <ClearCart />
       <div className="text-center animate-in fade-in slide-in-from-bottom-4 duration-700">
-        <CircleCheck className="mx-auto size-16 text-success animate-in zoom-in duration-500" />
-        <h1 className="mt-4 font-display text-5xl font-bold uppercase">Thanks, {order.name.split(" ")[0]}!</h1>
+        <span className="mx-auto grid size-16 place-items-center rounded-lg bg-success/10 animate-in zoom-in duration-500">
+          <CircleCheck className="size-8 text-success" />
+        </span>
+        <h1 className="mt-6 font-display text-4xl font-bold sm:text-5xl">Thanks, {order.name.split(" ")[0]}.</h1>
         <p className="mt-2 text-muted-foreground">
           Order <span className="font-mono font-medium text-foreground">#{reference}</span> is in. We&apos;ll email {order.email} with your payment link and tracking.
         </p>
@@ -36,7 +38,7 @@ export default async function OrderPage(props: PageProps<"/order/[id]">) {
           { icon: Package, title: "We pack & ship", body: DELIVERY_OPTIONS[order.delivery].label },
           { icon: Wrench, title: "Need fitting?", body: "Book a local installer any time." },
         ].map(({ icon: Icon, title, body }) => (
-          <li key={title} className="rounded-2xl border bg-card p-5">
+          <li key={title} className="rounded-xl bg-card ring-1 ring-foreground/[0.07] p-5">
             <Icon className="size-5 text-primary" />
             <p className="mt-3 font-medium">{title}</p>
             <p className="text-sm text-muted-foreground">{body}</p>
@@ -82,10 +84,10 @@ export default async function OrderPage(props: PageProps<"/order/[id]">) {
       </Card>
 
       <div className="mt-8 flex flex-wrap justify-center gap-3">
-        <Button asChild className="rounded-full">
+        <Button asChild size="xl">
           <Link href="/fitting">Book a fitting</Link>
         </Button>
-        <Button asChild variant="outline" className="rounded-full">
+        <Button asChild size="xl" variant="outline">
           <Link href="/shop">Keep shopping</Link>
         </Button>
       </div>

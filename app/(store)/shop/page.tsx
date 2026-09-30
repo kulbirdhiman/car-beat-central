@@ -74,7 +74,7 @@ export default async function ShopPage(props: PageProps<"/shop">) {
             name="model"
             defaultValue={filters.model ?? ""}
             aria-label="Vehicle"
-            className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             <option value="">Any vehicle</option>
             {CAR_BRANDS.map((b) => (
@@ -87,7 +87,7 @@ export default async function ShopPage(props: PageProps<"/shop">) {
               </optgroup>
             ))}
           </select>
-          <Button type="submit" variant="secondary" className="h-9 w-full">
+          <Button type="submit" variant="ink" className="h-10 w-full">
             <CarFront /> Show parts that fit
           </Button>
         </form>
@@ -121,7 +121,7 @@ export default async function ShopPage(props: PageProps<"/shop">) {
           <div className="mb-6 flex flex-wrap items-center gap-2">
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="outline" className="h-10 lg:hidden">
+                <Button variant="outline" className="h-10 bg-card lg:hidden">
                   <SlidersHorizontal /> Filters {active.length > 0 && <Badge className="ml-1">{active.length}</Badge>}
                 </Button>
               </SheetTrigger>
@@ -134,7 +134,7 @@ export default async function ShopPage(props: PageProps<"/shop">) {
             </Sheet>
 
             {active.map((f) => (
-              <Badge key={f.key} asChild variant="secondary" className="h-8 gap-1.5 px-3 text-sm">
+              <Badge key={f.key} asChild variant="outline" className="h-8 gap-1.5 rounded-md bg-card px-3 text-sm hover:border-foreground/30">
                 <Link href={hrefWith({ [f.key]: null })} aria-label={`Remove filter ${f.label}`}>
                   {f.label} <X className="size-3.5!" />
                 </Link>
@@ -152,18 +152,19 @@ export default async function ShopPage(props: PageProps<"/shop">) {
           </div>
 
           {products.length === 0 ? (
-            <div className="rounded-2xl border border-dashed p-12 text-center">
-              <p className="font-display text-3xl font-bold uppercase">No parts match those filters</p>
+            <div className="rounded-xl border border-dashed border-foreground/20 px-6 py-16 text-center">
+              <p className="label-mono text-muted-foreground">0 results</p>
+              <p className="mt-3 font-display text-3xl font-bold">No parts match those filters</p>
               <p className="mt-2 text-muted-foreground">Try removing a filter or searching for something broader.</p>
-              <Button asChild className="mt-6 rounded-full">
+              <Button asChild size="lg" className="mt-6 h-10 px-4">
                 <Link href="/shop">Show all parts</Link>
               </Button>
             </div>
           ) : (
-            <ul className="grid grid-cols-2 gap-3 sm:gap-5 xl:grid-cols-3">
+            <ul className="grid grid-cols-2 gap-2 sm:gap-4 xl:grid-cols-3 2xl:grid-cols-4">
               {products.map((p, i) => (
                 <li key={p.id} className="animate-in fade-in slide-in-from-bottom-3 fill-mode-both duration-500" style={{ animationDelay: `${Math.min(i, 8) * 50}ms` }}>
-                  <ProductCard product={p} sizes="(min-width: 1280px) 25vw, (min-width: 1024px) 35vw, 50vw" />
+                  <ProductCard product={p} sizes="(min-width: 1536px) 20vw, (min-width: 1280px) 25vw, (min-width: 1024px) 35vw, 50vw" />
                 </li>
               ))}
             </ul>
@@ -177,7 +178,7 @@ export default async function ShopPage(props: PageProps<"/shop">) {
 function FilterGroup({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">{title}</h2>
+      <h2 className="label-mono mb-3 border-t border-foreground/15 pt-3 text-muted-foreground">{title}</h2>
       <div className="grid gap-0.5">{children}</div>
     </div>
   );
@@ -189,7 +190,7 @@ function FilterLink({ href, active, children }: { href: string; active: boolean;
       href={href}
       scroll={false}
       aria-current={active ? "page" : undefined}
-      className={`rounded-lg px-3 py-2 text-sm transition-colors ${active ? "bg-foreground font-medium text-background" : "hover:bg-muted"}`}
+      className={`relative rounded-md px-3 py-2 text-sm transition-colors ${active ? "bg-card font-medium text-foreground shadow-sm ring-1 ring-foreground/[0.07] before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
     >
       {children}
     </Link>

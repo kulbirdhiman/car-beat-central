@@ -8,7 +8,7 @@ export function CopyCodeButton({ code }: { code: string }) {
   return (
     <Button
       variant="outline"
-      className="h-11 gap-3 rounded-full border-dashed border-white/40 bg-black/30 pl-5 pr-4 font-mono tracking-widest text-white backdrop-blur hover:bg-white hover:text-foreground"
+      className="h-11 gap-3 border-dashed border-white/45 bg-black/35 pl-4 pr-3.5 font-mono tracking-[0.15em] text-white backdrop-blur-md hover:border-solid hover:bg-white hover:text-foreground"
       onClick={async () => {
         try {
           await navigator.clipboard.writeText(code);
@@ -19,7 +19,7 @@ export function CopyCodeButton({ code }: { code: string }) {
       }}
     >
       {code}
-      <Copy className="size-4" />
+      <Copy className="size-4 opacity-70" />
     </Button>
   );
 }

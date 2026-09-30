@@ -30,17 +30,18 @@ const FAQS = [
 
 export function Faq() {
   return (
-    <section id="faq" className="scroll-mt-20 bg-secondary/60 py-20 sm:py-28">
-      <div className="mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 lg:grid-cols-[1fr_1.4fr]">
-        <div className="self-start lg:sticky lg:top-28">
-          <SectionHeading eyebrow="Questions" title="Good to know" description="Everything worth knowing before you order." />
-        </div>
-        <Reveal>
-          <Accordion type="single" collapsible className="rounded-2xl border bg-card px-6">
-            {FAQS.map((f) => (
-              <AccordionItem key={f.q} value={f.q}>
-                <AccordionTrigger className="py-5 text-base">{f.q}</AccordionTrigger>
-                <AccordionContent className="text-muted-foreground">{f.a}</AccordionContent>
+    <section id="faq" className="scroll-mt-20 pb-24 sm:pb-32">
+      <div className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-8">
+        <SectionHeading index="07" eyebrow="Questions" title="Good to know" description="Everything worth knowing before you order." />
+        <Reveal className="grid lg:grid-cols-5">
+          <Accordion type="single" collapsible className="border-t border-foreground/15 lg:col-span-3 lg:col-start-3">
+            {FAQS.map((f, i) => (
+              <AccordionItem key={f.q} value={f.q} className="border-foreground/10">
+                <AccordionTrigger className="gap-4 py-6 text-base font-medium hover:no-underline sm:text-lg aria-expanded:[&>span:first-child]:text-primary">
+                  <span className="label-mono w-6 shrink-0 pt-1.5 text-muted-foreground transition-colors">{String(i + 1).padStart(2, "0")}</span>
+                  <span className="flex-1">{f.q}</span>
+                </AccordionTrigger>
+                <AccordionContent className="max-w-2xl pl-10 text-[15px] leading-relaxed text-muted-foreground">{f.a}</AccordionContent>
               </AccordionItem>
             ))}
           </Accordion>

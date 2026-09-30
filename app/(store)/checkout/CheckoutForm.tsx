@@ -40,13 +40,13 @@ export function CheckoutForm() {
   const errors = Object.fromEntries(Object.entries(state.errors ?? {}).filter(([k]) => !editedNames.includes(k)));
   const v = state.values ?? {};
 
-  if (!hydrated) return <Skeleton className="h-96 w-full rounded-2xl" />;
+  if (!hydrated) return <Skeleton className="h-96 w-full rounded-xl" />;
 
   if (lines.length === 0) {
     return (
-      <div className="rounded-3xl border border-dashed p-12 text-center">
-        <p className="font-display text-3xl font-bold uppercase">Nothing to check out yet</p>
-        <Button asChild className="mt-6 rounded-full">
+      <div className="rounded-xl border border-dashed p-12 text-center">
+        <p className="font-display text-3xl font-bold">Nothing to check out yet</p>
+        <Button asChild size="lg" className="mt-6 h-10 px-4">
           <Link href="/shop">Browse parts</Link>
         </Button>
       </div>
@@ -99,7 +99,7 @@ export function CheckoutForm() {
                   setAuState(s);
                   markEdited("state");
                 }}>
-                <SelectTrigger id="state" className="h-9 w-full" aria-invalid={!!errors.state}>
+                <SelectTrigger id="state" className="h-11! w-full" aria-invalid={!!errors.state}>
                   <SelectValue placeholder="—" />
                 </SelectTrigger>
                 <SelectContent>
@@ -150,7 +150,7 @@ export function CheckoutForm() {
 
       <Card className="h-fit lg:sticky lg:top-28">
         <CardHeader>
-          <CardTitle className="font-display text-2xl font-bold uppercase">Your order</CardTitle>
+          <CardTitle className="font-display text-2xl font-bold">Your order</CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
           <ul className="space-y-3">
@@ -187,10 +187,10 @@ export function CheckoutForm() {
                   placeholder="Offer code"
                   aria-label="Offer code"
                   aria-invalid={!!(couponError || errors.coupon)}
-                  className="pl-9 font-mono uppercase"
+                  className="h-10 pl-9 font-mono uppercase"
                 />
               </div>
-              <Button type="button" variant="secondary" onClick={() => setCoupon(couponInput.trim())} disabled={!couponInput.trim()}>
+              <Button type="button" variant="ink" className="h-10 px-4" onClick={() => setCoupon(couponInput.trim())} disabled={!couponInput.trim()}>
                 Apply
               </Button>
             </div>
@@ -200,7 +200,7 @@ export function CheckoutForm() {
 
           <OrderSummary totals={totals} stale={stale} />
 
-          <Button type="submit" size="lg" className="h-12 w-full rounded-full text-base" disabled={pending || !!couponError}>
+          <Button type="submit" size="xl" className="w-full" disabled={pending || !!couponError}>
             {pending ? (
               <>
                 <Loader2 className="animate-spin" /> Placing order…
@@ -218,9 +218,9 @@ export function CheckoutForm() {
 
 function Section({ step, title, children }: { step: number; title: string; children: ReactNode }) {
   return (
-    <section className="rounded-2xl border bg-card p-6">
-      <h2 className="mb-5 flex items-center gap-3 font-display text-2xl font-bold uppercase">
-        <span className="grid size-8 place-items-center rounded-full bg-foreground font-sans text-sm text-background">{step}</span>
+    <section className="rounded-xl bg-card p-6 ring-1 ring-foreground/[0.07]">
+      <h2 className="mb-5 flex items-center gap-3 font-display text-2xl font-bold">
+        <span className="label-mono grid size-8 place-items-center rounded-md bg-foreground text-background">{String(step).padStart(2, "0")}</span>
         {title}
       </h2>
       {children}
@@ -244,7 +244,7 @@ function Field({
   children: ReactNode;
 }) {
   return (
-    <div className={cn("grid gap-1.5", className)} data-invalid={!!error || undefined}>
+    <div className={cn("grid content-start gap-1.5", className)} data-invalid={!!error || undefined}>
       <Label htmlFor={name}>{label}</Label>
       <div className="[&_input]:h-11">{children}</div>
       {error ? <p className="text-xs text-destructive">{error}</p> : hint && <p className="text-xs text-muted-foreground">{hint}</p>}

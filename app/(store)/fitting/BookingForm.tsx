@@ -27,11 +27,13 @@ export function BookingForm() {
 
   if (state.ok) {
     return (
-      <div className="rounded-3xl border bg-card p-10 text-center animate-in fade-in zoom-in-95">
-        <CalendarCheck className="mx-auto size-12 text-success" />
-        <h2 className="mt-4 font-display text-4xl font-bold uppercase">Booking request sent</h2>
+      <div className="self-start rounded-xl bg-card p-10 text-center ring-1 ring-foreground/[0.07] animate-in fade-in zoom-in-95">
+        <span className="mx-auto grid size-14 place-items-center rounded-lg bg-success/10">
+          <CalendarCheck className="size-6 text-success" />
+        </span>
+        <h2 className="mt-4 font-display text-4xl font-bold">Booking request sent</h2>
         <p className="mx-auto mt-2 max-w-md text-muted-foreground">{state.message}</p>
-        <Button asChild className="mt-6 rounded-full">
+        <Button asChild size="lg" className="mt-6 h-10 px-4">
           <Link href="/shop">Shop parts while you wait</Link>
         </Button>
       </div>
@@ -39,9 +41,9 @@ export function BookingForm() {
   }
 
   return (
-    <form action={action} noValidate className="grid gap-5 rounded-3xl border bg-card p-6 sm:grid-cols-2 sm:p-8">
+    <form action={action} noValidate className="grid content-start gap-5 self-start rounded-xl bg-card p-6 ring-1 ring-foreground/[0.07] sm:grid-cols-2 sm:p-8">
       {state.message && (
-        <p role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive sm:col-span-2">
+        <p role="alert" className="rounded-lg bg-destructive/10 p-3 text-sm font-medium text-destructive sm:col-span-2">
           {state.message}
         </p>
       )}
@@ -85,7 +87,7 @@ export function BookingForm() {
       <Field label="What are we fitting? (optional)" htmlFor="notes" className="sm:col-span-2">
         <Textarea id="notes" name="notes" rows={4} placeholder="e.g. BeatDeck X9 stereo and front speakers, bought online" defaultValue={v.notes} />
       </Field>
-      <Button type="submit" size="lg" disabled={pending} className="h-12 rounded-full text-base sm:col-span-2">
+      <Button type="submit" size="xl" disabled={pending} className="sm:col-span-2">
         {pending ? <Loader2 className="animate-spin" /> : <CalendarCheck />}
         {pending ? "Sending…" : "Request booking"}
       </Button>
@@ -109,7 +111,7 @@ function Field({
   children: ReactNode;
 }) {
   return (
-    <div className={`grid gap-1.5 [&_input]:h-11 ${className ?? ""}`}>
+    <div className={`grid content-start gap-1.5 [&_input]:h-11 ${className ?? ""}`}>
       <Label htmlFor={htmlFor}>{label}</Label>
       {children}
       {error ? <p className="text-xs text-destructive">{error}</p> : hint && <p className="text-xs text-muted-foreground">{hint}</p>}
