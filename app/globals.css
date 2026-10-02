@@ -5,31 +5,31 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Garage palette: cool light-grey floor, white cards, graphite "ink" for feature
- * panels, and one electric-blue accent reserved for prices, deals and actions.
+ * Garage palette: warm light-grey floor, white cards, graphite "ink" for feature
+ * panels, and one racing-red accent reserved for prices, deals and actions.
  */
 :root {
   --radius: 0.625rem;
-  --background: oklch(0.968 0.004 255);
-  --foreground: oklch(0.2 0.018 260);
+  --background: oklch(0.97 0.003 30);
+  --foreground: oklch(0.19 0.008 25);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2 0.018 260);
+  --card-foreground: oklch(0.19 0.008 25);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.2 0.018 260);
-  --primary: oklch(0.56 0.22 262);
-  --primary-foreground: oklch(0.99 0.003 255);
-  --secondary: oklch(0.945 0.005 255);
-  --secondary-foreground: oklch(0.24 0.018 260);
-  --muted: oklch(0.948 0.005 255);
-  --muted-foreground: oklch(0.5 0.016 260);
-  --accent: oklch(0.945 0.005 255);
-  --accent-foreground: oklch(0.24 0.018 260);
-  --destructive: oklch(0.58 0.21 27);
-  --border: oklch(0.905 0.006 255);
-  --input: oklch(0.88 0.008 255);
-  --ring: oklch(0.56 0.22 262);
-  --ink: oklch(0.19 0.02 262);
-  --ink-foreground: oklch(0.97 0.004 255);
+  --popover-foreground: oklch(0.19 0.008 25);
+  --primary: oklch(0.56 0.215 26);
+  --primary-foreground: oklch(0.99 0.003 30);
+  --secondary: oklch(0.945 0.004 30);
+  --secondary-foreground: oklch(0.23 0.008 25);
+  --muted: oklch(0.948 0.004 30);
+  --muted-foreground: oklch(0.5 0.01 25);
+  --accent: oklch(0.945 0.004 30);
+  --accent-foreground: oklch(0.23 0.008 25);
+  --destructive: oklch(0.5 0.2 22);
+  --border: oklch(0.905 0.005 30);
+  --input: oklch(0.88 0.006 30);
+  --ring: oklch(0.56 0.215 26);
+  --ink: oklch(0.17 0.006 25);
+  --ink-foreground: oklch(0.97 0.003 30);
   --success: oklch(0.57 0.13 155);
 }
 
