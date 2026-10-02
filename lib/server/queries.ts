@@ -1,5 +1,5 @@
 import "server-only";
-import { CAR_BRANDS } from "../data";
+import { CAR_BRANDS, productFitsModel } from "../data";
 import type { Category, Product } from "../types";
 import { db } from "./db";
 
@@ -146,4 +146,10 @@ export function getRelated(product: Product, limit = 4): Product[] {
 export function getCategoryCounts(): Partial<Record<Category, number>> {
   const rows = db.prepare("SELECT category, COUNT(*) AS n FROM products GROUP BY category").all() as { category: Category; n: number }[];
   return Object.fromEntries(rows.map((r) => [r.category, r.n]));
+}
+
+/** Products that fit each model id, for the vehicle pickers' "Show N matching parts". */
+export function getFitCounts(): Record<string, number> {
+  const products = listProducts();
+  return Object.fromEntries(CAR_BRANDS.flatMap((b) => b.models).map((m) => [m.id, products.filter((p) => productFitsModel(p, m.id)).length]));
 }

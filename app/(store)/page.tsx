@@ -10,7 +10,7 @@ import { Offers } from "@/components/home/offers/Offers";
 import { TrustBar } from "@/components/home/TrustBar";
 import { UpgradeSpotlight } from "@/components/home/UpgradeSpotlight";
 import { CATEGORY_LABELS, OFFERS } from "@/lib/data";
-import { getCategoryCounts, getProductBySlug, listProducts } from "@/lib/server/queries";
+import { getCategoryCounts, getFitCounts, getProductBySlug, listProducts } from "@/lib/server/queries";
 import type { Category } from "@/lib/types";
 
 const RAIL_CATEGORIES: Category[] = ["stereo", "speaker", "subwoofer", "dashcam", "lighting"];
@@ -38,7 +38,7 @@ export default function Home() {
   return (
     <>
       {/* Deals lead: banners and today's price drops, then browsing by category, product and car. */}
-      <Hero promos={OFFERS.slice(1)} />
+      <Hero promo={OFFERS.find((o) => o.code === "GLOWUP") ?? OFFERS[0]} fitCounts={getFitCounts()} />
       <TrustBar />
       <TodayDeals />
       <CategoryGrid counts={getCategoryCounts()} />

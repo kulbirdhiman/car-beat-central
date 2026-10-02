@@ -28,7 +28,7 @@ export function ProductCard({ product, footer, sizes = "(min-width: 1024px) 25vw
   return (
     <article
       className={cn(
-        "group/product relative flex h-full flex-col rounded-xl border bg-card p-2.5 transition-[border-color,box-shadow] duration-300 hover:border-foreground/15 hover:shadow-[0_18px_40px_-24px_oklch(0.25_0.03_260/0.35)] sm:p-3",
+        "group/product relative flex h-full flex-col rounded-xl border bg-card p-2.5 transition-[border-color,box-shadow] duration-300 hover:border-foreground/15 hover:shadow-[0_18px_40px_-24px_oklch(0.25_0.01_25/0.35)] sm:p-3",
         className,
       )}
     >

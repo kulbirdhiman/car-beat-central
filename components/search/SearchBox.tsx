@@ -245,8 +245,10 @@ export function SearchBox({ className }: { className?: string }) {
     >
       <div
         className={cn(
-          "flex h-11 items-center gap-2 rounded-xl border-2 bg-white pl-4 pr-1 text-foreground transition-[border-color,box-shadow]",
-          open ? "border-primary shadow-[0_0_0_4px_color-mix(in_oklch,var(--primary),transparent_75%)]" : "border-transparent",
+          "flex h-11 items-center gap-2 rounded-full border pl-4 pr-1 text-foreground transition-[background-color,border-color,box-shadow]",
+          open
+            ? "border-primary bg-white shadow-[0_0_0_4px_color-mix(in_oklch,var(--primary),transparent_82%)]"
+            : "border-transparent bg-secondary hover:border-border",
         )}
       >
         <Search className="size-4 shrink-0 text-muted-foreground" />
@@ -290,15 +292,15 @@ export function SearchBox({ className }: { className?: string }) {
             <X className="size-4" />
           </button>
         ) : (
-          <kbd className="hidden shrink-0 rounded-sm border bg-card px-1.5 font-mono text-[10px] text-muted-foreground lg:block">⌘K</kbd>
+          <kbd className="hidden shrink-0 rounded-md border bg-card px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground lg:block">⌘K</kbd>
         )}
-        <button type="submit" className="h-9 shrink-0 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-[color-mix(in_oklch,var(--primary),black_10%)]">
+        <button type="submit" className="h-9 shrink-0 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-[color-mix(in_oklch,var(--primary),black_10%)]">
           Search
         </button>
       </div>
 
       {open && (
-        <div className="absolute inset-x-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-2xl border bg-popover text-popover-foreground shadow-[0_24px_60px_-20px_oklch(0.2_0.03_260/0.4)] animate-in fade-in slide-in-from-top-1 duration-150">
+        <div className="absolute inset-x-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-2xl border bg-popover text-popover-foreground shadow-[0_24px_60px_-20px_oklch(0.2_0.01_25/0.4)] animate-in fade-in slide-in-from-top-1 duration-150">
           <div id={listId} role="listbox" aria-label="Search suggestions" className="max-h-[min(70vh,560px)] overflow-y-auto p-2">
             {groups.map(
               (g) =>
