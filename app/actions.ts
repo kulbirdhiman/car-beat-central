@@ -1,8 +1,10 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { addSubscriber, createBooking, createOrder } from "@/lib/server/orders";
-import { EMAIL_RE, parseCart, str, validateBooking, validateCheckout, type FieldErrors } from "@/lib/server/validate";
+import { addReview } from "@/lib/server/reviews";
+import { EMAIL_RE, parseCart, str, validateBooking, validateCheckout, validateReview, type FieldErrors } from "@/lib/server/validate";
 
 export type FormState = {
   ok?: boolean;
@@ -56,4 +58,14 @@ export async function subscribe(_prev: FormState, form: FormData): Promise<FormS
   if (!EMAIL_RE.test(email)) return { errors: { email: "Enter a valid email address." }, values: { email } };
   const added = addSubscriber(email);
   return { ok: true, message: added ? "You're in. Watch your inbox for price drops." : "You're already subscribed. Good on ya!" };
+}
+
+const REVIEW_FIELDS = ["name", "rating", "title", "body", "vehicle"];
+
+export async function submitReview(_prev: FormState, form: FormData): Promise<FormState> {
+  const { data, errors } = validateReview(form);
+  if (!data) return { errors, values: echo(form, REVIEW_FIELDS), message: "Please fix the highlighted fields." };
+  if (!addReview(data)) return { message: "That product no longer exists." };
+  revalidatePath(`/products/${str(form, "slug", 120)}`);
+  return { ok: true, message: `Thanks ${data.name.split(" ")[0]}! Your review is live.` };
 }

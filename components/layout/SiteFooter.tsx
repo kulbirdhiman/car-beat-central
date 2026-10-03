@@ -25,8 +25,9 @@ const COLUMNS = [
     links: [
       { label: "Book a fitting", href: "/fitting" },
       { label: "Your cart", href: "/cart" },
-      { label: "Delivery & returns", href: "/#faq" },
-      { label: "Fitment guarantee", href: "/#faq" },
+      { label: "Returns & refunds", href: "/returns" },
+      { label: "Warranty", href: "/warranty" },
+      { label: "Fitment guarantee", href: "/returns#fitment" },
       { label: "FAQs", href: "/#faq" },
     ],
   },

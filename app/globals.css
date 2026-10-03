@@ -193,3 +193,43 @@
     opacity: 1;
   }
 }
+
+/* Long-form copy on policy pages. */
+.policy-prose {
+  color: var(--muted-foreground);
+  font-size: 0.9375rem;
+  line-height: 1.7;
+}
+.policy-prose > * + * {
+  margin-top: 1rem;
+}
+.policy-prose strong {
+  color: var(--foreground);
+  font-weight: 600;
+}
+.policy-prose a:not([class]) {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.policy-prose ul:not(.not-prose) {
+  list-style: none;
+  padding: 0;
+}
+.policy-prose ul:not(.not-prose) > li {
+  position: relative;
+  padding-left: 1.5rem;
+}
+.policy-prose ul:not(.not-prose) > li + li {
+  margin-top: 0.5rem;
+}
+.policy-prose ul:not(.not-prose) > li::before {
+  content: "";
+  position: absolute;
+  left: 0.25rem;
+  top: 0.7em;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 9999px;
+  background: var(--primary);
+}
