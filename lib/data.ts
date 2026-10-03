@@ -86,6 +86,7 @@ export const OFFERS: Offer[] = [
     code: "BASSDROP",
     highlight: "30% OFF",
     image: "/images/hero-ranger.jpg",
+    href: "/shop?category=stereo",
   },
   {
     id: "o2",
@@ -94,6 +95,7 @@ export const OFFERS: Offer[] = [
     code: "FIRSTBEAT",
     highlight: "$50 OFF",
     image: "/images/coast-road.jpg",
+    href: "/shop",
   },
   {
     id: "o3",
@@ -102,6 +104,7 @@ export const OFFERS: Offer[] = [
     code: "GLOWUP",
     highlight: "Buy 2 Get 1",
     image: "/images/headlights-red.jpg",
+    href: "/shop?category=lighting",
   },
 ];
 
@@ -133,3 +136,18 @@ export function formatCents(cents: number) {
 export const AU_STATES = ["NSW", "VIC", "QLD", "WA", "SA", "TAS", "ACT", "NT"] as const;
 
 export const FITTING_CITIES = ["Sydney", "Melbourne", "Brisbane", "Perth", "Adelaide", "Hobart", "Canberra", "Darwin"] as const;
+
+/** Customer support inbox, used on the policy pages. */
+export const SUPPORT_EMAIL = "support@carbeat.com.au";
+
+/** Extra lifestyle photos per category, shown after the product shot in the gallery. */
+export const CATEGORY_GALLERY: Record<Category, string[]> = {
+  stereo: ["/images/hero-interior.jpg", "/images/stereo-carplay.jpg", "/images/stereo-android.jpg"],
+  speaker: ["/images/speaker-component.jpg", "/images/speaker-coaxial.jpg", "/images/trunk-audio.jpg"],
+  subwoofer: ["/images/subwoofer-underseat.jpg", "/images/subwoofer-tube.jpg", "/images/hero-subwoofer-build.jpg"],
+  amplifier: ["/images/trunk-audio.jpg", "/images/hero-subwoofer-build.jpg"],
+  dashcam: ["/images/dashcam.jpg", "/images/dashcam-mount.jpg", "/images/coast-road.jpg"],
+  lighting: ["/images/headlights.jpg", "/images/headlights-red.jpg", "/images/ambient-light.jpg"],
+  mount: ["/images/phone-mount.jpg", "/images/coast-road.jpg"],
+  interior: ["/images/ambient-light.jpg", "/images/floor-mats.jpg", "/images/air-vents.jpg"],
+};

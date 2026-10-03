@@ -116,3 +116,24 @@ export function validateBooking(form: FormData): { data?: BookingInput; errors: 
 
   return Object.keys(errors).length ? { errors } : { data, errors };
 }
+
+export type ReviewInput = { productId: string; name: string; rating: number; title: string; body: string; vehicle: string };
+
+export function validateReview(form: FormData): { data?: ReviewInput; errors: FieldErrors } {
+  const errors: FieldErrors = {};
+  const data = {
+    productId: str(form, "productId", 20),
+    name: str(form, "name", 60),
+    rating: Number(str(form, "rating", 1)),
+    title: str(form, "title", 100),
+    body: str(form, "body", 2000),
+    vehicle: str(form, "vehicle", 80),
+  };
+
+  if (!Number.isInteger(data.rating) || data.rating < 1 || data.rating > 5) errors.rating = "Choose a star rating.";
+  if (data.name.length < 2) errors.name = "Enter your name.";
+  if (data.title.length < 3) errors.title = "Give your review a short title.";
+  if (data.body.length < 20) errors.body = "Tell us a bit more (at least 20 characters).";
+
+  return Object.keys(errors).length ? { errors } : { data, errors };
+}

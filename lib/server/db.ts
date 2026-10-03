@@ -1,10 +1,14 @@
 import "server-only";
 import { mkdirSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { SEED_DEALS, SEED_PRODUCTS, SEED_TRENDING } from "./seed";
 
-const DB_PATH = process.env.DATABASE_PATH ?? path.join(process.cwd(), "data", "carbeat.db");
+// Serverless hosts (Vercel) only allow writes under the temp dir. The catalogue is re-seeded on
+// open, so products are always there; orders and bookings written there don't survive a cold start.
+const DB_PATH =
+  process.env.DATABASE_PATH ?? (process.env.VERCEL ? path.join(tmpdir(), "carbeat.db") : path.join(process.cwd(), "data", "carbeat.db"));
 
 const SCHEMA = `
   CREATE TABLE IF NOT EXISTS products (
@@ -65,6 +69,17 @@ const SCHEMA = `
     preferred_date TEXT NOT NULL,
     notes TEXT
   );
+  CREATE TABLE IF NOT EXISTS product_reviews (
+    id TEXT PRIMARY KEY,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    product_id TEXT NOT NULL REFERENCES products(id),
+    name TEXT NOT NULL,
+    rating INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    body TEXT NOT NULL,
+    vehicle TEXT
+  );
+  CREATE INDEX IF NOT EXISTS product_reviews_product ON product_reviews(product_id, created_at);
   CREATE TABLE IF NOT EXISTS subscribers (
     email TEXT PRIMARY KEY,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -75,10 +90,22 @@ function open() {
   mkdirSync(path.dirname(DB_PATH), { recursive: true });
   // Build workers open the file concurrently: wait on locks (set at open, so it covers the pragmas too).
   const db = new DatabaseSync(DB_PATH, { timeout: 15_000 });
-  db.exec("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;");
+  // Switching a brand-new file to WAL can fail with "locked" without waiting, so retry briefly.
+  withRetry(() => db.exec("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;"));
   db.exec(SCHEMA);
   syncCatalogue(db);
   return db;
+}
+
+function withRetry(run: () => void, attempts = 50) {
+  for (let i = 1; ; i++) {
+    try {
+      return run();
+    } catch (error) {
+      if (i >= attempts || (error as { errcode?: number }).errcode !== 5) throw error;
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 100);
+    }
+  }
 }
 
 /** The catalogue lives in code (seed.ts); keep the database in step with it. */

@@ -11,7 +11,7 @@ export function Logo({ className }: { className?: string }) {
         </svg>
       </span>
       <span className="font-display text-[1.35rem] font-extrabold leading-none">
-        Car<span className="text-primary">Beat</span>
+        Car<span className="text-primary">Beats</span>
       </span>
     </span>
   );

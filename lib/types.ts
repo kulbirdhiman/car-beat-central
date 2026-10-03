@@ -42,6 +42,8 @@ export type Offer = {
   code: string;
   highlight: string;
   image: string;
+  /** Where "Shop this offer" goes. */
+  href: string;
 };
 
 export type CartLine = { productId: string; qty: number };
