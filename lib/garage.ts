@@ -1,15 +1,22 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
-import { CAR_BRANDS } from "./data";
+import { createContext, useContext, useSyncExternalStore } from "react";
+import type { CarBrand } from "./types";
 
 const KEY = "carbeat:garage";
 const listeners = new Set<() => void>();
 
 export type GarageCar = {
-  brand: (typeof CAR_BRANDS)[number];
-  model: (typeof CAR_BRANDS)[number]["models"][number];
+  brand: CarBrand;
+  model: CarBrand["models"][number];
 };
+
+/** Vehicle makes and models from the database, provided once by the store layout (see CarBrandsProvider). */
+export const CarBrandsContext = createContext<CarBrand[]>([]);
+
+export function useCarBrands() {
+  return useContext(CarBrandsContext);
+}
 
 /** Saved model id, or null. Storage can be unavailable (private mode), so reads never throw. */
 export function readGarage(): string | null {
@@ -40,8 +47,8 @@ function subscribe(listener: () => void) {
   };
 }
 
-export function findCar(modelId: string | null): GarageCar | null {
-  for (const brand of CAR_BRANDS) {
+export function findCar(brands: CarBrand[], modelId: string | null): GarageCar | null {
+  for (const brand of brands) {
     const model = brand.models.find((m) => m.id === modelId);
     if (model) return { brand, model };
   }
@@ -50,9 +57,11 @@ export function findCar(modelId: string | null): GarageCar | null {
 
 /** The shopper's saved car. Always null during SSR and hydration. */
 export function useGarage() {
+  const brands = useCarBrands();
   const modelId = useSyncExternalStore(subscribe, readGarage, () => null);
   return {
-    car: findCar(modelId),
+    // A saved model the admin has since deleted reads as no car.
+    car: findCar(brands, modelId),
     save: (id: string) => write(id),
     clear: () => write(null),
   };

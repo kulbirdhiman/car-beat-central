@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { ORDER_STATUS_LABEL, PROMO_STATUS_LABEL, type PromoStatus } from "@/lib/admin/mock-data";
+import { ORDER_STATUS_LABEL, PROMO_STATUS_LABEL, type PromoStatus } from "@/lib/admin/model";
 import type { OrderStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 

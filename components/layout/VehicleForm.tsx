@@ -4,8 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { CAR_BRANDS } from "@/lib/data";
-import { useGarage } from "@/lib/garage";
+import { useCarBrands, useGarage } from "@/lib/garage";
 import { cn } from "@/lib/utils";
 
 const chevron = (stroke: string) =>
@@ -36,9 +35,10 @@ export function VehicleForm({
 }) {
   const router = useRouter();
   const garage = useGarage();
+  const brands = useCarBrands();
   const [brandId, setBrandId] = useState(garage.car?.brand.id ?? "");
   const [modelId, setModelId] = useState(garage.car?.model.id ?? "");
-  const brand = CAR_BRANDS.find((b) => b.id === brandId);
+  const brand = brands.find((b) => b.id === brandId);
   const count = modelId ? (fitCounts[modelId] ?? 0) : null;
   const t = tones[tone];
   const selectClass = cn(selectBase, t.select);
@@ -66,7 +66,7 @@ export function VehicleForm({
         style={style}
       >
         <option value="">Select make</option>
-        {CAR_BRANDS.map((b) => (
+        {brands.map((b) => (
           <option key={b.id} value={b.id}>
             {b.name}
           </option>

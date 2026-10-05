@@ -27,7 +27,7 @@ import {
   type CouponScope,
   type CouponType,
   type PromoStatus,
-} from "@/lib/admin/mock-data";
+} from "@/lib/admin/model";
 import { CouponTester } from "./CouponTester";
 
 const ALL = "all";

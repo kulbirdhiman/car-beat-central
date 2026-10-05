@@ -8,8 +8,8 @@ import { ProductCard } from "@/components/product/ProductCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { CAR_BRANDS, CATEGORY_IMAGES, CATEGORY_LABELS, OFFERS } from "@/lib/data";
-import { getCategoryCounts, getDeals, getFitCounts, listProducts, SORTS } from "@/lib/server/queries";
+import { CATEGORY_IMAGES, CATEGORY_LABELS } from "@/lib/data";
+import { getCarBrands, getCategoryCounts, getDeals, getFitCounts, getLiveOffers, getSubDepartments, listProducts, SORTS } from "@/lib/server/queries";
 import { parseFilters } from "@/lib/server/validate";
 import type { Category } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -31,8 +31,10 @@ export default async function ShopPage(props: PageProps<"/shop">) {
   const params = new URLSearchParams(Object.entries(raw).flatMap(([k, v]) => (typeof v === "string" ? [[k, v]] : [])));
   const filters = parseFilters(params);
   const products = listProducts(filters);
-  const car = CAR_BRANDS.flatMap((b) => b.models.map((m) => ({ brand: b, model: m }))).find((c) => c.model.id === filters.model);
+  const car = getCarBrands().flatMap((b) => b.models.map((m) => ({ brand: b, model: m }))).find((c) => c.model.id === filters.model);
   const counts = getCategoryCounts();
+  const subs = filters.category ? getSubDepartments(filters.category) : [];
+  const sub = subs.find((s) => s.slug === filters.sub);
   const total = Object.values(counts).reduce((n, c) => n + (c ?? 0), 0);
 
   /** Builds a /shop URL from the current filters with some keys changed (null removes). */
@@ -48,7 +50,9 @@ export default async function ShopPage(props: PageProps<"/shop">) {
 
   const title = filters.onSale
     ? "Today's deals"
-    : filters.category
+    : sub
+      ? sub.name
+      : filters.category
       ? CATEGORY_LABELS[filters.category]
       : car
         ? `Parts for your ${car.model.name}`
@@ -57,6 +61,7 @@ export default async function ShopPage(props: PageProps<"/shop">) {
   const active = [
     filters.q && { label: `“${filters.q}”`, key: "q" },
     filters.category && { label: CATEGORY_LABELS[filters.category], key: "category" },
+    filters.sub && { label: sub?.name ?? filters.sub, key: "sub" },
     car && { label: `${car.brand.name} ${car.model.name}`, key: "model" },
     filters.maxPrice && { label: `Under $${filters.maxPrice}`, key: "maxPrice" },
     filters.onSale && { label: "On sale", key: "sale" },
@@ -67,13 +72,25 @@ export default async function ShopPage(props: PageProps<"/shop">) {
       <VehicleFilter key={filters.model ?? "none"} modelId={filters.model} fitCounts={getFitCounts()} />
 
       <FilterCard title="Categories">
-        <CategoryLink href={hrefWith({ category: null })} active={!filters.category} label="All categories" count={total}>
+        <CategoryLink href={hrefWith({ category: null, sub: null })} active={!filters.category} label="All categories" count={total}>
           <LayoutGrid className="size-4" />
         </CategoryLink>
         {(Object.keys(CATEGORY_LABELS) as Category[]).map((c) => (
-          <CategoryLink key={c} href={hrefWith({ category: c })} active={filters.category === c} label={CATEGORY_LABELS[c]} count={counts[c] ?? 0}>
-            <Image src={CATEGORY_IMAGES[c]} alt="" fill sizes="32px" className="object-cover" />
-          </CategoryLink>
+          <div key={c}>
+            <CategoryLink href={hrefWith({ category: c, sub: null })} active={filters.category === c && !filters.sub} label={CATEGORY_LABELS[c]} count={counts[c] ?? 0}>
+              <Image src={CATEGORY_IMAGES[c]} alt="" fill sizes="32px" className="object-cover" />
+            </CategoryLink>
+            {filters.category === c && subs.length > 0 && (
+              <div className="mb-1 ml-[1.375rem] grid gap-0.5 border-l pl-3">
+                {subs.map((s) => (
+                  <OptionLink key={s.slug} href={hrefWith({ sub: filters.sub === s.slug ? null : s.slug })} active={filters.sub === s.slug}>
+                    <span className="flex-1 truncate">{s.name}</span>
+                    <span className="text-xs tabular-nums text-muted-foreground">{s.count}</span>
+                  </OptionLink>
+                ))}
+              </div>
+            )}
+          </div>
         ))}
       </FilterCard>
 
@@ -150,7 +167,7 @@ export default async function ShopPage(props: PageProps<"/shop">) {
           )}
 
           <div className="mt-5">
-            <OfferStrip offers={OFFERS} dealCount={getDeals().length} />
+            <OfferStrip offers={getLiveOffers()} dealCount={getDeals().length} />
           </div>
 
           <div className="mt-6">
@@ -221,7 +238,7 @@ function OptionLink({ href, active, checkbox, children }: { href: string; active
       >
         {active && <span className={cn("bg-white", checkbox ? "size-1.5 rounded-[1px]" : "size-1.5 rounded-full")} />}
       </span>
-      <span className="flex items-center gap-1.5">{children}</span>
+      <span className="flex flex-1 items-center gap-1.5">{children}</span>
     </Link>
   );
 }

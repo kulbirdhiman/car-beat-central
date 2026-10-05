@@ -1,14 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { connection } from "next/server";
 import { AdminMobileNav, AdminSidebar } from "@/components/admin/AdminNav";
 import { AdminStoreProvider } from "@/components/admin/AdminStore";
 import { Logo } from "@/components/layout/Logo";
+import { getAdminData } from "@/lib/server/admin/data";
 
 export const metadata: Metadata = { title: "Admin · CarBeat", robots: { index: false } };
 
-export default function AdminLayout({ children }: LayoutProps<"/admin">) {
+export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
+  // Always render per request: admin data must be live, never a build-time snapshot.
+  await connection();
   return (
-    <AdminStoreProvider>
+    <AdminStoreProvider initial={getAdminData()}>
       <div className="min-h-full bg-secondary/50">
         <header className="sticky top-0 z-30 border-b bg-background">
           <div className="flex h-16 items-center justify-between gap-3 px-4 sm:px-6">
@@ -20,9 +24,6 @@ export default function AdminLayout({ children }: LayoutProps<"/admin">) {
               </Link>
             </div>
             <div className="flex items-center gap-4">
-              <span className="hidden rounded-md border border-dashed px-2 py-0.5 text-xs text-muted-foreground sm:inline">
-                Sample data · changes reset on reload
-              </span>
               <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
                 View store →
               </Link>

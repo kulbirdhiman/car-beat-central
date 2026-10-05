@@ -4,7 +4,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAdminStore } from "@/components/admin/AdminStore";
 import { PageHeader } from "@/components/admin/ui";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { promoStatus } from "@/lib/admin/mock-data";
+import { promoStatus } from "@/lib/admin/model";
 import { CouponsTab } from "./CouponsTab";
 import { OffersTab } from "./OffersTab";
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
@@ -13,37 +13,67 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import type { Department } from "@/lib/admin/mock-data";
+import type { Department } from "@/lib/admin/model";
 
-export function DepartmentsManager() {
-  const { departments, products, deleteDepartment, setDepartments } = useAdminStore();
+const TOP_LEVEL = "none";
+
+/** Top-level departments, or with `parentId` the sub-departments of one department (e.g. Satnav Car Stereos under Car Stereos). */
+export function DepartmentsManager({ parentId = null }: { parentId?: string | null }) {
+  const { departments, products, deleteDepartment, reorderDepartments } = useAdminStore();
   const [editing, setEditing] = useState<Department | "new" | null>(null);
   const [deleting, setDeleting] = useState<Department | null>(null);
 
+  const parent = parentId === null ? null : departments.find((d) => d.id === parentId);
+  if (parentId !== null && !parent) {
+    return (
+      <Empty>
+        That department doesn&apos;t exist (it may have been deleted).{" "}
+        <Link href="/admin/departments" className="underline">
+          Back to departments
+        </Link>
+      </Empty>
+    );
+  }
+
+  const rows = departments.filter((d) => d.parentId === parentId);
+  const children = (id: string) => departments.filter((d) => d.parentId === id);
   const productCount = (id: string) => products.filter((p) => p.departmentId === id).length;
-  const deletingCount = deleting ? productCount(deleting.id) : 0;
+  // A department's count includes its sub-departments' products.
+  const totalCount = (id: string) => productCount(id) + children(id).reduce((n, c) => n + productCount(c.id), 0);
+  const deletingCount = deleting ? totalCount(deleting.id) : 0;
+  const deletingSubs = deleting ? children(deleting.id).length : 0;
 
   return (
     <>
+      {parent && (
+        <Link href="/admin/departments" className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+          <ChevronLeft className="size-4" /> All departments
+        </Link>
+      )}
       <PageHeader
-        title="Departments"
-        description="Product types such as Car Stereos or Audio Equipment. Drag rows to set the order they appear in the store."
+        title={parent ? `${parent.name}: sub-departments` : "Departments"}
+        description={
+          parent
+            ? `Narrower groups inside ${parent.name}, such as Satnav or Linux stereos. Shoppers see them under the category in the shop filters. Drag rows to reorder.`
+            : "Product types such as Car Stereos or Audio Equipment. Open one to add sub-departments. Drag rows to set the order they appear in the store."
+        }
         actions={
           <Button onClick={() => setEditing("new")}>
-            <Plus /> Add department
+            <Plus /> {parent ? "Add sub-department" : "Add department"}
           </Button>
         }
       />
 
       <Card>
         <CardContent>
-          {departments.length === 0 ? (
-            <Empty>No departments yet.</Empty>
+          {rows.length === 0 ? (
+            <Empty>{parent ? `No sub-departments in ${parent.name} yet.` : "No departments yet."}</Empty>
           ) : (
             <SortableTable
-              rows={departments}
-              onReorder={setDepartments}
+              rows={rows}
+              onReorder={reorderDepartments}
               rowLabel={(d) => d.name}
               columns={[
                 {
@@ -62,7 +92,21 @@ export function DepartmentsManager() {
                   ),
                 },
                 { header: "Description", className: "hidden max-w-80 whitespace-normal text-muted-foreground md:table-cell", cell: (d) => d.description || "—" },
-                { header: "Products", className: "text-right tabular-nums", cell: (d) => productCount(d.id) },
+                ...(parent
+                  ? []
+                  : [
+                      {
+                        header: "Sub-departments",
+                        className: "hidden sm:table-cell",
+                        cell: (d: Department) => (
+                          <Link href={`/admin/departments/${d.id}`} className="inline-flex items-center gap-0.5 text-sm hover:underline">
+                            {children(d.id).length || "Add"}
+                            <ChevronRight className="size-3.5" />
+                          </Link>
+                        ),
+                      },
+                    ]),
+                { header: "Products", className: "text-right tabular-nums", cell: (d) => totalCount(d.id) },
                 {
                   header: "Status",
                   className: "hidden sm:table-cell",
@@ -89,25 +133,36 @@ export function DepartmentsManager() {
         </CardContent>
       </Card>
 
-      {editing && <DepartmentDialog key={editing === "new" ? "new" : editing.id} department={editing === "new" ? null : editing} onClose={() => setEditing(null)} />}
+      {editing && (
+        <DepartmentDialog
+          key={editing === "new" ? "new" : editing.id}
+          department={editing === "new" ? null : editing}
+          defaultParentId={parentId}
+          onClose={() => setEditing(null)}
+        />
+      )}
 
       <ConfirmDialog
         open={deleting !== null}
         onOpenChange={(open) => !open && setDeleting(null)}
-        title="Delete department?"
-        description={
-          deletingCount > 0
-            ? `"${deleting?.name}" has ${deletingCount} products. They'll show as Unassigned until you move them to another department.`
-            : `"${deleting?.name}" will be removed.`
-        }
+        title={deleting?.parentId ? "Delete sub-department?" : "Delete department?"}
+        description={[
+          `"${deleting?.name}" will be removed`,
+          deletingSubs > 0 ? ` along with its ${deletingSubs} sub-department${deletingSubs === 1 ? "" : "s"}.` : ".",
+          deletingCount > 0 ? ` ${deletingCount} product${deletingCount === 1 ? "" : "s"} will show as Unassigned until you move them to another department.` : "",
+        ].join("")}
         onConfirm={() => deleting && deleteDepartment(deleting.id)}
       />
     </>
   );
 }
 
-function DepartmentDialog({ department, onClose }: { department: Department | null; onClose: () => void }) {
+function DepartmentDialog({ department, defaultParentId, onClose }: { department: Department | null; defaultParentId: string | null; onClose: () => void }) {
   const { departments, saveDepartment } = useAdminStore();
+  const [parentId, setParentId] = useState(department ? department.parentId : defaultParentId);
+  // Only one level of nesting: a department with sub-departments stays top-level.
+  const hasChildren = !!department && departments.some((d) => d.parentId === department.id);
+  const parents = departments.filter((d) => d.parentId === null && d.id !== department?.id);
   const [name, setName] = useState(department?.name ?? "");
   const [slug, setSlug] = useState(department?.slug ?? "");
   const [slugTouched, setSlugTouched] = useState(!!department);
@@ -127,6 +182,7 @@ function DepartmentDialog({ department, onClose }: { department: Department | nu
 
     saveDepartment({
       id: department?.id ?? newId("d"),
+      parentId,
       name: name.trim(),
       slug,
       description: description.trim(),
@@ -141,8 +197,8 @@ function DepartmentDialog({ department, onClose }: { department: Department | nu
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{department ? "Edit department" : "Add department"}</DialogTitle>
-          <DialogDescription>Departments group products by type.</DialogDescription>
+          <DialogTitle>{department ? "Edit department" : parentId ? "Add sub-department" : "Add department"}</DialogTitle>
+          <DialogDescription>Departments group products by type. Sub-departments split one further, e.g. Satnav Car Stereos under Car Stereos.</DialogDescription>
         </DialogHeader>
         <form id="department-form" onSubmit={submit} className="grid gap-4" noValidate>
           <Field id="df-name" label="Name" error={errors.name}>
@@ -153,9 +209,25 @@ function DepartmentDialog({ department, onClose }: { department: Department | nu
                 setName(e.target.value);
                 if (!slugTouched) setSlug(slugify(e.target.value));
               }}
-              placeholder="e.g. Audio Equipment"
+              placeholder={parentId ? "e.g. Satnav Car Stereos" : "e.g. Audio Equipment"}
               aria-invalid={!!errors.name}
             />
+          </Field>
+          <Field id="df-parent" label="Sits under">
+            <Select value={parentId ?? TOP_LEVEL} onValueChange={(v) => setParentId(v === TOP_LEVEL ? null : v)} disabled={hasChildren}>
+              <SelectTrigger id="df-parent" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={TOP_LEVEL}>Nothing (top-level department)</SelectItem>
+                {parents.map((d) => (
+                  <SelectItem key={d.id} value={d.id}>
+                    {d.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {hasChildren && <p className="text-xs text-muted-foreground">This department has sub-departments, so it stays top-level.</p>}
           </Field>
           <Field id="df-slug" label="URL slug" error={errors.slug}>
             <Input

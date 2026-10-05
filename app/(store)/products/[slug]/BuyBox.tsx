@@ -10,13 +10,13 @@ import { addToCart } from "@/lib/cart";
 import { formatPrice } from "@/lib/data";
 import { cn } from "@/lib/utils";
 
-type Props = { productId: string; name: string; image: string; price: number };
+type Props = { productId: string; name: string; image: string; price: number; stock: number };
 
 /**
  * Quantity, Add to cart and Buy now. Once those buttons scroll out of view, a bar with the
  * same actions sticks to the bottom of the screen, so buying is always one tap away.
  */
-export function BuyBox({ productId, name, image, price }: Props) {
+export function BuyBox({ productId, name, image, price, stock }: Props) {
   const router = useRouter();
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
@@ -43,6 +43,18 @@ export function BuyBox({ productId, name, image, price }: Props) {
     router.push("/checkout");
   };
 
+  if (stock === 0) {
+    return (
+      <div ref={anchor} className="mt-5 grid gap-2">
+        <Button size="xl" className="h-14 w-full rounded-xl text-base" disabled>
+          Sold out
+        </Button>
+        <p className="text-center text-sm text-muted-foreground">Back soon. Check again in a few days.</p>
+      </div>
+    );
+  }
+  const maxQty = Math.min(20, stock);
+
   return (
     <>
       <div ref={anchor} className="mt-5 grid gap-3">
@@ -54,7 +66,7 @@ export function BuyBox({ productId, name, image, price }: Props) {
             <span className="w-8 text-center font-semibold tabular-nums" aria-live="polite">
               {qty}
             </span>
-            <Button variant="ghost" size="icon-lg" className="mr-1 rounded-lg" aria-label="Increase quantity" disabled={qty >= 20} onClick={() => setQty((q) => q + 1)}>
+            <Button variant="ghost" size="icon-lg" className="mr-1 rounded-lg" aria-label="Increase quantity" disabled={qty >= maxQty} onClick={() => setQty((q) => q + 1)}>
               <Plus />
             </Button>
           </div>

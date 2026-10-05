@@ -1,7 +1,7 @@
 import "server-only";
 import type { Product } from "../types";
 
-type SeedProduct = Omit<Product, "deal">;
+type SeedProduct = Omit<Product, "deal" | "departmentId" | "departmentParentId" | "stock">;
 
 /** Catalogue source of truth. Upserted into the database on startup. */
 export const SEED_PRODUCTS: SeedProduct[] = [
@@ -194,7 +194,55 @@ export const SEED_PRODUCTS: SeedProduct[] = [
     description: "ADR-compliant LED headlight upgrade with a sharp cut-off, so you see further on country roads without dazzling oncoming traffic.",
     features: ["ADR compliant", "6500K daylight white", "Plug-and-play harness", "IP68 waterproof"],
   },
+  {
+    id: "p13",
+    slug: "beatdeck-b12-for-bmw",
+    name: 'BeatDeck B12 for BMW 12.3"',
+    brand: "BeatDeck",
+    category: "stereo",
+    price: 1199,
+    rrp: 1599,
+    rating: 4.8,
+    reviews: 214,
+    fits: ["bmw-3-series", "bmw-x5", "bmw-1-series"],
+    image: "/images/hero-interior.jpg",
+    description: "Factory-look 12.3-inch screen upgrade that keeps iDrive controls, with wireless CarPlay and Android Auto.",
+    features: ["Keeps iDrive controls", "Wireless CarPlay & Android Auto", "Factory-look 12.3\" screen", "Plug-and-play CAN-bus harness"],
+  },
+  {
+    id: "p14",
+    slug: "pulse-harman-upgrade-kit-bmw",
+    name: "Pulse Harman Upgrade Kit for BMW",
+    brand: "Pulse",
+    category: "speaker",
+    price: 799,
+    rrp: 999,
+    rating: 0,
+    reviews: 0,
+    fits: ["bmw-3-series", "bmw-x5"],
+    image: "/images/speaker-coaxial.jpg",
+    description: "Plug-and-play speaker kit for BMW factory locations.",
+    features: ["Fits factory locations", "No cutting or soldering", "Centre and underseat drivers"],
+  },
 ];
+
+/** Admin-only product fields: [sku, department id, stock, status]. */
+export const SEED_INVENTORY: Record<string, [sku: string, departmentId: string, stock: number, status: "active" | "draft"]> = {
+  p1: ["BD-X9-AND", "d-stereo", 42, "active"],
+  p2: ["PL-PRO-65C", "d-audio", 65, "active"],
+  p3: ["TH-12-USW", "d-audio", 9, "active"],
+  p4: ["VA-4CH-1200", "d-audio", 23, "active"],
+  p5: ["RE-4K-DUO", "d-dashcam", 31, "active"],
+  p6: ["LM-AMB-64", "d-lighting", 3, "active"],
+  p7: ["MC-MAG-15W", "d-mounts", 120, "active"],
+  p8: ["CC-7D-MAT", "d-interior", 27, "active"],
+  p9: ["BD-MINI-7", "d-stereo", 18, "active"],
+  p10: ["PL-CX-69", "d-audio", 40, "active"],
+  p11: ["TH-10-TUBE", "d-audio", 0, "active"],
+  p12: ["LM-MTX-LED", "d-lighting", 14, "active"],
+  p13: ["BD-B12-BMW", "d-stereo", 4, "active"],
+  p14: ["PL-HK-BMW", "d-audio", 6, "draft"],
+};
 
 export const SEED_TRENDING = ["p1", "p5", "p2", "p12", "p3", "p7", "p9", "p6"];
 

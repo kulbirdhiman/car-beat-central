@@ -3,10 +3,9 @@ import Link from "next/link";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Reveal } from "@/components/ui/Reveal";
-import { COUPONS } from "@/lib/pricing";
 import { SectionHeading } from "./SectionHeading";
 
-const FAQS = [
+const BASE_FAQS = [
   {
     q: "How do I know a part fits my car?",
     a: "Pick your make and model with “Select your vehicle” at the top of the page and we'll only show compatible parts. Every product page also shows a fitment check for your saved car. If something we said fits doesn't, we'll cover return postage.",
@@ -27,18 +26,19 @@ const FAQS = [
     q: "Do you install?",
     a: "Our partner installers work in every capital city, Monday to Saturday. Book online and we'll confirm a time within one business day.",
   },
-  {
-    q: "How do the offer codes work?",
-    a: `Enter one code at checkout. ${Object.entries(COUPONS)
-      .map(([code, text]) => `${code}: ${text.charAt(0).toLowerCase()}${text.slice(1)}`)
-      .join(". ")}.`,
-  },
 ];
+
+/** The codes answer lists whatever coupons are currently on live offers. */
+function codesFaq(codes: { code: string; description: string }[]) {
+  const list = codes.map(({ code, description }) => `${code}: ${description.charAt(0).toLowerCase()}${description.slice(1)}`).join(". ");
+  return { q: "How do the offer codes work?", a: `Enter one code at checkout.${list ? ` Current codes: ${list}.` : " Watch this page for current codes."}` };
+}
 
 type Stats = { rating: number; reviews: number };
 
 /** Questions on the right; rating proof and a human fallback on the left. */
-export function Faq({ stats }: { stats: Stats }) {
+export function Faq({ stats, codes }: { stats: Stats; codes: { code: string; description: string }[] }) {
+  const FAQS = [...BASE_FAQS, codesFaq(codes)];
   return (
     <section id="faq" className="mx-auto max-w-[1440px] scroll-mt-32 px-4 pb-20 pt-16 sm:px-6 sm:pb-28 sm:pt-24 lg:px-8">
       <div className="grid gap-8 lg:grid-cols-[1fr_1.6fr] lg:gap-12">

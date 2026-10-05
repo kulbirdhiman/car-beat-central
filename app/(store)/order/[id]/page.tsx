@@ -49,11 +49,11 @@ export default async function OrderPage(props: PageProps<"/order/[id]">) {
       <Card className="mt-8">
         <CardContent className="space-y-3 text-sm">
           {order.items.map((i) => (
-            <div key={i.product_id} className="flex justify-between gap-4">
+            <div key={i.productId} className="flex justify-between gap-4">
               <span>
                 {i.qty} × {i.name}
               </span>
-              <span className="tabular-nums">{formatCents(i.unit_price * i.qty)}</span>
+              <span className="tabular-nums">{formatCents(i.unitPrice * i.qty)}</span>
             </div>
           ))}
           <Separator />

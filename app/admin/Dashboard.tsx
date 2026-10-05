@@ -6,7 +6,7 @@ import { useAdminStore } from "@/components/admin/AdminStore";
 import { Empty, OrderStatusBadge, PageHeader, fmtDateTime } from "@/components/admin/ui";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { LOW_STOCK, ORDER_STATUS_LABEL, orderTotal } from "@/lib/admin/mock-data";
+import { LOW_STOCK, ORDER_STATUS_LABEL, orderTotal } from "@/lib/admin/model";
 import { formatCents } from "@/lib/data";
 import type { OrderStatus } from "@/lib/types";
 

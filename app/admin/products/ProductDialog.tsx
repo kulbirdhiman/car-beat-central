@@ -10,9 +10,11 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, Di
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import type { AdminProduct } from "@/lib/admin/mock-data";
+import { departmentTree, type AdminProduct } from "@/lib/admin/model";
+import { CATEGORY_LABELS } from "@/lib/data";
+import type { Category } from "@/lib/types";
 
-type Errors = Partial<Record<"name" | "sku" | "brand" | "departmentId" | "price" | "rrp" | "stock" | "image" | "fits", string>>;
+type Errors = Partial<Record<"name" | "sku" | "brand" | "departmentId" | "category" | "price" | "rrp" | "stock" | "image" | "fits", string>>;
 
 export function ProductDialog({ product, onClose }: { product: AdminProduct | null; onClose: () => void }) {
   const { departments, makes, saveProduct } = useAdminStore();
@@ -21,6 +23,7 @@ export function ProductDialog({ product, onClose }: { product: AdminProduct | nu
     sku: product?.sku ?? "",
     brand: product?.brand ?? "",
     departmentId: product?.departmentId ?? "",
+    category: product?.category ?? "",
     price: product ? String(product.price) : "",
     rrp: product ? String(product.rrp) : "",
     stock: product ? String(product.stock) : "0",
@@ -45,6 +48,7 @@ export function ProductDialog({ product, onClose }: { product: AdminProduct | nu
     if (!form.sku.trim()) next.sku = "Enter a SKU.";
     if (!form.brand.trim()) next.brand = "Enter a brand.";
     if (!form.departmentId) next.departmentId = "Choose a department.";
+    if (!form.category) next.category = "Choose a store category.";
     if (!Number.isInteger(price) || price <= 0) next.price = "Whole dollars, above 0.";
     if (!Number.isInteger(rrp) || rrp < price) next.rrp = "RRP can't be below the price.";
     if (!Number.isInteger(stock) || stock < 0) next.stock = "0 or more.";
@@ -55,10 +59,13 @@ export function ProductDialog({ product, onClose }: { product: AdminProduct | nu
 
     saveProduct({
       id: product?.id ?? newId("p"),
+      // New products get their store URL from the server.
+      slug: product?.slug ?? "",
       name: form.name.trim(),
       sku: form.sku.trim().toUpperCase(),
       brand: form.brand.trim(),
       departmentId: form.departmentId,
+      category: form.category as Category,
       price,
       rrp,
       stock,
@@ -94,9 +101,23 @@ export function ProductDialog({ product, onClose }: { product: AdminProduct | nu
                 <SelectValue placeholder="Choose…" />
               </SelectTrigger>
               <SelectContent>
-                {departments.map((d) => (
-                  <SelectItem key={d.id} value={d.id}>
+                {departmentTree(departments).map((d) => (
+                  <SelectItem key={d.id} value={d.id} className={d.depth ? "pl-6" : undefined}>
                     {d.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field id="pf-category" label="Store category" error={errors.category}>
+            <Select value={form.category} onValueChange={(v) => setForm((f) => ({ ...f, category: v }))}>
+              <SelectTrigger id="pf-category" className="w-full" aria-invalid={!!errors.category}>
+                <SelectValue placeholder="Choose…" />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(CATEGORY_LABELS) as Category[]).map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {CATEGORY_LABELS[c]}
                   </SelectItem>
                 ))}
               </SelectContent>

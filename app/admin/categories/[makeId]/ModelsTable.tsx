@@ -4,7 +4,7 @@ import { Plus } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
-import { idFrom, useAdminStore, vehicles } from "@/components/admin/AdminStore";
+import { idFrom, useAdminStore } from "@/components/admin/AdminStore";
 import { RowActions } from "@/components/admin/RowActions";
 import { SortableTable } from "@/components/admin/SortableTable";
 import { Empty, PageHeader, fmtDate } from "@/components/admin/ui";
@@ -12,10 +12,10 @@ import { VehicleBreadcrumb } from "@/components/admin/VehicleBreadcrumb";
 import { VehicleDialog } from "@/components/admin/VehicleDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import type { VehicleModel } from "@/lib/admin/mock-data";
+import type { VehicleModel } from "@/lib/admin/model";
 
 export function ModelsTable({ makeId }: { makeId: string }) {
-  const { makes, products, setMakes } = useAdminStore();
+  const { makes, products, saveModel, deleteModel, reorderModels } = useAdminStore();
   const [editing, setEditing] = useState<VehicleModel | "new" | null>(null);
   const [deleting, setDeleting] = useState<VehicleModel | null>(null);
 
@@ -58,7 +58,7 @@ export function ModelsTable({ makeId }: { makeId: string }) {
           ) : (
             <SortableTable
               rows={make.models}
-              onReorder={(rows) => setMakes((list) => vehicles.updateMake(list, make.id, (m) => ({ ...m, models: rows })))}
+              onReorder={(rows) => reorderModels(make.id, rows)}
               rowLabel={(m) => `${make.name} ${m.name}`}
               columns={[
                 {
@@ -99,17 +99,7 @@ export function ModelsTable({ makeId }: { makeId: string }) {
           initial={editing === "new" ? undefined : { name: editing.name, description: editing.description, extra: "" }}
           onClose={() => setEditing(null)}
           onSave={({ name, description }) =>
-            setMakes((list) =>
-              editing === "new"
-                ? vehicles.updateMake(list, make.id, (m) => ({
-                    ...m,
-                    models: [
-                      ...m.models,
-                      { id: idFrom(`${make.id}-${name}`, allModelIds), name, description, createdAt: new Date().toISOString(), subModels: [] },
-                    ],
-                  }))
-                : vehicles.updateModel(list, make.id, editing.id, (m) => ({ ...m, name, description })),
-            )
+            saveModel(make.id, { id: editing === "new" ? idFrom(`${make.id}-${name}`, allModelIds) : editing.id, name, description })
           }
         />
       )}
@@ -121,9 +111,7 @@ export function ModelsTable({ makeId }: { makeId: string }) {
         description={`This also deletes its ${deleting?.subModels.length ?? 0} sub-models.${
           deleting && fitted(deleting.id) ? ` ${fitted(deleting.id)} products are fitted to this model and will lose that fitment.` : ""
         }`}
-        onConfirm={() =>
-          deleting && setMakes((list) => vehicles.updateMake(list, make.id, (m) => ({ ...m, models: m.models.filter((x) => x.id !== deleting.id) })))
-        }
+        onConfirm={() => deleting && deleteModel(make.id, deleting.id)}
       />
     </>
   );

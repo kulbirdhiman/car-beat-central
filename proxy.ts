@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { isAdminAuthorized } from "./lib/server/admin-auth";
 
-/** Guards the admin dashboard with HTTP Basic auth. */
+/** Guards the admin dashboard and its API with HTTP Basic auth. */
 export function proxy(request: NextRequest) {
   if (!process.env.ADMIN_PASSWORD) {
     return new NextResponse("Admin is disabled. Set ADMIN_PASSWORD to enable it.", { status: 503 });
@@ -15,5 +15,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin", "/admin/:path*"],
+  matcher: ["/admin", "/admin/:path*", "/api/admin", "/api/admin/:path*"],
 };

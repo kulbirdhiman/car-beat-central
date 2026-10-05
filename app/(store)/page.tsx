@@ -9,8 +9,9 @@ import { InstallGallery } from "@/components/home/InstallGallery";
 import { Offers } from "@/components/home/offers/Offers";
 import { TrustBar } from "@/components/home/TrustBar";
 import { UpgradeSpotlight } from "@/components/home/UpgradeSpotlight";
-import { CATEGORY_LABELS, OFFERS } from "@/lib/data";
-import { getCategoryCounts, getFitCounts, getProductBySlug, listProducts } from "@/lib/server/queries";
+import { CATEGORY_LABELS } from "@/lib/data";
+import { listCoupons } from "@/lib/server/admin/promos";
+import { getCategoryCounts, getFitCounts, getLiveOffers, getProductBySlug, listProducts } from "@/lib/server/queries";
 import type { Category } from "@/lib/types";
 
 const RAIL_CATEGORIES: Category[] = ["stereo", "speaker", "subwoofer", "dashcam", "lighting"];
@@ -34,21 +35,24 @@ export default function Home() {
       products: byRating.filter((p) => p.category === c),
     })),
   ].filter((g) => g.products.length > 0);
+  const offers = getLiveOffers();
+  const offerCodes = new Set(offers.map((o) => o.code));
+  const codes = listCoupons().filter((c) => offerCodes.has(c.code));
 
   return (
     <>
       {/* Deals lead: banners and today's price drops, then browsing by category, product and car. */}
-      <Hero promo={OFFERS.find((o) => o.code === "GLOWUP") ?? OFFERS[0]} fitCounts={getFitCounts()} />
+      <Hero promo={offers[0]} fitCounts={getFitCounts()} />
       <TrustBar />
       <TodayDeals />
       <CategoryGrid counts={getCategoryCounts()} />
       {spotlight && <UpgradeSpotlight product={spotlight} />}
       <CategoryRail groups={groups} />
       <GarageSection products={products} />
-      <Offers />
+      <Offers offers={offers} />
       <InstallerSection />
       <InstallGallery />
-      <Faq stats={stats} />
+      <Faq stats={stats} codes={codes} />
     </>
   );
 }

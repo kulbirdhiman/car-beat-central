@@ -4,12 +4,12 @@ import { ArrowRight, ArrowUpLeft, CarFront, Clock, Loader2, Search, TrendingUp, 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
-import { CAR_BRANDS, CATEGORY_IMAGES, CATEGORY_LABELS, formatPrice } from "@/lib/data";
+import { CATEGORY_IMAGES, CATEGORY_LABELS, formatPrice } from "@/lib/data";
+import { useCarBrands } from "@/lib/garage";
 import type { Category, Product } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const POPULAR = ["CarPlay stereo", "Dash cam", "Subwoofer", "LED headlights", "Speakers", "Amplifier"];
-const VEHICLES = CAR_BRANDS.flatMap((b) => b.models.map((m) => ({ id: m.id, label: `${b.name} ${m.name}` })));
 const CATEGORIES = Object.keys(CATEGORY_LABELS) as Category[];
 const RECENT_KEY = "carbeat:recent-searches";
 
@@ -53,6 +53,7 @@ type Option = { key: string; href: string; term?: string; render: () => ReactNod
  * and Enter with nothing highlighted goes to the full results page.
  */
 export function SearchBox({ className }: { className?: string }) {
+  const brands = useCarBrands();
   const router = useRouter();
   const listId = useId();
   const root = useRef<HTMLFormElement>(null);
@@ -117,7 +118,7 @@ export function SearchBox({ className }: { className?: string }) {
   const categories = q ? CATEGORIES.filter((c) => CATEGORY_LABELS[c].toLowerCase().includes(lower) || c.includes(lower)).slice(0, 3) : [];
   // Every typed word must start a word of the vehicle name: "toy hi" finds Toyota HiLux, "sub" finds nothing.
   const vehicles = q
-    ? VEHICLES.filter((v) => {
+    ? brands.flatMap((b) => b.models.map((m) => ({ id: m.id, label: `${b.name} ${m.name}` }))).filter((v) => {
         const words = v.label.toLowerCase().split(/[\s-]+/);
         return lower.split(/\s+/).every((t) => words.some((w) => w.startsWith(t) || w.replace(/[^a-z0-9]/g, "").startsWith(t)));
       }).slice(0, 3)

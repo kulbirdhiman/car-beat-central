@@ -5,11 +5,10 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { CAR_BRANDS } from "@/lib/data";
-import { findCar, useGarage } from "@/lib/garage";
+import { findCar, useCarBrands, useGarage } from "@/lib/garage";
 import { cn } from "@/lib/utils";
 
-const POPULAR = ["hilux", "ranger", "triton", "dmax", "rav4", "corolla"].map(findCar).filter((c) => c !== null);
+const POPULAR = ["hilux", "ranger", "triton", "dmax", "rav4", "corolla"];
 
 const selectClass =
   "h-10 w-full appearance-none rounded-lg border border-input bg-background pl-3 pr-9 text-sm outline-none transition-colors focus:border-primary disabled:opacity-50";
@@ -29,10 +28,12 @@ export function VehicleFilter({ modelId, fitCounts }: { modelId?: string; fitCou
   const pathname = usePathname();
   const params = useSearchParams();
   const garage = useGarage();
-  const selected = findCar(modelId ?? null);
+  const brands = useCarBrands();
+  const selected = findCar(brands, modelId ?? null);
+  const popular = POPULAR.map((id) => findCar(brands, id)).filter((c) => c !== null);
   const [brandId, setBrandId] = useState(selected?.brand.id ?? "");
   const [pick, setPick] = useState(selected?.model.id ?? "");
-  const brand = CAR_BRANDS.find((b) => b.id === brandId);
+  const brand = brands.find((b) => b.id === brandId);
 
   const hrefFor = (id: string | null) => {
     const next = new URLSearchParams(params);
@@ -89,7 +90,7 @@ export function VehicleFilter({ modelId, fitCounts }: { modelId?: string; fitCou
             style={chevron}
           >
             <option value="">Select make</option>
-            {CAR_BRANDS.map((b) => (
+            {brands.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.name}
               </option>
@@ -120,7 +121,7 @@ export function VehicleFilter({ modelId, fitCounts }: { modelId?: string; fitCou
 
         <p className="mt-4 text-xs font-medium text-muted-foreground">Popular vehicles</p>
         <div className="mt-2 flex flex-wrap gap-1.5">
-          {POPULAR.map((c) => (
+          {popular.map((c) => (
             <button
               key={c.model.id}
               type="button"
