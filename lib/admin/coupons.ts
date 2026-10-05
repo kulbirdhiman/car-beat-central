@@ -1,35 +1,42 @@
-import { couponValueLabel, promoStatus, type AdminProduct, type Coupon, type Department, type VehicleMake } from "./mock-data";
+import { couponValueLabel, departmentLabel, promoStatus, type AdminProduct, type Coupon, type Department, type VehicleMake } from "./model";
 
 /**
  * Coupon rules: which cart lines a code applies to, and how much it takes off.
- * Pure functions so the admin "Test this coupon" panel and, later, checkout share one implementation.
+ * Pure functions, so the admin "Test this coupon" panel and checkout share one implementation.
  * Money in and out is cents; coupon settings (value, minOrder, maxDiscount) are whole AUD.
  */
 
-export type TestLine = { product: AdminProduct; qty: number };
+/**
+ * What a coupon needs to know about a product. `price` is the unit price charged, whole AUD.
+ * `departmentParentId` is set when the product is in a sub-department, so a coupon for the parent covers it too.
+ */
+export type CouponProduct = Pick<AdminProduct, "id" | "fits" | "price"> & { departmentId: string | null; departmentParentId?: string | null };
+
+/** A cart line. The admin tester uses full products; checkout passes just what pricing needs. */
+export type TestLine<P extends CouponProduct = AdminProduct> = { product: P; qty: number };
 
 export type CouponResult =
   | { ok: true; discount: number; freeShipping: boolean; eligibleSubtotal: number; capped: boolean; eligibleProductIds: string[] }
   | { ok: false; reason: string };
 
 /** Whether a product is covered by the coupon's scope. */
-export function couponCoversProduct(coupon: Coupon, product: AdminProduct) {
+export function couponCoversProduct(coupon: Coupon, product: CouponProduct) {
   switch (coupon.scope) {
     case "all":
       return true;
     case "products":
       return coupon.productIds.includes(product.id);
     case "departments":
-      return coupon.departmentIds.includes(product.departmentId);
+      return [product.departmentId, product.departmentParentId].some((id) => id != null && coupon.departmentIds.includes(id));
     case "models":
       return product.fits === "universal" || product.fits.some((id) => coupon.modelIds.includes(id));
   }
 }
 
 const cents = (aud: number) => aud * 100;
-const lineTotal = (l: TestLine) => cents(l.product.price) * l.qty;
+const lineTotal = (l: TestLine<CouponProduct>) => cents(l.product.price) * l.qty;
 
-export function evaluateCoupon(coupon: Coupon, lines: TestLine[], opts: { isFirstOrder: boolean }): CouponResult {
+export function evaluateCoupon(coupon: Coupon, lines: TestLine<CouponProduct>[], opts: { isFirstOrder: boolean }): CouponResult {
   const status = promoStatus(coupon);
   if (status === "off") return { ok: false, reason: "This code is turned off." };
   if (status === "expired") return { ok: false, reason: "This code has expired." };
@@ -89,7 +96,7 @@ export function couponScopeSummary(coupon: Coupon, data: { products: AdminProduc
       return names.length === 1 ? names[0]! : `${names.length} products: ${names.join(", ")}`;
     }
     case "departments":
-      return coupon.departmentIds.map((id) => data.departments.find((d) => d.id === id)?.name ?? "Deleted department").join(", ");
+      return coupon.departmentIds.map((id) => departmentLabel(data.departments, id) ?? "Deleted department").join(", ");
     case "models":
       return (
         data.makes

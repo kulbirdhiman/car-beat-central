@@ -60,7 +60,11 @@ function OfferTile({ offer }: { offer: Offer }) {
           <div>
             <p className="font-display text-xl font-extrabold leading-none">{offer.highlight}</p>
             <p className="mt-2 flex items-center justify-between gap-2 text-xs">
-              <span className="rounded border border-dashed border-white/50 px-1.5 py-0.5 font-mono font-semibold tracking-wider">{offer.code}</span>
+              {offer.code ? (
+                <span className="rounded border border-dashed border-white/50 px-1.5 py-0.5 font-mono font-semibold tracking-wider">{offer.code}</span>
+              ) : (
+                <span />
+              )}
               <span className="flex items-center gap-0.5 font-semibold text-white/85 group-hover:text-white">
                 View offer <ChevronRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
               </span>
@@ -79,23 +83,27 @@ function OfferTile({ offer }: { offer: Offer }) {
           <DialogTitle className="font-display text-xl font-bold">{offer.title}</DialogTitle>
           <DialogDescription className="mt-1">{offer.subtitle}</DialogDescription>
 
-          <div className="mt-5 flex items-center justify-between gap-3 rounded-xl bg-secondary p-3">
-            <span className="text-sm text-muted-foreground">Your code</span>
-            <CopyCodeButton code={offer.code} />
-          </div>
+          {offer.code && (
+            <>
+              <div className="mt-5 flex items-center justify-between gap-3 rounded-xl bg-secondary p-3">
+                <span className="text-sm text-muted-foreground">Your code</span>
+                <CopyCodeButton code={offer.code} />
+              </div>
 
-          <p className="mt-5 text-sm font-semibold">How to use it</p>
-          <ol className="mt-2 space-y-2 text-sm text-muted-foreground">
-            {HOW_TO.map((step, i) => (
-              <li key={step} className="flex items-center gap-2.5">
-                <span className="grid size-5 shrink-0 place-items-center rounded-full bg-primary/10 font-mono text-[11px] font-bold text-primary">{i + 1}</span>
-                {step}
-              </li>
-            ))}
-          </ol>
-          <p className="mt-4 flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Check className="size-3.5 text-success" /> One code per order.
-          </p>
+              <p className="mt-5 text-sm font-semibold">How to use it</p>
+              <ol className="mt-2 space-y-2 text-sm text-muted-foreground">
+                {HOW_TO.map((step, i) => (
+                  <li key={step} className="flex items-center gap-2.5">
+                    <span className="grid size-5 shrink-0 place-items-center rounded-full bg-primary/10 font-mono text-[11px] font-bold text-primary">{i + 1}</span>
+                    {step}
+                  </li>
+                ))}
+              </ol>
+              <p className="mt-4 flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Check className="size-3.5 text-success" /> One code per order.
+              </p>
+            </>
+          )}
 
           <DialogClose asChild>
             <Button asChild size="xl" className="mt-5 w-full">

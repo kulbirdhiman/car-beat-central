@@ -12,7 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { LOW_STOCK, type AdminProduct, type VehicleMake } from "@/lib/admin/mock-data";
+import { departmentLabel, departmentTree, LOW_STOCK, type AdminProduct, type VehicleMake } from "@/lib/admin/model";
 import { formatPrice } from "@/lib/data";
 import { ProductDialog } from "./ProductDialog";
 
@@ -54,12 +54,13 @@ export function ProductsManager() {
   const rows = products.filter(
     (p) =>
       (!q || p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q) || p.brand.toLowerCase().includes(q)) &&
-      (department === ALL || p.departmentId === department) &&
+      // Filtering by a department includes its sub-departments.
+      (department === ALL || p.departmentId === department || departments.some((d) => d.id === p.departmentId && d.parentId === department)) &&
       (status === ALL || p.status === status) &&
       (make === ALL || p.fits === "universal" || p.fits.some((id) => makeModels.has(id))),
   );
 
-  const departmentName = (id: string) => departments.find((d) => d.id === id)?.name ?? "Unassigned";
+  const departmentName = (id: string) => departmentLabel(departments, id) ?? "Unassigned";
 
   return (
     <>
@@ -86,8 +87,8 @@ export function ProductsManager() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={ALL}>All departments</SelectItem>
-                {departments.map((d) => (
-                  <SelectItem key={d.id} value={d.id}>
+                {departmentTree(departments).map((d) => (
+                  <SelectItem key={d.id} value={d.id} className={d.depth ? "pl-6" : undefined}>
                     {d.name}
                   </SelectItem>
                 ))}

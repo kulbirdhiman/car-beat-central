@@ -21,6 +21,12 @@ export type Product = {
   reviews: number;
   /** Car model ids this product fits, or "universal". */
   fits: string[] | "universal";
+  /** Admin department the product belongs to (used for coupon scopes). */
+  departmentId: string | null;
+  /** Parent of the product's department when that is a sub-department, else null. */
+  departmentParentId: string | null;
+  /** Units on hand; 0 means sold out. */
+  stock: number;
   badge?: string;
   image: string;
   description: string;
@@ -39,7 +45,8 @@ export type Offer = {
   id: string;
   title: string;
   subtitle: string;
-  code: string;
+  /** Coupon code shown on the banner, if the offer has one. */
+  code: string | null;
   highlight: string;
   image: string;
   /** Where "Shop this offer" goes. */

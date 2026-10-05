@@ -4,7 +4,8 @@ import Link from "next/link";
 import { AddToCartButton } from "@/components/product/AddToCartButton";
 import { Button } from "@/components/ui/button";
 import { Reveal } from "@/components/ui/Reveal";
-import { CAR_BRANDS, discountPercent, formatPrice } from "@/lib/data";
+import { discountPercent, formatPrice } from "@/lib/data";
+import { getCarBrands } from "@/lib/server/queries";
 import type { Product } from "@/lib/types";
 
 const SPECS = [
@@ -14,13 +15,12 @@ const SPECS = [
   { icon: Camera, value: "HD", label: "Reverse camera input" },
 ];
 
-const MODEL_NAMES = Object.fromEntries(CAR_BRANDS.flatMap((b) => b.models.map((m) => [m.id, m.name])));
-
 /** One hero product, sold on its specs: image left, spec tiles, fitment and price right. */
 export function UpgradeSpotlight({ product }: { product: Product }) {
   const price = product.deal?.price ?? product.price;
   const off = discountPercent(price, product.rrp);
-  const fits = product.fits === "universal" ? [] : product.fits.map((id) => MODEL_NAMES[id]).filter(Boolean);
+  const modelNames = Object.fromEntries(getCarBrands().flatMap((b) => b.models.map((m) => [m.id, m.name])));
+  const fits = product.fits === "universal" ? [] : product.fits.map((id) => modelNames[id]).filter(Boolean);
 
   return (
     <section className="mx-auto max-w-[1440px] px-4 pt-16 sm:px-6 sm:pt-24 lg:px-8">

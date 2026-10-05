@@ -5,8 +5,8 @@ import { notFound } from "next/navigation";
 import { PageShell } from "@/components/layout/PageShell";
 import { ProductCard } from "@/components/product/ProductCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CAR_BRANDS, CATEGORY_GALLERY, CATEGORY_LABELS, discountPercent, formatPrice } from "@/lib/data";
-import { getProductBySlug, getRelated, listProducts } from "@/lib/server/queries";
+import { CATEGORY_GALLERY, CATEGORY_LABELS, discountPercent, formatPrice } from "@/lib/data";
+import { getCarBrands, getProductBySlug, getRelated, listProducts } from "@/lib/server/queries";
 import { listReviews } from "@/lib/server/reviews";
 import { getSpecs } from "@/lib/server/specs";
 import { cn } from "@/lib/utils";
@@ -43,7 +43,7 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
   const groups =
     fits === "universal"
       ? null
-      : CAR_BRANDS.map((b) => ({ brand: b.name, models: b.models.filter((m) => fits.includes(m.id)) })).filter((g) => g.models.length > 0);
+      : getCarBrands().map((b) => ({ brand: b.name, models: b.models.filter((m) => fits.includes(m.id)) })).filter((g) => g.models.length > 0);
   const reviews = listReviews(product.id);
   const flags = [
     ...(product.deal ? [{ label: "Today's deal", tone: "deal" as const }] : []),
@@ -118,7 +118,7 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
             )}
 
             <FitmentCheck fits={product.fits} />
-            <BuyBox productId={product.id} name={product.name} image={product.image} price={price} />
+            <BuyBox productId={product.id} name={product.name} image={product.image} price={price} stock={product.stock} />
           </div>
 
           <ul className="mt-4 grid grid-cols-2 gap-2">

@@ -11,7 +11,7 @@ import { SLIDE_MS, SLIDES } from "./slides";
 import { VehicleSearchCard } from "./VehicleSearchCard";
 
 /** Banner carousel on the left; on the right, the vehicle search tile above a promo tile. */
-export function Hero({ promo, fitCounts }: { promo: Offer; fitCounts: Record<string, number> }) {
+export function Hero({ promo, fitCounts }: { promo?: Offer; fitCounts: Record<string, number> }) {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const slide = SLIDES[index];
@@ -106,19 +106,25 @@ export function Hero({ promo, fitCounts }: { promo: Offer; fitCounts: Record<str
       {/* The promo is hidden on phones so deals come sooner; its code is also in the Offers section. */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
         <VehicleSearchCard fitCounts={fitCounts} />
-        <Link href="/#offers" className="group relative isolate hidden min-h-[200px] flex-col justify-end overflow-clip rounded-2xl bg-ink p-6 text-white sm:flex">
-          <Image src={promo.image} alt="" fill sizes="(min-width: 1024px) 33vw, 50vw" className="-z-10 object-cover transition-transform duration-700 group-hover:scale-105" />
-          <div className="absolute inset-0 -z-10 bg-gradient-to-t from-ink/95 via-ink/50 to-ink/10" />
-          <p className="text-xs font-semibold uppercase tracking-wider text-white/70">{promo.title}</p>
-          <p className="mt-1 font-display text-4xl font-extrabold leading-none">{promo.highlight}</p>
-          <p className="mt-2 max-w-xs text-sm text-white/75">{promo.subtitle}</p>
-          <p className="mt-4 flex items-center justify-between text-sm">
-            <span>
-              Code <span className="rounded border border-dashed border-white/40 px-1.5 py-0.5 font-mono font-semibold tracking-wider">{promo.code}</span>
-            </span>
-            <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
-          </p>
-        </Link>
+        {promo && (
+          <Link href="/#offers" className="group relative isolate hidden min-h-[200px] flex-col justify-end overflow-clip rounded-2xl bg-ink p-6 text-white sm:flex">
+            <Image src={promo.image} alt="" fill sizes="(min-width: 1024px) 33vw, 50vw" className="-z-10 object-cover transition-transform duration-700 group-hover:scale-105" />
+            <div className="absolute inset-0 -z-10 bg-gradient-to-t from-ink/95 via-ink/50 to-ink/10" />
+            <p className="text-xs font-semibold uppercase tracking-wider text-white/70">{promo.title}</p>
+            <p className="mt-1 font-display text-4xl font-extrabold leading-none">{promo.highlight}</p>
+            <p className="mt-2 max-w-xs text-sm text-white/75">{promo.subtitle}</p>
+            <p className="mt-4 flex items-center justify-between text-sm">
+              {promo.code ? (
+                <span>
+                  Code <span className="rounded border border-dashed border-white/40 px-1.5 py-0.5 font-mono font-semibold tracking-wider">{promo.code}</span>
+                </span>
+              ) : (
+                <span className="font-semibold">See the offer</span>
+              )}
+              <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
+            </p>
+          </Link>
+        )}
       </div>
     </section>
   );

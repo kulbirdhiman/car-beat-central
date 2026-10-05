@@ -4,7 +4,8 @@ import { Search } from "lucide-react";
 import { useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import type { AdminProduct, Department, VehicleMake } from "@/lib/admin/mock-data";
+import { cn } from "@/lib/utils";
+import { departmentTree, type AdminProduct, type Department, type VehicleMake } from "@/lib/admin/model";
 import { formatPrice } from "@/lib/data";
 
 function toggle(set: Set<string>, ids: string[], on: boolean) {
@@ -53,9 +54,9 @@ export function ModelPicker({ makes, value, onChange }: { makes: VehicleMake[]; 
 
 export function DepartmentPicker({ departments, value, onChange }: { departments: Department[]; value: Set<string>; onChange: (next: Set<string>) => void }) {
   return (
-    <div className="grid gap-2 rounded-lg border p-3 sm:grid-cols-2">
-      {departments.map((d) => (
-        <label key={d.id} className="flex items-center gap-2 text-sm">
+    <div className="grid gap-2 rounded-lg border p-3">
+      {departmentTree(departments).map((d) => (
+        <label key={d.id} className={cn("flex items-center gap-2 text-sm", d.depth && "pl-6 text-muted-foreground")}>
           <Checkbox checked={value.has(d.id)} onCheckedChange={(v) => onChange(toggle(value, [d.id], v === true))} />
           {d.name}
         </label>

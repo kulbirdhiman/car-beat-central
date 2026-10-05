@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { couponCoversProduct, evaluateCoupon, type TestLine } from "@/lib/admin/coupons";
-import type { Coupon } from "@/lib/admin/mock-data";
+import type { Coupon } from "@/lib/admin/model";
 import { formatCents, formatPrice } from "@/lib/data";
 
 /** Try the coupon (as currently filled in) against a sample cart before saving it. */

@@ -5,8 +5,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { ProductCard } from "@/components/product/ProductCard";
 import { Button } from "@/components/ui/button";
-import { CAR_BRANDS, productFitsModel } from "@/lib/data";
-import { findCar, useGarage } from "@/lib/garage";
+import { productFitsModel } from "@/lib/data";
+import { findCar, useCarBrands, useGarage } from "@/lib/garage";
 import type { Product } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { SectionHeading } from "./SectionHeading";
@@ -14,9 +14,13 @@ import { SectionHeading } from "./SectionHeading";
 /** Make chips, then model chips, then the parts that fit. Starts on the saved car if there is one. */
 export function GarageSection({ products }: { products: Product[] }) {
   const garage = useGarage();
+  const brands = useCarBrands();
   // Until the shopper picks something here, show their saved car (or the Ranger, Australia's best seller).
   const [picked, setPicked] = useState<string | null>(null);
-  const { brand, model } = findCar(picked ?? garage.car?.model.id ?? "ranger")!;
+  const car =
+    findCar(brands, picked ?? garage.car?.model.id ?? "ranger") ?? (brands[0] ? { brand: brands[0], model: brands[0].models[0] } : null);
+  if (!car) return null;
+  const { brand, model } = car;
   const isSaved = garage.car?.model.id === model.id;
 
   // Model-specific parts first, then universal ones.
@@ -42,7 +46,7 @@ export function GarageSection({ products }: { products: Product[] }) {
 
       <div className="rounded-2xl border bg-card p-4 sm:p-6">
         <div role="group" aria-label="Make" className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1">
-          {CAR_BRANDS.map((b) => (
+          {brands.map((b) => (
             <button
               key={b.id}
               type="button"

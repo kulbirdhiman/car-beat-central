@@ -4,7 +4,7 @@ import { Plus } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
-import { idFrom, useAdminStore, vehicles } from "@/components/admin/AdminStore";
+import { idFrom, useAdminStore } from "@/components/admin/AdminStore";
 import { RowActions } from "@/components/admin/RowActions";
 import { SortableTable } from "@/components/admin/SortableTable";
 import { Empty, PageHeader, fmtDate } from "@/components/admin/ui";
@@ -12,10 +12,10 @@ import { VehicleBreadcrumb } from "@/components/admin/VehicleBreadcrumb";
 import { VehicleDialog } from "@/components/admin/VehicleDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import type { SubModel } from "@/lib/admin/mock-data";
+import type { SubModel } from "@/lib/admin/model";
 
 export function SubModelsTable({ makeId, modelId }: { makeId: string; modelId: string }) {
-  const { makes, setMakes } = useAdminStore();
+  const { makes, saveSubModel, deleteSubModel, reorderSubModels } = useAdminStore();
   const [editing, setEditing] = useState<SubModel | "new" | null>(null);
   const [deleting, setDeleting] = useState<SubModel | null>(null);
 
@@ -42,8 +42,6 @@ export function SubModelsTable({ makeId, modelId }: { makeId: string; modelId: s
 
   const fullName = `${make.name} ${model.name}`;
   const allSubIds = makes.flatMap((m) => m.models.flatMap((x) => x.subModels.map((s) => s.id)));
-  const setSubModels = (fn: (subs: SubModel[]) => SubModel[]) =>
-    setMakes((list) => vehicles.updateModel(list, make.id, model.id, (m) => ({ ...m, subModels: fn(m.subModels) })));
 
   return (
     <>
@@ -70,7 +68,7 @@ export function SubModelsTable({ makeId, modelId }: { makeId: string; modelId: s
           ) : (
             <SortableTable
               rows={model.subModels}
-              onReorder={(rows) => setSubModels(() => rows)}
+              onReorder={(rows) => reorderSubModels(make.id, model.id, rows)}
               rowLabel={(s) => s.name}
               columns={[
                 { header: "Sub-model", cell: (s) => <span className="font-medium">{s.name}</span> },
@@ -95,11 +93,12 @@ export function SubModelsTable({ makeId, modelId }: { makeId: string; modelId: s
           initial={editing === "new" ? undefined : { name: editing.name, description: editing.description, extra: editing.years }}
           onClose={() => setEditing(null)}
           onSave={({ name, description, extra }) =>
-            setSubModels((subs) =>
-              editing === "new"
-                ? [...subs, { id: idFrom(`${model.id}-${name}`, allSubIds), name, description, years: extra, createdAt: new Date().toISOString() }]
-                : subs.map((s) => (s.id === editing.id ? { ...s, name, description, years: extra } : s)),
-            )
+            saveSubModel(make.id, model.id, {
+              id: editing === "new" ? idFrom(`${model.id}-${name}`, allSubIds) : editing.id,
+              name,
+              description,
+              years: extra,
+            })
           }
         />
       )}
@@ -109,7 +108,7 @@ export function SubModelsTable({ makeId, modelId }: { makeId: string; modelId: s
         onOpenChange={(open) => !open && setDeleting(null)}
         title={`Delete ${deleting?.name}?`}
         description="Products are fitted by model, so no products are affected."
-        onConfirm={() => deleting && setSubModels((subs) => subs.filter((s) => s.id !== deleting.id))}
+        onConfirm={() => deleting && deleteSubModel(make.id, model.id, deleting.id)}
       />
     </>
   );

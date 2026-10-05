@@ -1,4 +1,4 @@
-import type { CarBrand, Category, Offer, Product } from "./types";
+import type { Category, Product } from "./types";
 
 export const CATEGORY_LABELS: Record<Category, string> = {
   stereo: "Car Stereos",
@@ -21,92 +21,6 @@ export const CATEGORY_IMAGES: Record<Category, string> = {
   mount: "/images/phone-mount.jpg",
   interior: "/images/air-vents.jpg",
 };
-
-export const CAR_BRANDS: CarBrand[] = [
-  {
-    id: "toyota",
-    name: "Toyota",
-    models: [
-      { id: "hilux", name: "HiLux" },
-      { id: "rav4", name: "RAV4" },
-      { id: "landcruiser", name: "LandCruiser" },
-      { id: "corolla", name: "Corolla" },
-    ],
-  },
-  {
-    id: "ford",
-    name: "Ford",
-    models: [
-      { id: "ranger", name: "Ranger" },
-      { id: "everest", name: "Everest" },
-    ],
-  },
-  {
-    id: "mazda",
-    name: "Mazda",
-    models: [
-      { id: "cx5", name: "CX-5" },
-      { id: "bt50", name: "BT-50" },
-      { id: "mazda3", name: "Mazda3" },
-    ],
-  },
-  {
-    id: "hyundai",
-    name: "Hyundai",
-    models: [
-      { id: "i30", name: "i30" },
-      { id: "tucson", name: "Tucson" },
-    ],
-  },
-  {
-    id: "mitsubishi",
-    name: "Mitsubishi",
-    models: [
-      { id: "triton", name: "Triton" },
-      { id: "outlander", name: "Outlander" },
-    ],
-  },
-  {
-    id: "kia",
-    name: "Kia",
-    models: [{ id: "sportage", name: "Sportage" }],
-  },
-  {
-    id: "isuzu",
-    name: "Isuzu",
-    models: [{ id: "dmax", name: "D-Max" }],
-  },
-];
-
-export const OFFERS: Offer[] = [
-  {
-    id: "o1",
-    title: "Ute & 4x4 Audio Upgrade",
-    subtitle: "Stereo + speakers + sub bundle for HiLux, Ranger, Triton and more. Free fitting.",
-    code: "BASSDROP",
-    highlight: "30% OFF",
-    image: "/images/hero-ranger.jpg",
-    href: "/shop?category=stereo",
-  },
-  {
-    id: "o2",
-    title: "Road-trip ready",
-    subtitle: "$50 off your first order over $299",
-    code: "FIRSTBEAT",
-    highlight: "$50 OFF",
-    image: "/images/coast-road.jpg",
-    href: "/shop",
-  },
-  {
-    id: "o3",
-    title: "Lighting Week",
-    subtitle: "All LED headlights and ambient kits",
-    code: "GLOWUP",
-    highlight: "Buy 2 Get 1",
-    image: "/images/headlights-red.jpg",
-    href: "/shop?category=lighting",
-  },
-];
 
 export function productFitsModel(product: Pick<Product, "fits">, modelId: string) {
   return product.fits === "universal" || product.fits.includes(modelId);
