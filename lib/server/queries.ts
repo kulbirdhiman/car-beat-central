@@ -2,7 +2,7 @@ import "server-only";
 import { and, asc, count, desc, eq, inArray, isNotNull, like, lte, ne, or, sql, type SQL } from "drizzle-orm";
 import type { AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 import { productFitsModel } from "../data";
-import type { CarBrand, Category, Offer, Product } from "../types";
+import type { CarBrand, Category, Offer, Product, StoreDepartment } from "../types";
 import { db } from "./db";
 import { coupons, deals, departments, offers, products, vehicleMakes, vehicleModels } from "./schema";
 
@@ -13,14 +13,26 @@ const isActive = eq(products.status, "active");
 /** Products with their deal, if any, and their department's parent (for sub-departments). */
 const selectProducts = () =>
   db
-    .select({ product: products, dealPrice: deals.dealPrice, claimed: deals.claimed, departmentParentId: departments.parentId })
+    .select({
+      product: products,
+      dealPrice: deals.dealPrice,
+      claimed: deals.claimed,
+      departmentName: departments.name,
+      departmentParentId: departments.parentId,
+    })
     .from(products)
     .leftJoin(deals, eq(deals.productId, products.id))
     .leftJoin(departments, eq(departments.id, products.departmentId));
 
-type ProductRow = { product: typeof products.$inferSelect; dealPrice: number | null; claimed: number | null; departmentParentId: string | null };
+type ProductRow = {
+  product: typeof products.$inferSelect;
+  dealPrice: number | null;
+  claimed: number | null;
+  departmentName: string | null;
+  departmentParentId: string | null;
+};
 
-function toProduct({ product: p, dealPrice, claimed, departmentParentId }: ProductRow): Product {
+function toProduct({ product: p, dealPrice, claimed, departmentName, departmentParentId }: ProductRow): Product {
   return {
     id: p.id,
     slug: p.slug,
@@ -37,6 +49,7 @@ function toProduct({ product: p, dealPrice, claimed, departmentParentId }: Produ
     description: p.description,
     features: p.features,
     departmentId: p.departmentId,
+    departmentName,
     departmentParentId,
     stock: p.stock,
     deal: dealPrice === null ? undefined : { price: dealPrice, claimed: claimed ?? 0 },
@@ -63,8 +76,8 @@ export type SortKey = keyof typeof SORTS;
 export type ProductFilters = {
   q?: string;
   category?: Category;
-  /** Sub-department slug, e.g. "satnav-car-stereos". */
-  sub?: string;
+  /** Department slug; a top-level department includes its sub-departments' products. */
+  dept?: string;
   model?: string;
   maxPrice?: number;
   onSale?: boolean;
@@ -89,12 +102,18 @@ export function listProducts(filters: ProductFilters = {}): Product[] {
     where.push(
       models.length > 0
         ? fitsAny(models.map((m) => m.id))
-        : or(like(products.name, pattern), like(products.brand, pattern), like(products.category, pattern)),
+        : or(like(products.name, pattern), like(products.brand, pattern), like(products.category, pattern), like(departments.name, pattern)),
     );
   }
   if (filters.category) where.push(eq(products.category, filters.category));
-  if (filters.sub) {
-    where.push(inArray(products.departmentId, db.select({ id: departments.id }).from(departments).where(eq(departments.slug, filters.sub))));
+  if (filters.dept) {
+    const dept = db.select({ id: departments.id }).from(departments).where(eq(departments.slug, filters.dept));
+    where.push(
+      inArray(
+        products.departmentId,
+        db.select({ id: departments.id }).from(departments).where(or(eq(departments.slug, filters.dept), inArray(departments.parentId, dept))),
+      ),
+    );
   }
   if (filters.model) where.push(fitsAny([filters.model]));
   if (filters.maxPrice) where.push(lte(price, filters.maxPrice));
@@ -127,7 +146,6 @@ const bySlug = selectProducts()
   .prepare();
 const trending = selectProducts().where(and(isActive, isNotNull(products.trendingRank))).orderBy(products.trendingRank).prepare();
 const dealsNow = selectProducts().where(and(isActive, isNotNull(deals.dealPrice))).orderBy(desc(deals.claimed)).prepare();
-const categoryCounts = db.select({ category: products.category, n: count() }).from(products).where(isActive).groupBy(products.category).prepare();
 const brandRows = db
   .select({ makeId: vehicleMakes.id, makeName: vehicleMakes.name, id: vehicleModels.id, name: vehicleModels.name })
   .from(vehicleMakes)
@@ -151,26 +169,50 @@ export function getDeals(): Product[] {
 export function getRelated(product: Product, limit = 4): Product[] {
   return selectProducts()
     .where(and(isActive, ne(products.id, product.id)))
-    .orderBy(sql`(${products.category} = ${product.category}) DESC`, desc(products.reviews))
+    .orderBy(
+      sql`(${products.departmentId} IS ${product.departmentId}) DESC`,
+      sql`(${products.category} = ${product.category}) DESC`,
+      desc(products.reviews),
+    )
     .limit(limit)
     .all()
     .map(toProduct);
 }
 
-export function getCategoryCounts(): Partial<Record<Category, number>> {
-  return Object.fromEntries(categoryCounts.all().map((r) => [r.category, r.n]));
+export function getProductCount(): number {
+  return db.select({ n: count() }).from(products).where(isActive).get()?.n ?? 0;
 }
 
-/** Visible sub-departments with products in this category, in admin order, with their product counts. */
-export function getSubDepartments(category: Category): { slug: string; name: string; count: number }[] {
-  return db
-    .select({ slug: departments.slug, name: departments.name, count: count() })
-    .from(products)
-    .innerJoin(departments, eq(departments.id, products.departmentId))
-    .where(and(isActive, eq(products.category, category), isNotNull(departments.parentId), eq(departments.active, true)))
-    .groupBy(departments.id)
+/**
+ * Active departments that have active products, in admin order, as the store's category navigation.
+ * Sub-departments are listed under their parent and counted in its total; a hidden parent hides them too.
+ */
+export function getStoreDepartments(): StoreDepartment[] {
+  const counts = new Map(
+    db
+      .select({ id: products.departmentId, n: count() })
+      .from(products)
+      .where(and(isActive, isNotNull(products.departmentId)))
+      .groupBy(products.departmentId)
+      .all()
+      .map((r) => [r.id, r.n]),
+  );
+  const rows = db
+    .select({ id: departments.id, parentId: departments.parentId, slug: departments.slug, name: departments.name, image: departments.image })
+    .from(departments)
+    .where(eq(departments.active, true))
     .orderBy(departments.position)
     .all();
+  return rows
+    .filter((d) => d.parentId === null)
+    .map((d) => {
+      const children = rows
+        .filter((c) => c.parentId === d.id && counts.get(c.id))
+        .map((c) => ({ id: c.id, slug: c.slug, name: c.name, image: c.image, count: counts.get(c.id)!, children: [] }));
+      const count = (counts.get(d.id) ?? 0) + children.reduce((n, c) => n + c.count, 0);
+      return { id: d.id, slug: d.slug, name: d.name, image: d.image, count, children };
+    })
+    .filter((d) => d.count > 0);
 }
 
 /** Products that fit each model id, for the vehicle pickers' "Show N matching parts". */

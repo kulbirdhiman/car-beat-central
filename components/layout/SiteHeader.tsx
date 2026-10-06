@@ -10,15 +10,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useCartCount } from "@/lib/cart";
-import { CATEGORY_IMAGES, CATEGORY_LABELS, FITTING_CITIES } from "@/lib/data";
-import type { Category } from "@/lib/types";
+import { FITTING_CITIES } from "@/lib/data";
+import type { StoreDepartment } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { SearchBox } from "../search/SearchBox";
 import { Logo } from "./Logo";
-
-const CATEGORIES = Object.keys(CATEGORY_LABELS) as Category[];
-
-type Counts = Partial<Record<Category, number>>;
 
 const productsLabel = (n: number) => `${n} ${n === 1 ? "product" : "products"}`;
 
@@ -27,7 +23,7 @@ const productsLabel = (n: number) => `${n} ${n === 1 ? "product" : "products"}`;
  * booking and cart. It lifts with a deeper shadow once the page scrolls. On phones search drops
  * to a second row inside the same bar.
  */
-export function SiteHeader({ counts }: { counts: Counts }) {
+export function SiteHeader({ departments, total }: { departments: StoreDepartment[]; total: number }) {
   const cartCount = useCartCount();
   const scrolled = useScrolled();
 
@@ -40,20 +36,20 @@ export function SiteHeader({ counts }: { counts: Counts }) {
         )}
       >
         <div className="flex h-16 items-center gap-2 px-3 sm:px-4 lg:h-[68px] lg:gap-3">
-          <MobileMenu counts={counts} />
+          <MobileMenu departments={departments} />
 
           <Link href="/" aria-label="CarBeat home" className="mr-1 shrink-0 rounded-md lg:mr-3">
             <Logo />
           </Link>
 
           <nav aria-label="Main" className="hidden items-center gap-1 md:flex">
-            <AllProductsMenu counts={counts} />
+            <AllProductsMenu departments={departments} total={total} />
             <Suspense fallback={<DealsLink />}>
               <DealsLinkWithState />
             </Suspense>
           </nav>
 
-          <SearchBox className="mx-1 hidden min-w-0 flex-1 md:block lg:mx-3" />
+          <SearchBox departments={departments} className="mx-1 hidden min-w-0 flex-1 md:block lg:mx-3" />
 
           <div className="ml-auto flex shrink-0 items-center gap-1.5 md:ml-0">
             <Link
@@ -87,7 +83,7 @@ export function SiteHeader({ counts }: { counts: Counts }) {
 
         {/* Phones and small tablets: search gets the full width of the bar. */}
         <div className="px-3 pb-3 md:hidden">
-          <SearchBox />
+          <SearchBox departments={departments} />
         </div>
       </div>
     </header>
@@ -127,9 +123,8 @@ function useScrolled() {
 }
 
 /** Mega menu: every department as a photo tile, with deals and shop-all on the side. */
-function AllProductsMenu({ counts }: { counts: Counts }) {
+function AllProductsMenu({ departments, total }: { departments: StoreDepartment[]; total: number }) {
   const [open, setOpen] = useState(false);
-  const total = Object.values(counts).reduce((n, c) => n + (c ?? 0), 0);
   const close = () => setOpen(false);
 
   return (
@@ -150,14 +145,14 @@ function AllProductsMenu({ counts }: { counts: Counts }) {
       <PopoverContent align="start" sideOffset={18} className="w-[min(860px,calc(100vw-2rem))] rounded-2xl p-3">
         <div className="grid gap-3 lg:grid-cols-[1fr_220px]">
           <ul className="grid grid-cols-2 gap-1 sm:grid-cols-4">
-            {CATEGORIES.map((c) => (
-              <li key={c}>
-                <Link href={`/shop?category=${c}`} onClick={close} className="group block rounded-xl p-1.5 transition-colors hover:bg-secondary">
+            {departments.map((d) => (
+              <li key={d.id}>
+                <Link href={`/shop?dept=${d.slug}`} onClick={close} className="group block rounded-xl p-1.5 transition-colors hover:bg-secondary">
                   <span className="relative block aspect-[4/3] overflow-hidden rounded-lg bg-muted">
-                    <Image src={CATEGORY_IMAGES[c]} alt="" fill sizes="160px" className="object-cover transition-transform duration-500 group-hover:scale-105" />
+                    <Image src={d.image} alt="" fill sizes="160px" className="object-cover transition-transform duration-500 group-hover:scale-105" />
                   </span>
-                  <span className="mt-2 block px-1 text-sm font-semibold">{CATEGORY_LABELS[c]}</span>
-                  <span className="block px-1 pb-1 text-xs text-muted-foreground">{productsLabel(counts[c] ?? 0)}</span>
+                  <span className="mt-2 block px-1 text-sm font-semibold">{d.name}</span>
+                  <span className="block px-1 pb-1 text-xs text-muted-foreground">{productsLabel(d.count)}</span>
                 </Link>
               </li>
             ))}
@@ -185,7 +180,7 @@ function AllProductsMenu({ counts }: { counts: Counts }) {
   );
 }
 
-function MobileMenu({ counts }: { counts: Counts }) {
+function MobileMenu({ departments }: { departments: StoreDepartment[] }) {
   return (
     <Sheet>
       <SheetTrigger asChild>
@@ -223,16 +218,20 @@ function MobileMenu({ counts }: { counts: Counts }) {
               Offers &amp; codes
             </Link>
           </SheetClose>
-          <Separator className="my-3" />
-          <p className="label-mono px-3 pb-1 text-muted-foreground">Categories</p>
-          {CATEGORIES.map((c) => (
-            <SheetClose asChild key={c}>
-              <Link href={`/shop?category=${c}`} className="flex items-center gap-3 rounded-md px-3 py-2 text-sm hover:bg-muted">
+          {departments.length > 0 && (
+            <>
+              <Separator className="my-3" />
+              <p className="label-mono px-3 pb-1 text-muted-foreground">Categories</p>
+            </>
+          )}
+          {departments.map((d) => (
+            <SheetClose asChild key={d.id}>
+              <Link href={`/shop?dept=${d.slug}`} className="flex items-center gap-3 rounded-md px-3 py-2 text-sm hover:bg-muted">
                 <span className="relative size-8 shrink-0 overflow-hidden rounded-md bg-muted">
-                  <Image src={CATEGORY_IMAGES[c]} alt="" fill sizes="32px" className="object-cover" />
+                  <Image src={d.image} alt="" fill sizes="32px" className="object-cover" />
                 </span>
-                <span className="flex-1">{CATEGORY_LABELS[c]}</span>
-                <span className="text-xs text-muted-foreground">{counts[c] ?? 0}</span>
+                <span className="flex-1">{d.name}</span>
+                <span className="text-xs text-muted-foreground">{d.count}</span>
               </Link>
             </SheetClose>
           ))}

@@ -1,16 +1,12 @@
 import { Mail, MapPin, Wrench } from "lucide-react";
 import Link from "next/link";
-import { CATEGORY_LABELS, FITTING_CITIES } from "@/lib/data";
-import type { Category } from "@/lib/types";
+import { FITTING_CITIES } from "@/lib/data";
+import type { StoreDepartment } from "@/lib/types";
 import credits from "@/public/images/credits.json";
 import { Logo } from "./Logo";
 import { NewsletterForm } from "./NewsletterForm";
 
 const COLUMNS = [
-  {
-    title: "Shop",
-    links: (Object.keys(CATEGORY_LABELS) as Category[]).map((c) => ({ label: CATEGORY_LABELS[c], href: `/shop?category=${c}` })),
-  },
   {
     title: "Deals",
     links: [
@@ -35,7 +31,8 @@ const COLUMNS = [
 
 const photographers = [...new Set(Object.values(credits).map((c) => c.photographer))];
 
-export function SiteFooter() {
+export function SiteFooter({ departments }: { departments: StoreDepartment[] }) {
+  const shop = { title: "Shop", links: departments.map((d) => ({ label: d.name, href: `/shop?dept=${d.slug}` })) };
   return (
     <footer className="bg-ink text-ink-foreground">
       {/* Newsletter band */}
@@ -69,7 +66,7 @@ export function SiteFooter() {
             </li>
           </ul>
         </div>
-        {COLUMNS.map((col) => (
+        {[shop, ...COLUMNS].map((col) => (
           <nav key={col.title} aria-label={col.title}>
             <h3 className="text-sm font-semibold">{col.title}</h3>
             <ul className="mt-4 space-y-2.5 text-sm text-white/60">

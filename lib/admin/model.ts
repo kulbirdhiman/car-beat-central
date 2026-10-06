@@ -53,6 +53,17 @@ export type AdminProduct = {
   fits: string[] | "universal";
   image: string;
   description: string;
+  /** Short label on the product card, e.g. "Best seller". Empty for none. */
+  badge: string;
+  /** Bullet points on the product page. */
+  features: string[];
+  /** Today's-deal price in whole AUD, below the price; null when not on deal. */
+  dealPrice: number | null;
+  /** Shown in the homepage spotlight and trending lists. */
+  trending: boolean;
+  /** Customer ratings, kept up to date as reviews are written or removed. Read-only in the admin. */
+  rating: number;
+  reviews: number;
 };
 
 export type AdminOrder = {

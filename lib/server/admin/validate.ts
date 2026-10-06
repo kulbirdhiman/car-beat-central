@@ -104,13 +104,19 @@ export function parseDepartment(departmentId: string, value: unknown): Omit<Depa
   };
 }
 
-export type ProductInput = Omit<AdminProduct, "slug">;
+export type ProductInput = Omit<AdminProduct, "slug" | "rating" | "reviews">;
 
 export function parseProduct(productId: string, value: unknown): ProductInput {
   const body = asBody(value);
   const price = int(body, "price", { min: 1, label: "Price" });
   const rrp = int(body, "rrp", { min: 1, label: "RRP" });
   if (rrp < price) throw new AdminError("RRP can't be below the price.");
+  const dealPrice = body.dealPrice === null || body.dealPrice === undefined ? null : int(body, "dealPrice", { min: 1, label: "Deal price" });
+  if (dealPrice !== null && dealPrice >= price) throw new AdminError("Deal price must be below the price.");
+  const features = body.features ?? [];
+  if (!Array.isArray(features) || features.length > 12 || features.some((f) => typeof f !== "string" || f.trim().length === 0 || f.length > 200)) {
+    throw new AdminError("Features must be up to 12 lines of at most 200 characters.");
+  }
   let fits: AdminProduct["fits"];
   if (body.fits === "universal") fits = "universal";
   else {
@@ -131,6 +137,10 @@ export function parseProduct(productId: string, value: unknown): ProductInput {
     fits,
     image: image(body, "image"),
     description: text(body, "description", { max: 2000 }),
+    badge: text(body, "badge", { max: 30, label: "Badge" }),
+    features: features.map((f: string) => f.trim()),
+    dealPrice,
+    trending: body.trending === true,
   };
 }
 

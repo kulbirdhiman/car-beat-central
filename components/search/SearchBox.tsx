@@ -4,13 +4,11 @@ import { ArrowRight, ArrowUpLeft, CarFront, Clock, Loader2, Search, TrendingUp, 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
-import { CATEGORY_IMAGES, CATEGORY_LABELS, formatPrice } from "@/lib/data";
+import { CATEGORY_LABELS, formatPrice } from "@/lib/data";
 import { useCarBrands } from "@/lib/garage";
-import type { Category, Product } from "@/lib/types";
+import type { Product, StoreDepartment } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-const POPULAR = ["CarPlay stereo", "Dash cam", "Subwoofer", "LED headlights", "Speakers", "Amplifier"];
-const CATEGORIES = Object.keys(CATEGORY_LABELS) as Category[];
 const RECENT_KEY = "carbeat:recent-searches";
 
 function readRecent(): string[] {
@@ -52,7 +50,7 @@ type Option = { key: string; href: string; term?: string; render: () => ReactNod
  * category and vehicle suggestions. Arrow keys move, Enter opens, Escape closes,
  * and Enter with nothing highlighted goes to the full results page.
  */
-export function SearchBox({ className }: { className?: string }) {
+export function SearchBox({ departments, className }: { departments: StoreDepartment[]; className?: string }) {
   const brands = useCarBrands();
   const router = useRouter();
   const listId = useId();
@@ -63,6 +61,12 @@ export function SearchBox({ className }: { className?: string }) {
   const [active, setActive] = useState(-1);
   const [recent, setRecent] = useState<string[]>([]);
   const [results, setResults] = useState<{ q: string; products: Product[] } | null>(null);
+  // Suggested searches: the store's biggest categories, most specific first.
+  const popular = departments
+    .flatMap((d) => (d.children.length ? d.children : [d]))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 6)
+    .map((d) => d.name);
   const q = query.trim();
   const loading = q.length > 0 && results?.q !== q;
 
@@ -115,7 +119,7 @@ export function SearchBox({ className }: { className?: string }) {
 
   const lower = q.toLowerCase();
   const products = q && results?.q === q ? results.products : [];
-  const categories = q ? CATEGORIES.filter((c) => CATEGORY_LABELS[c].toLowerCase().includes(lower) || c.includes(lower)).slice(0, 3) : [];
+  const categories = q ? departments.flatMap((d) => [d, ...d.children]).filter((d) => d.name.toLowerCase().includes(lower)).slice(0, 3) : [];
   // Every typed word must start a word of the vehicle name: "toy hi" finds Toyota HiLux, "sub" finds nothing.
   const vehicles = q
     ? brands.flatMap((b) => b.models.map((m) => ({ id: m.id, label: `${b.name} ${m.name}` }))).filter((v) => {
@@ -147,18 +151,20 @@ export function SearchBox({ className }: { className?: string }) {
         },
         {
           title: "Categories",
-          options: categories.map((c) => ({
-            key: `c-${c}`,
-            href: `/shop?category=${c}`,
-            term: CATEGORY_LABELS[c],
+          options: categories.map((d) => ({
+            key: `c-${d.id}`,
+            href: `/shop?dept=${d.slug}`,
+            term: d.name,
             render: () => (
               <>
                 <span className="relative size-10 shrink-0 overflow-hidden rounded-lg bg-muted">
-                  <Image src={CATEGORY_IMAGES[c]} alt="" fill sizes="40px" className="object-cover" />
+                  <Image src={d.image} alt="" fill sizes="40px" className="object-cover" />
                 </span>
                 <span className="flex-1">
-                  <Highlight text={CATEGORY_LABELS[c]} query={q} />
-                  <span className="block text-xs text-muted-foreground">Category</span>
+                  <Highlight text={d.name} query={q} />
+                  <span className="block text-xs text-muted-foreground">
+                    Category · {d.count} {d.count === 1 ? "product" : "products"}
+                  </span>
                 </span>
               </>
             ),
@@ -180,7 +186,7 @@ export function SearchBox({ className }: { className?: string }) {
                     <Highlight text={p.name} query={q} />
                   </span>
                   <span className="block text-xs text-muted-foreground">
-                    {p.brand} · {CATEGORY_LABELS[p.category]}
+                    {p.brand} · {p.departmentName ?? CATEGORY_LABELS[p.category]}
                   </span>
                 </span>
                 <span className="text-right">
@@ -332,12 +338,13 @@ export function SearchBox({ className }: { className?: string }) {
 
             {!q && (
               <>
+                {popular.length > 0 && (
                 <div className="px-3 pb-3 pt-2">
                   <p className="flex items-center gap-1.5 pb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                     <TrendingUp className="size-3.5" /> Popular searches
                   </p>
                   <div className="flex flex-wrap gap-1.5">
-                    {POPULAR.map((term) => (
+                    {popular.map((term) => (
                       <button
                         key={term}
                         type="button"
@@ -354,25 +361,28 @@ export function SearchBox({ className }: { className?: string }) {
                     ))}
                   </div>
                 </div>
-                <div className="border-t px-3 pb-2 pt-3">
-                  <p className="pb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Browse categories</p>
-                  <div className="grid grid-cols-2 gap-1 sm:grid-cols-4">
-                    {CATEGORIES.map((c) => (
-                      <button
-                        key={c}
-                        type="button"
-                        onPointerDown={(e) => e.preventDefault()}
-                        onClick={() => go(`/shop?category=${c}`)}
-                        className="flex items-center gap-2 rounded-lg p-1.5 text-left text-sm hover:bg-muted"
-                      >
-                        <span className="relative size-8 shrink-0 overflow-hidden rounded-md bg-muted">
-                          <Image src={CATEGORY_IMAGES[c]} alt="" fill sizes="32px" className="object-cover" />
-                        </span>
-                        <span className="truncate">{CATEGORY_LABELS[c]}</span>
-                      </button>
-                    ))}
+                )}
+                {departments.length > 0 && (
+                  <div className="border-t px-3 pb-2 pt-3">
+                    <p className="pb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Browse categories</p>
+                    <div className="grid grid-cols-2 gap-1 sm:grid-cols-4">
+                      {departments.map((d) => (
+                        <button
+                          key={d.id}
+                          type="button"
+                          onPointerDown={(e) => e.preventDefault()}
+                          onClick={() => go(`/shop?dept=${d.slug}`)}
+                          className="flex items-center gap-2 rounded-lg p-1.5 text-left text-sm hover:bg-muted"
+                        >
+                          <span className="relative size-8 shrink-0 overflow-hidden rounded-md bg-muted">
+                            <Image src={d.image} alt="" fill sizes="32px" className="object-cover" />
+                          </span>
+                          <span className="truncate">{d.name}</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </>
             )}
 

@@ -1,15 +1,17 @@
 import { ArrowRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import { Reveal } from "@/components/ui/Reveal";
-import { CATEGORY_IMAGES, CATEGORY_LABELS } from "@/lib/data";
-import type { Category } from "@/lib/types";
+import type { StoreDepartment } from "@/lib/types";
 import { SectionHeading } from "./SectionHeading";
 
-const CATEGORIES = Object.keys(CATEGORY_LABELS) as Category[];
+/** Every department that has products, as an equal tile: image, name and live product count. */
+export function CategoryGrid({ departments }: { departments: StoreDepartment[] }) {
+  if (departments.length === 0) return null;
+  // One row on desktop, however many departments there are (4 to 8 per row).
+  const columns = { "--cols": `repeat(${Math.min(Math.max(departments.length, 4), 8)}, minmax(0, 1fr))` } as CSSProperties;
 
-/** Every department as an equal tile: image, name and live product count. */
-export function CategoryGrid({ counts }: { counts: Partial<Record<Category, number>> }) {
   return (
     <section id="categories" className="mx-auto max-w-[1440px] scroll-mt-32 px-4 pt-16 sm:px-6 sm:pt-24 lg:px-8">
       <SectionHeading
@@ -21,25 +23,22 @@ export function CategoryGrid({ counts }: { counts: Partial<Record<Category, numb
           </Link>
         }
       />
-      <ul className="grid grid-cols-4 gap-2 sm:gap-3 lg:grid-cols-8">
-        {CATEGORIES.map((c, i) => {
-          const count = counts[c] ?? 0;
-          return (
-            <Reveal as="li" key={c} delay={i * 50}>
-              <Link href={`/shop?category=${c}`} className="group block h-full rounded-xl border bg-card p-1.5 transition-[border-color,box-shadow] sm:rounded-2xl sm:p-2 hover:border-primary/40 hover:shadow-[0_16px_32px_-20px_oklch(0.25_0.01_25/0.35)]">
-                <span className="relative block aspect-square overflow-hidden rounded-lg bg-muted sm:rounded-xl">
-                  <Image src={CATEGORY_IMAGES[c]} alt="" fill sizes="(min-width: 1024px) 12vw, 25vw" className="object-cover transition-transform duration-700 group-hover:scale-110" />
+      <ul className="grid grid-cols-4 gap-2 sm:gap-3 lg:grid-cols-(--cols)" style={columns}>
+        {departments.map((d, i) => (
+          <Reveal as="li" key={d.id} delay={i * 50}>
+            <Link href={`/shop?dept=${d.slug}`} className="group block h-full rounded-xl border bg-card p-1.5 transition-[border-color,box-shadow] sm:rounded-2xl sm:p-2 hover:border-primary/40 hover:shadow-[0_16px_32px_-20px_oklch(0.25_0.01_25/0.35)]">
+              <span className="relative block aspect-square overflow-hidden rounded-lg bg-muted sm:rounded-xl">
+                <Image src={d.image} alt="" fill sizes="(min-width: 1024px) 12vw, 25vw" className="object-cover transition-transform duration-700 group-hover:scale-110" />
+              </span>
+              <span className="block px-0.5 pb-1 pt-2 sm:px-1.5 sm:pt-3">
+                <span className="block text-[11px] font-semibold leading-tight group-hover:text-primary sm:text-sm">{d.name}</span>
+                <span className="mt-0.5 hidden text-xs text-muted-foreground sm:block">
+                  {d.count} {d.count === 1 ? "product" : "products"}
                 </span>
-                <span className="block px-0.5 pb-1 pt-2 sm:px-1.5 sm:pt-3">
-                  <span className="block text-[11px] font-semibold leading-tight group-hover:text-primary sm:text-sm">{CATEGORY_LABELS[c]}</span>
-                  <span className="mt-0.5 hidden text-xs text-muted-foreground sm:block">
-                    {count} {count === 1 ? "product" : "products"}
-                  </span>
-                </span>
-              </Link>
-            </Reveal>
-          );
-        })}
+              </span>
+            </Link>
+          </Reveal>
+        ))}
       </ul>
     </section>
   );

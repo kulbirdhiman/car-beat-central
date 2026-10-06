@@ -1,6 +1,6 @@
 "use client";
 
-import { Car, Layers, LayoutDashboard, Menu, Package, ShoppingBag, TicketPercent } from "lucide-react";
+import { Car, Layers, LayoutDashboard, Menu, Package, ShoppingBag, TicketPercent, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -16,6 +16,7 @@ const LINKS = [
   { href: "/admin/categories", label: "Vehicle Categories", icon: Car },
   { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
   { href: "/admin/offers", label: "Offers & Coupons", icon: TicketPercent },
+  { href: "/admin/customers", label: "Customers", icon: Users },
 ] as const;
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {

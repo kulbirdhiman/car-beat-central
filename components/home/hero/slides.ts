@@ -1,16 +1,30 @@
+import type { StaticImageData } from "next/image";
 import interior from "@/public/images/hero-interior.jpg";
 import ranger from "@/public/images/hero-ranger.jpg";
 import subBuild from "@/public/images/hero-subwoofer-build.jpg";
 
-export const SLIDES = [
+/** Banner copy. Each one points at a department or a vehicle; its price line and link are worked out from the live catalogue. */
+export type SlideSource = {
+  image: StaticImageData;
+  alt: string;
+  eyebrow: string;
+  title: string;
+  body: string;
+  /** Department slug ("From $X" across its products) or vehicle model id ("Save up to X%" on parts that fit). */
+  target: { dept: string } | { model: string; label: string };
+};
+
+/** A banner ready to show: its target exists and has products. */
+export type Slide = Omit<SlideSource, "target"> & { price: string; cta: { label: string; href: string } };
+
+export const SLIDE_SOURCES: SlideSource[] = [
   {
     image: interior,
     alt: "Modern car interior with a large touchscreen stereo",
     eyebrow: "Head unit upgrades",
-    title: "Your factory dash, now a 9″ smart screen",
+    title: "Your factory dash, now a smart screen",
     body: "Wireless CarPlay, Android Auto and DAB+ with a fascia made for your model.",
-    price: "From $549",
-    cta: { label: "Shop car stereos", href: "/shop?category=stereo" },
+    target: { dept: "car-stereos" },
   },
   {
     image: ranger,
@@ -18,17 +32,15 @@ export const SLIDES = [
     eyebrow: "Ute & 4x4",
     title: "Built for corrugations and 40° days",
     body: "Dash cams, LED lighting and underseat subs for HiLux, Ranger, Triton and D-Max.",
-    price: "Save up to 30%",
-    cta: { label: "Shop ute upgrades", href: "/shop?model=ranger" },
+    target: { model: "ranger", label: "Shop ute upgrades" },
   },
   {
     image: subBuild,
     alt: "Custom subwoofer build in a car boot lit in neon",
-    eyebrow: "Subwoofers & amps",
+    eyebrow: "Speakers, subs & amps",
     title: "Feel every single note",
     body: "From slim underseat subs to full boot builds, fitted in every capital city.",
-    price: "From $429",
-    cta: { label: "Shop subwoofers", href: "/shop?category=subwoofer" },
+    target: { dept: "audio-equipment" },
   },
 ];
 

@@ -155,7 +155,11 @@ export function ProductsManager() {
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       <div>{formatPrice(p.price)}</div>
-                      {p.rrp > p.price && <div className="text-xs text-muted-foreground line-through">{formatPrice(p.rrp)}</div>}
+                      {p.dealPrice !== null ? (
+                        <div className="text-xs font-medium text-destructive">Deal {formatPrice(p.dealPrice)}</div>
+                      ) : (
+                        p.rrp > p.price && <div className="text-xs text-muted-foreground line-through">{formatPrice(p.rrp)}</div>
+                      )}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       <span className={p.stock === 0 ? "font-medium text-destructive" : p.stock <= LOW_STOCK ? "text-amber-700 dark:text-amber-400" : undefined}>

@@ -8,10 +8,9 @@ import { ProductCard } from "@/components/product/ProductCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { CATEGORY_IMAGES, CATEGORY_LABELS } from "@/lib/data";
-import { getCarBrands, getCategoryCounts, getDeals, getFitCounts, getLiveOffers, getSubDepartments, listProducts, SORTS } from "@/lib/server/queries";
+import { CATEGORY_LABELS, findDepartment } from "@/lib/data";
+import { getCarBrands, getDeals, getFitCounts, getLiveOffers, getProductCount, getStoreDepartments, listProducts, SORTS } from "@/lib/server/queries";
 import { parseFilters } from "@/lib/server/validate";
-import type { Category } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { OfferStrip } from "./OfferStrip";
 import { SortSelect } from "./SortSelect";
@@ -32,10 +31,10 @@ export default async function ShopPage(props: PageProps<"/shop">) {
   const filters = parseFilters(params);
   const products = listProducts(filters);
   const car = getCarBrands().flatMap((b) => b.models.map((m) => ({ brand: b, model: m }))).find((c) => c.model.id === filters.model);
-  const counts = getCategoryCounts();
-  const subs = filters.category ? getSubDepartments(filters.category) : [];
-  const sub = subs.find((s) => s.slug === filters.sub);
-  const total = Object.values(counts).reduce((n, c) => n + (c ?? 0), 0);
+  const departments = getStoreDepartments();
+  const dept = filters.dept ? findDepartment(departments, (d) => d.slug === filters.dept) : null;
+  // The top-level department whose sub-departments are shown in the sidebar.
+  const openDept = dept?.parent ?? dept?.department;
 
   /** Builds a /shop URL from the current filters with some keys changed (null removes). */
   const hrefWith = (changes: Record<string, string | null>) => {
@@ -50,8 +49,8 @@ export default async function ShopPage(props: PageProps<"/shop">) {
 
   const title = filters.onSale
     ? "Today's deals"
-    : sub
-      ? sub.name
+    : dept
+      ? dept.department.name
       : filters.category
       ? CATEGORY_LABELS[filters.category]
       : car
@@ -61,7 +60,7 @@ export default async function ShopPage(props: PageProps<"/shop">) {
   const active = [
     filters.q && { label: `“${filters.q}”`, key: "q" },
     filters.category && { label: CATEGORY_LABELS[filters.category], key: "category" },
-    filters.sub && { label: sub?.name ?? filters.sub, key: "sub" },
+    filters.dept && { label: dept?.department.name ?? filters.dept, key: "dept" },
     car && { label: `${car.brand.name} ${car.model.name}`, key: "model" },
     filters.maxPrice && { label: `Under $${filters.maxPrice}`, key: "maxPrice" },
     filters.onSale && { label: "On sale", key: "sale" },
@@ -72,20 +71,20 @@ export default async function ShopPage(props: PageProps<"/shop">) {
       <VehicleFilter key={filters.model ?? "none"} modelId={filters.model} fitCounts={getFitCounts()} />
 
       <FilterCard title="Categories">
-        <CategoryLink href={hrefWith({ category: null, sub: null })} active={!filters.category} label="All categories" count={total}>
+        <CategoryLink href={hrefWith({ dept: null, category: null })} active={!filters.dept && !filters.category} label="All categories" count={getProductCount()}>
           <LayoutGrid className="size-4" />
         </CategoryLink>
-        {(Object.keys(CATEGORY_LABELS) as Category[]).map((c) => (
-          <div key={c}>
-            <CategoryLink href={hrefWith({ category: c, sub: null })} active={filters.category === c && !filters.sub} label={CATEGORY_LABELS[c]} count={counts[c] ?? 0}>
-              <Image src={CATEGORY_IMAGES[c]} alt="" fill sizes="32px" className="object-cover" />
+        {departments.map((d) => (
+          <div key={d.id}>
+            <CategoryLink href={hrefWith({ dept: d.slug, category: null })} active={filters.dept === d.slug} label={d.name} count={d.count}>
+              <Image src={d.image} alt="" fill sizes="32px" className="object-cover" />
             </CategoryLink>
-            {filters.category === c && subs.length > 0 && (
+            {openDept?.id === d.id && d.children.length > 0 && (
               <div className="mb-1 ml-[1.375rem] grid gap-0.5 border-l pl-3">
-                {subs.map((s) => (
-                  <OptionLink key={s.slug} href={hrefWith({ sub: filters.sub === s.slug ? null : s.slug })} active={filters.sub === s.slug}>
-                    <span className="flex-1 truncate">{s.name}</span>
-                    <span className="text-xs tabular-nums text-muted-foreground">{s.count}</span>
+                {d.children.map((c) => (
+                  <OptionLink key={c.id} href={hrefWith({ dept: filters.dept === c.slug ? d.slug : c.slug, category: null })} active={filters.dept === c.slug}>
+                    <span className="flex-1 truncate">{c.name}</span>
+                    <span className="text-xs tabular-nums text-muted-foreground">{c.count}</span>
                   </OptionLink>
                 ))}
               </div>

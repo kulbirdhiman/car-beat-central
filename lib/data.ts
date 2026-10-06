@@ -1,4 +1,4 @@
-import type { Category, Product } from "./types";
+import type { Category, Product, StoreDepartment } from "./types";
 
 export const CATEGORY_LABELS: Record<Category, string> = {
   stereo: "Car Stereos",
@@ -11,19 +11,18 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   interior: "Interior",
 };
 
-export const CATEGORY_IMAGES: Record<Category, string> = {
-  stereo: "/images/stereo-android.jpg",
-  speaker: "/images/speaker-coaxial.jpg",
-  subwoofer: "/images/hero-subwoofer-build.jpg",
-  amplifier: "/images/amplifier.jpg",
-  dashcam: "/images/dashcam-mount.jpg",
-  lighting: "/images/headlights-red.jpg",
-  mount: "/images/phone-mount.jpg",
-  interior: "/images/air-vents.jpg",
-};
-
 export function productFitsModel(product: Pick<Product, "fits">, modelId: string) {
   return product.fits === "universal" || product.fits.includes(modelId);
+}
+
+/** Finds a store department, or one of its sub-departments, with its parent. */
+export function findDepartment(departments: StoreDepartment[], match: (d: StoreDepartment) => boolean) {
+  for (const d of departments) {
+    if (match(d)) return { department: d, parent: null };
+    const child = d.children.find(match);
+    if (child) return { department: child, parent: d };
+  }
+  return null;
 }
 
 export function discountPercent(price: number, rrp: number) {
