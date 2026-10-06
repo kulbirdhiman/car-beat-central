@@ -23,6 +23,8 @@ export type Product = {
   fits: string[] | "universal";
   /** Admin department the product belongs to (used for coupon scopes). */
   departmentId: string | null;
+  /** Name of the product's department, shown as its category in the store. */
+  departmentName: string | null;
   /** Parent of the product's department when that is a sub-department, else null. */
   departmentParentId: string | null;
   /** Units on hand; 0 means sold out. */
@@ -33,6 +35,18 @@ export type Product = {
   features: string[];
   /** Present when the product is in today's deals. */
   deal?: { price: number; claimed: number };
+};
+
+/** An active admin department as the store shows it, with its live product count. */
+export type StoreDepartment = {
+  id: string;
+  slug: string;
+  name: string;
+  image: string;
+  /** Active products in this department, including its sub-departments. */
+  count: number;
+  /** Sub-departments that have products, in admin order. */
+  children: StoreDepartment[];
 };
 
 export type CarBrand = {

@@ -8,8 +8,6 @@ import { Button } from "@/components/ui/button";
 import { findCar, useCarBrands, useGarage } from "@/lib/garage";
 import { cn } from "@/lib/utils";
 
-const POPULAR = ["hilux", "ranger", "triton", "dmax", "rav4", "corolla"];
-
 const selectClass =
   "h-10 w-full appearance-none rounded-lg border border-input bg-background pl-3 pr-9 text-sm outline-none transition-colors focus:border-primary disabled:opacity-50";
 const chevron = {
@@ -30,7 +28,11 @@ export function VehicleFilter({ modelId, fitCounts }: { modelId?: string; fitCou
   const garage = useGarage();
   const brands = useCarBrands();
   const selected = findCar(brands, modelId ?? null);
-  const popular = POPULAR.map((id) => findCar(brands, id)).filter((c) => c !== null);
+  // The vehicles with the most parts in the catalogue (stable sort keeps admin order on ties).
+  const popular = brands
+    .flatMap((brand) => brand.models.map((model) => ({ brand, model })))
+    .sort((a, b) => (fitCounts[b.model.id] ?? 0) - (fitCounts[a.model.id] ?? 0))
+    .slice(0, 6);
   const [brandId, setBrandId] = useState(selected?.brand.id ?? "");
   const [pick, setPick] = useState(selected?.model.id ?? "");
   const brand = brands.find((b) => b.id === brandId);

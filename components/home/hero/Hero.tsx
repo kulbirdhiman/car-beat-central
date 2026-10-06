@@ -7,21 +7,21 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { Button } from "@/components/ui/button";
 import type { Offer } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { SLIDE_MS, SLIDES } from "./slides";
+import { SLIDE_MS, type Slide } from "./slides";
 import { VehicleSearchCard } from "./VehicleSearchCard";
 
 /** Banner carousel on the left; on the right, the vehicle search tile above a promo tile. */
-export function Hero({ promo, fitCounts }: { promo?: Offer; fitCounts: Record<string, number> }) {
+export function Hero({ slides, promo, fitCounts }: { slides: Slide[]; promo?: Offer; fitCounts: Record<string, number> }) {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
-  const slide = SLIDES[index];
-  const go = (delta: number) => setIndex((i) => (i + delta + SLIDES.length) % SLIDES.length);
+  const slide = slides[index];
+  const go = (delta: number) => setIndex((i) => (i + delta + slides.length) % slides.length);
 
   useEffect(() => {
     if (paused) return;
-    const id = setTimeout(() => setIndex((i) => (i + 1) % SLIDES.length), SLIDE_MS);
+    const id = setTimeout(() => setIndex((i) => (i + 1) % slides.length), SLIDE_MS);
     return () => clearTimeout(id);
-  }, [index, paused]);
+  }, [index, paused, slides.length]);
 
   return (
     <section className="mx-auto grid max-w-[1440px] gap-3 px-4 pt-4 sm:px-6 sm:pt-6 lg:grid-cols-[2fr_1fr] lg:px-8">
@@ -33,7 +33,7 @@ export function Hero({ promo, fitCounts }: { promo?: Offer; fitCounts: Record<st
         onPointerLeave={() => setPaused(false)}
       >
         {/* All photos mounted, only the active one visible, so switching is a crossfade. */}
-        {SLIDES.map((s, i) => (
+        {slides.map((s, i) => (
           <div key={s.alt} className={cn("absolute inset-0 -z-10 transition-opacity duration-1000", i === index ? "opacity-100" : "opacity-0")} aria-hidden={i !== index}>
             <Image
               src={s.image}
@@ -66,14 +66,14 @@ export function Hero({ promo, fitCounts }: { promo?: Offer; fitCounts: Record<st
                 <ArrowRight className="transition-transform group-hover:translate-x-1" />
               </Link>
             </Button>
-            <span className="font-display text-xl font-bold text-primary">{slide.price}</span>
+            {slide.price && <span className="font-display text-xl font-bold text-primary">{slide.price}</span>}
           </div>
         </div>
 
         {/* Controls: arrows plus progress dots. */}
         <div className="absolute inset-x-0 bottom-0 z-10 flex items-center justify-between gap-4 p-5 sm:px-10 lg:px-12">
           <div className="flex gap-2">
-            {SLIDES.map((s, i) => (
+            {slides.map((s, i) => (
               <button
                 key={s.alt}
                 type="button"

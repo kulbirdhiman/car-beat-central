@@ -14,7 +14,7 @@ import { departmentTree, type AdminProduct } from "@/lib/admin/model";
 import { CATEGORY_LABELS } from "@/lib/data";
 import type { Category } from "@/lib/types";
 
-type Errors = Partial<Record<"name" | "sku" | "brand" | "departmentId" | "category" | "price" | "rrp" | "stock" | "image" | "fits", string>>;
+type Errors = Partial<Record<"name" | "sku" | "brand" | "departmentId" | "category" | "price" | "rrp" | "stock" | "image" | "fits" | "dealPrice" | "features", string>>;
 
 export function ProductDialog({ product, onClose }: { product: AdminProduct | null; onClose: () => void }) {
   const { departments, makes, saveProduct } = useAdminStore();
@@ -30,7 +30,11 @@ export function ProductDialog({ product, onClose }: { product: AdminProduct | nu
     status: product?.status ?? "draft",
     image: product?.image ?? "/images/stereo-android.jpg",
     description: product?.description ?? "",
+    badge: product?.badge ?? "",
+    dealPrice: product?.dealPrice ? String(product.dealPrice) : "",
+    features: product?.features.join("\n") ?? "",
   });
+  const [trending, setTrending] = useState(product?.trending ?? false);
   const [universal, setUniversal] = useState(product?.fits === "universal");
   const [models, setModels] = useState<Set<string>>(new Set(product && product.fits !== "universal" ? product.fits : []));
   const [errors, setErrors] = useState<Errors>({});
@@ -43,6 +47,8 @@ export function ProductDialog({ product, onClose }: { product: AdminProduct | nu
     const price = Number(form.price);
     const rrp = Number(form.rrp || form.price);
     const stock = Number(form.stock);
+    const dealPrice = form.dealPrice.trim() ? Number(form.dealPrice) : null;
+    const features = form.features.split("\n").map((f) => f.trim()).filter(Boolean);
     const next: Errors = {};
     if (form.name.trim().length < 2) next.name = "Enter a product name.";
     if (!form.sku.trim()) next.sku = "Enter a SKU.";
@@ -52,6 +58,8 @@ export function ProductDialog({ product, onClose }: { product: AdminProduct | nu
     if (!Number.isInteger(price) || price <= 0) next.price = "Whole dollars, above 0.";
     if (!Number.isInteger(rrp) || rrp < price) next.rrp = "RRP can't be below the price.";
     if (!Number.isInteger(stock) || stock < 0) next.stock = "0 or more.";
+    if (dealPrice !== null && (!Number.isInteger(dealPrice) || dealPrice <= 0 || dealPrice >= price)) next.dealPrice = "Whole dollars, below the price.";
+    if (features.length > 12 || features.some((f) => f.length > 200)) next.features = "Up to 12 lines of 200 characters.";
     if (!form.image.trim()) next.image = "Add an image path or URL.";
     if (!universal && models.size === 0) next.fits = "Pick at least one model, or mark it universal.";
     setErrors(next);
@@ -73,6 +81,13 @@ export function ProductDialog({ product, onClose }: { product: AdminProduct | nu
       image: form.image.trim(),
       description: form.description.trim(),
       fits: universal ? "universal" : [...models],
+      badge: form.badge.trim(),
+      features,
+      dealPrice,
+      trending,
+      // Ratings come from customer reviews; the server ignores these.
+      rating: product?.rating ?? 0,
+      reviews: product?.reviews ?? 0,
     });
     onClose();
   }
@@ -155,6 +170,23 @@ export function ProductDialog({ product, onClose }: { product: AdminProduct | nu
           <Field id="pf-description" label="Description" className="sm:col-span-2">
             <Textarea id="pf-description" value={form.description} onChange={set("description")} rows={3} />
           </Field>
+          <Field id="pf-features" label="Features (one per line)" error={errors.features} className="sm:col-span-2">
+            <Textarea id="pf-features" value={form.features} onChange={set("features")} rows={4} aria-invalid={!!errors.features} />
+          </Field>
+
+          <fieldset className="grid gap-4 rounded-lg border p-4 sm:col-span-2 sm:grid-cols-2">
+            <legend className="px-1 text-sm font-medium">Merchandising</legend>
+            <Field id="pf-deal" label="Today's deal price ($)" error={errors.dealPrice}>
+              <Input id="pf-deal" inputMode="numeric" value={form.dealPrice} onChange={set("dealPrice")} placeholder="Not on deal" aria-invalid={!!errors.dealPrice} />
+            </Field>
+            <Field id="pf-badge" label="Badge">
+              <Input id="pf-badge" value={form.badge} onChange={set("badge")} maxLength={30} placeholder="e.g. Best seller" />
+            </Field>
+            <label className="flex items-center gap-2 text-sm sm:col-span-2">
+              <Checkbox checked={trending} onCheckedChange={(v) => setTrending(v === true)} />
+              Trending: feature on the homepage
+            </label>
+          </fieldset>
 
           <fieldset className="sm:col-span-2">
             <legend className="mb-2 text-sm font-medium">Vehicle fitment</legend>

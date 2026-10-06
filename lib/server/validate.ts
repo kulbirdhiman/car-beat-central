@@ -17,7 +17,7 @@ export function str(form: FormData, key: string, max = 200) {
 /** Parses shop/API filters from URL search params, dropping anything invalid. */
 export function parseFilters(params: URLSearchParams): ProductFilters {
   const category = params.get("category");
-  const sub = params.get("sub");
+  const dept = params.get("dept");
   const model = params.get("model");
   const sort = params.get("sort");
   const maxPrice = Number(params.get("maxPrice"));
@@ -26,8 +26,7 @@ export function parseFilters(params: URLSearchParams): ProductFilters {
   return {
     q: params.get("q")?.trim().slice(0, 80) || undefined,
     category: category && category in CATEGORY_LABELS ? (category as Category) : undefined,
-    // Sub-departments are picked within a category, so the filter only applies alongside one.
-    sub: sub && category && category in CATEGORY_LABELS && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(sub) ? sub.slice(0, 80) : undefined,
+    dept: dept && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(dept) ? dept.slice(0, 80) : undefined,
     model: model && getCarBrands().some((b) => b.models.some((m) => m.id === model)) ? model : undefined,
     maxPrice: maxPrice > 0 ? maxPrice : undefined,
     onSale: params.get("sale") === "1" || undefined,

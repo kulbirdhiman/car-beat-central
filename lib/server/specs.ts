@@ -96,11 +96,16 @@ const SPECS: Record<string, Spec[]> = {
   ],
 };
 
+/** The product's own specification rows, without the common ones. */
+export function getProductSpecs(product: Pick<Product, "id">): Spec[] {
+  return SPECS[product.id] ?? [];
+}
+
 /** Common rows first, then the product's own. */
 export function getSpecs(product: Product): Spec[] {
   return [
     ["Brand", product.brand],
-    ["Category", CATEGORY_LABELS[product.category]],
+    ["Category", product.departmentName ?? CATEGORY_LABELS[product.category]],
     ...(SPECS[product.id] ?? []),
     ["Fitment", product.fits === "universal" ? "Universal" : `${product.fits.length} vehicle models`],
     ["Warranty", "12 months"],

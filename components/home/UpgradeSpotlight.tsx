@@ -1,4 +1,4 @@
-import { ArrowRight, Bluetooth, Camera, CarFront, Radio, Smartphone, Star } from "lucide-react";
+import { ArrowRight, CarFront, Check, Star } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { AddToCartButton } from "@/components/product/AddToCartButton";
@@ -6,14 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Reveal } from "@/components/ui/Reveal";
 import { discountPercent, formatPrice } from "@/lib/data";
 import { getCarBrands } from "@/lib/server/queries";
+import { getProductSpecs } from "@/lib/server/specs";
 import type { Product } from "@/lib/types";
-
-const SPECS = [
-  { icon: Smartphone, value: "Wireless", label: "Apple CarPlay" },
-  { icon: Bluetooth, value: "Android", label: "Auto support" },
-  { icon: Radio, value: "DAB+", label: "Digital radio" },
-  { icon: Camera, value: "HD", label: "Reverse camera input" },
-];
 
 /** One hero product, sold on its specs: image left, spec tiles, fitment and price right. */
 export function UpgradeSpotlight({ product }: { product: Product }) {
@@ -21,6 +15,9 @@ export function UpgradeSpotlight({ product }: { product: Product }) {
   const off = discountPercent(price, product.rrp);
   const modelNames = Object.fromEntries(getCarBrands().flatMap((b) => b.models.map((m) => [m.id, m.name])));
   const fits = product.fits === "universal" ? [] : product.fits.map((id) => modelNames[id]).filter(Boolean);
+  // The product's own spec rows, or its feature list when it has none.
+  const specs = getProductSpecs(product).slice(0, 4);
+  const highlights = specs.length > 0 ? specs : product.features.slice(0, 4).map((f): [string, string] => ["Feature", f]);
 
   return (
     <section className="mx-auto max-w-[1440px] px-4 pt-16 sm:px-6 sm:pt-24 lg:px-8">
@@ -28,7 +25,7 @@ export function UpgradeSpotlight({ product }: { product: Product }) {
         <div className="relative min-h-[320px] bg-muted lg:min-h-full">
           <Image src={product.image} alt={product.name} fill sizes="(min-width: 1024px) 50vw, 100vw" className="object-cover" />
           <div className="absolute left-4 top-4 flex flex-wrap gap-2">
-            <span className="rounded-md bg-card/95 px-2.5 py-1.5 text-xs font-semibold backdrop-blur">Head unit upgrade</span>
+            {product.departmentName && <span className="rounded-md bg-card/95 px-2.5 py-1.5 text-xs font-semibold backdrop-blur">{product.departmentName}</span>}
             {off > 0 && <span className="rounded-md bg-destructive px-2.5 py-1.5 text-xs font-bold text-white">{off}% OFF</span>}
           </div>
           <div className="absolute bottom-4 left-4 flex items-center gap-3 rounded-xl bg-card/95 px-4 py-3 shadow-lg backdrop-blur">
@@ -46,17 +43,17 @@ export function UpgradeSpotlight({ product }: { product: Product }) {
 
         <div className="p-6 sm:p-10 lg:p-12">
           <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-            <span className="h-0.5 w-5 rounded-full bg-primary" /> Dashboard upgrade
+            <span className="h-0.5 w-5 rounded-full bg-primary" /> Featured upgrade · {product.brand}
           </p>
-          <h2 className="mt-3 font-display text-3xl font-bold leading-[1.05] sm:text-4xl">Turn your factory dash into a 9″ smart screen</h2>
+          <h2 className="mt-3 font-display text-3xl font-bold leading-[1.05] sm:text-4xl">{product.name}</h2>
           <p className="mt-4 text-muted-foreground">{product.description}</p>
 
           <ul className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {SPECS.map(({ icon: Icon, value, label }) => (
-              <li key={label} className="rounded-xl border bg-background p-4">
-                <Icon className="size-5 text-primary" />
-                <p className="mt-3 font-display text-lg font-bold leading-none">{value}</p>
-                <p className="mt-1 text-xs text-muted-foreground">{label}</p>
+            {highlights.map(([label, value]) => (
+              <li key={value} className="rounded-xl border bg-background p-4">
+                <Check className="size-5 text-primary" />
+                <p className="mt-3 text-xs text-muted-foreground">{label}</p>
+                <p className="mt-1 text-sm font-semibold leading-snug">{value}</p>
               </li>
             ))}
           </ul>
@@ -78,7 +75,7 @@ export function UpgradeSpotlight({ product }: { product: Product }) {
 
           <div className="mt-8 flex flex-wrap items-end justify-between gap-6 border-t pt-6">
             <div>
-              <p className="text-xs text-muted-foreground">{product.name}</p>
+              <p className="text-xs text-muted-foreground">{product.deal ? "Today\u2019s deal price" : "Price incl. GST"}</p>
               <p className="mt-1 flex items-baseline gap-2">
                 <span className="font-display text-4xl font-bold text-destructive">{formatPrice(price)}</span>
                 {off > 0 && <span className="text-sm text-muted-foreground line-through">{formatPrice(product.rrp)}</span>}

@@ -85,14 +85,29 @@ const productColumns = {
   fits: products.fits,
   image: products.image,
   description: products.description,
+  badge: products.badge,
+  features: products.features,
+  trendingRank: products.trendingRank,
+  rating: products.rating,
+  reviews: products.reviews,
+  dealPrice: deals.dealPrice,
 };
 
+type ProductRow = Omit<AdminProduct, "departmentId" | "badge" | "trending"> & { departmentId: string | null; badge: string | null; trendingRank: number | null };
+
 // Empty departmentId means unassigned (its department was deleted).
-const toAdminProduct = (p: Omit<AdminProduct, "departmentId"> & { departmentId: string | null }): AdminProduct => ({ ...p, departmentId: p.departmentId ?? "" });
+const toAdminProduct = ({ trendingRank, ...p }: ProductRow): AdminProduct => ({
+  ...p,
+  departmentId: p.departmentId ?? "",
+  badge: p.badge ?? "",
+  trending: trendingRank !== null,
+});
+
+const selectAdminProducts = () => db.select(productColumns).from(products).leftJoin(deals, eq(deals.productId, products.id));
 
 /** Newest first, like the admin table. */
 export function listAdminProducts(): AdminProduct[] {
-  return db.select(productColumns).from(products).orderBy(desc(products.createdAt), desc(sql`${products}.rowid`)).all().map(toAdminProduct);
+  return selectAdminProducts().orderBy(desc(products.createdAt), desc(sql`${products}.rowid`)).all().map(toAdminProduct);
 }
 
 function slugify(text: string) {
@@ -113,8 +128,8 @@ function uniqueSlug(name: string) {
 }
 
 /**
- * Creates or updates a product. A new product gets a URL slug from its name; an existing one keeps
- * its slug (so links don't break), and its storefront-only fields (ratings, features, badge) are left alone.
+ * Creates or updates a product with its deal and trending flag. A new product gets a URL slug from
+ * its name; an existing one keeps its slug (so links don't break). Ratings come from reviews, never from here.
  */
 export function saveProduct(p: ProductInput): AdminProduct {
   if (!db.select({ id: departments.id }).from(departments).where(eq(departments.id, p.departmentId)).get()) {
@@ -128,16 +143,19 @@ export function saveProduct(p: ProductInput): AdminProduct {
     if (known.n !== p.fits.length) throw new AdminError("Some of the fitted vehicle models don't exist.");
   }
 
-  const { id, ...fields } = p;
-  const exists = db.select({ id: products.id }).from(products).where(eq(products.id, id)).get();
-  const saved = exists
-    ? db.update(products).set(fields).where(eq(products.id, id)).returning(productColumns).get()
-    : db
-        .insert(products)
-        .values({ id, ...fields, slug: uniqueSlug(p.name), rating: 0, reviews: 0, features: [] })
-        .returning(productColumns)
-        .get();
-  return toAdminProduct(saved);
+  const { id, dealPrice, trending, badge, ...fields } = p;
+  transaction((tx) => {
+    const existing = tx.select({ trendingRank: products.trendingRank }).from(products).where(eq(products.id, id)).get();
+    // Newly trending products go to the end of the trending list; already trending ones keep their place.
+    const trendingRank = !trending ? null : (existing?.trendingRank ?? sql`(SELECT COALESCE(MAX(trending_rank), 0) + 1 FROM ${products})`);
+    const values = { ...fields, badge: badge || null, trendingRank };
+    if (existing) tx.update(products).set(values).where(eq(products.id, id)).run();
+    else tx.insert(products).values({ id, ...values, slug: uniqueSlug(p.name), rating: 0, reviews: 0 }).run();
+
+    if (dealPrice === null) tx.delete(deals).where(eq(deals.productId, id)).run();
+    else tx.insert(deals).values({ productId: id, dealPrice, claimed: 0 }).onConflictDoUpdate({ target: deals.productId, set: { dealPrice } }).run();
+  });
+  return toAdminProduct(selectAdminProducts().where(eq(products.id, id)).get()!);
 }
 
 /** Removes the product with its deal and reviews. Past orders keep their own copy of the name and price. */

@@ -68,7 +68,7 @@ export function CartView() {
               <div className="flex min-w-0 flex-1 flex-col">
                 <div className="flex justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="label-mono text-muted-foreground">{CATEGORY_LABELS[p.category]}</p>
+                    <p className="label-mono text-muted-foreground">{p.departmentName ?? CATEGORY_LABELS[p.category]}</p>
                     <Link href={`/products/${p.slug}`} className="font-medium hover:underline">
                       {p.name}
                     </Link>

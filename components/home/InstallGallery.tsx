@@ -4,21 +4,36 @@ import { Reveal } from "@/components/ui/Reveal";
 import { cn } from "@/lib/utils";
 import { SectionHeading } from "./SectionHeading";
 
-const SHOTS = [
-  { src: "/images/hero-subwoofer-build.jpg", title: "Full boot build", tag: "Subwoofers & amps", href: "/shop?category=subwoofer", className: "lg:col-span-2 lg:row-span-2" },
-  { src: "/images/ambient-light.jpg", title: "Ambient cabin lighting", tag: "LED lighting", href: "/shop?category=lighting", className: "" },
-  { src: "/images/stereo-carplay.jpg", title: "CarPlay head unit", tag: "Car stereos", href: "/shop?category=stereo", className: "" },
-  { src: "/images/headlights-red.jpg", title: "LED headlight upgrade", tag: "LED lighting", href: "/shop?category=lighting", className: "" },
-  { src: "/images/speaker-component.jpg", title: "Component door speakers", tag: "Speakers", href: "/shop?category=speaker", className: "" },
+import type { Category, Product } from "@/lib/types";
+
+const SHOTS: { src: string; title: string; category: Category; className: string }[] = [
+  { src: "/images/hero-subwoofer-build.jpg", title: "Full boot build", category: "subwoofer", className: "lg:col-span-2 lg:row-span-2" },
+  { src: "/images/ambient-light.jpg", title: "Ambient cabin lighting", category: "interior", className: "" },
+  { src: "/images/stereo-carplay.jpg", title: "CarPlay head unit", category: "stereo", className: "" },
+  { src: "/images/headlights-red.jpg", title: "LED headlight upgrade", category: "lighting", className: "" },
+  { src: "/images/speaker-component.jpg", title: "Component door speakers", category: "speaker", className: "" },
 ];
 
-/** Bento of finished-install photos, each linking to the department it came from. */
-export function InstallGallery() {
+/** The department most of a category's products sit in, so each photo is tagged and linked the way the store files them. */
+function departmentFor(products: Product[], category: Category) {
+  const tally = new Map<string, number>();
+  for (const p of products) if (p.category === category && p.departmentName) tally.set(p.departmentName, (tally.get(p.departmentName) ?? 0) + 1);
+  return [...tally.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+}
+
+/** Bento of finished-install photos, each linking to the live products it shows. Photos with nothing in stock to sell are left out. */
+export function InstallGallery({ products }: { products: Product[] }) {
+  const shots = SHOTS.flatMap((s) => {
+    const tag = departmentFor(products, s.category);
+    return tag ? [{ ...s, tag, href: `/shop?category=${s.category}` }] : [];
+  });
+  if (shots.length === 0) return null;
+
   return (
     <section className="mx-auto max-w-[1440px] px-4 pt-16 sm:px-6 sm:pt-24 lg:px-8">
       <SectionHeading eyebrow="Install inspiration" title="See what's possible" description="Ideas for your next upgrade, from a simple stereo swap to a full boot build." />
       <div className="grid auto-rows-[180px] grid-cols-2 gap-3 sm:auto-rows-[220px] lg:grid-cols-4">
-        {SHOTS.map((s, i) => (
+        {shots.map((s, i) => (
           <Reveal key={s.src} delay={i * 70} className={cn(i === 0 && "col-span-2 row-span-2", s.className)}>
             <Link href={s.href} className="group relative block size-full overflow-clip rounded-2xl bg-muted">
               <Image src={s.src} alt={s.title} fill sizes={i === 0 ? "(min-width: 1024px) 50vw, 100vw" : "(min-width: 1024px) 25vw, 50vw"} className="object-cover transition-transform duration-700 group-hover:scale-105" />

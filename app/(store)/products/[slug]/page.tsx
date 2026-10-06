@@ -5,8 +5,8 @@ import { notFound } from "next/navigation";
 import { PageShell } from "@/components/layout/PageShell";
 import { ProductCard } from "@/components/product/ProductCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CATEGORY_GALLERY, CATEGORY_LABELS, discountPercent, formatPrice } from "@/lib/data";
-import { getCarBrands, getProductBySlug, getRelated, listProducts } from "@/lib/server/queries";
+import { CATEGORY_GALLERY, CATEGORY_LABELS, discountPercent, findDepartment, formatPrice } from "@/lib/data";
+import { getCarBrands, getProductBySlug, getRelated, getStoreDepartments, listProducts } from "@/lib/server/queries";
 import { listReviews } from "@/lib/server/reviews";
 import { getSpecs } from "@/lib/server/specs";
 import { cn } from "@/lib/utils";
@@ -45,6 +45,11 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
       ? null
       : getCarBrands().map((b) => ({ brand: b.name, models: b.models.filter((m) => fits.includes(m.id)) })).filter((g) => g.models.length > 0);
   const reviews = listReviews(product.id);
+  // Breadcrumbs follow the product's department; products without one fall back to their type.
+  const dept = product.departmentId ? findDepartment(getStoreDepartments(), (d) => d.id === product.departmentId) : null;
+  const section = dept
+    ? { label: dept.department.name, href: `/shop?dept=${dept.department.slug}` }
+    : { label: CATEGORY_LABELS[product.category], href: `/shop?category=${product.category}` };
   const flags = [
     ...(product.deal ? [{ label: "Today's deal", tone: "deal" as const }] : []),
     ...(product.badge ? [{ label: product.badge, tone: "badge" as const }] : []),
@@ -56,7 +61,8 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
       crumbs={[
         { label: "Home", href: "/" },
         { label: "Shop", href: "/shop" },
-        { label: CATEGORY_LABELS[product.category], href: `/shop?category=${product.category}` },
+        ...(dept?.parent ? [{ label: dept.parent.name, href: `/shop?dept=${dept.parent.slug}` }] : []),
+        section,
         { label: product.name },
       ]}
     >
@@ -70,8 +76,8 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <span className="rounded-full bg-ink px-3 py-1 text-xs font-semibold uppercase tracking-wider text-ink-foreground">{product.brand}</span>
-            <Link href={`/shop?category=${product.category}`} className="rounded-full border bg-card px-3 py-1 text-xs font-medium text-muted-foreground hover:text-foreground">
-              {CATEGORY_LABELS[product.category]}
+            <Link href={section.href} className="rounded-full border bg-card px-3 py-1 text-xs font-medium text-muted-foreground hover:text-foreground">
+              {section.label}
             </Link>
           </div>
 
@@ -247,8 +253,8 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
       <section className="mt-20">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
           <h2 className="font-display text-3xl font-bold">You might also like</h2>
-          <Link href={`/shop?category=${product.category}`} className="group flex items-center gap-1 text-sm font-semibold text-primary">
-            More {CATEGORY_LABELS[product.category].toLowerCase()} <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+          <Link href={section.href} className="group flex items-center gap-1 text-sm font-semibold text-primary">
+            More {section.label.toLowerCase()} <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
           </Link>
         </div>
         <ul className="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-4">

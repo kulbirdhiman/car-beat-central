@@ -1,7 +1,7 @@
 import "server-only";
 import type { Product } from "../types";
 
-type SeedProduct = Omit<Product, "deal" | "departmentId" | "departmentParentId" | "stock">;
+type SeedProduct = Omit<Product, "deal" | "departmentId" | "departmentName" | "departmentParentId" | "stock">;
 
 /** Catalogue source of truth. Upserted into the database on startup. */
 export const SEED_PRODUCTS: SeedProduct[] = [

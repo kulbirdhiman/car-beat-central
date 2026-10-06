@@ -116,7 +116,7 @@ function OfferDialog({ offer, onClose }: { offer: Offer | null; onClose: () => v
     if (form.title.trim().length < 3) next.title = "Give the offer a title.";
     if (!form.highlight.trim()) next.highlight = "e.g. 30% OFF";
     if (!form.image.trim()) next.image = "Add a banner image.";
-    if (!form.href.startsWith("/")) next.href = "A store path starting with /, e.g. /shop?category=lighting";
+    if (!form.href.startsWith("/")) next.href = "A store path starting with /, e.g. /shop?dept=led-lighting";
     if (form.startsAt && form.endsAt && form.endsAt < form.startsAt) next.endsAt = "Ends before it starts.";
     setErrors(next);
     if (Object.keys(next).length) return;

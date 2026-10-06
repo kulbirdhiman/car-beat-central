@@ -150,8 +150,8 @@ export const SEED_COUPONS: Coupon[] = [
 ];
 
 export const SEED_OFFERS: Offer[] = [
-  { id: "o1", title: "Ute & 4x4 Audio Upgrade", subtitle: "Stereo + speakers + sub bundle for HiLux, Ranger, Triton and more. Free fitting.", highlight: "30% OFF", image: "/images/hero-ranger.jpg", href: "/shop?category=stereo", couponId: "c-bassdrop", startsAt: "2026-08-01", endsAt: "2026-12-31", active: true, createdAt: "2026-07-28T10:00:00+10:00" },
+  { id: "o1", title: "Ute & 4x4 Audio Upgrade", subtitle: "Stereo + speakers + sub bundle for HiLux, Ranger, Triton and more. Free fitting.", highlight: "30% OFF", image: "/images/hero-ranger.jpg", href: "/shop?dept=car-stereos", couponId: "c-bassdrop", startsAt: "2026-08-01", endsAt: "2026-12-31", active: true, createdAt: "2026-07-28T10:00:00+10:00" },
   { id: "o2", title: "Road-trip ready", subtitle: "$50 off your first order over $299", highlight: "$50 OFF", image: "/images/coast-road.jpg", href: "/shop", couponId: "c-firstbeat", startsAt: null, endsAt: null, active: true, createdAt: "2026-06-02T10:00:00+10:00" },
-  { id: "o3", title: "Lighting Week", subtitle: "All LED headlights and ambient kits", highlight: "Buy 2 Get 1", image: "/images/headlights-red.jpg", href: "/shop?category=lighting", couponId: "c-glowup", startsAt: "2026-09-15", endsAt: "2026-10-15", active: true, createdAt: "2026-09-10T10:00:00+10:00" },
-  { id: "o4", title: "Summer Dash Cam Sale", subtitle: "Capture every kilometre of the holidays", highlight: "$40 OFF", image: "/images/dashcam.jpg", href: "/shop?category=dashcam", couponId: "c-summer", startsAt: "2026-12-01", endsAt: "2027-01-31", active: true, createdAt: "2026-10-01T10:00:00+10:00" },
+  { id: "o3", title: "Lighting Week", subtitle: "All LED headlights and ambient kits", highlight: "Buy 2 Get 1", image: "/images/headlights-red.jpg", href: "/shop?dept=led-lighting", couponId: "c-glowup", startsAt: "2026-09-15", endsAt: "2026-10-15", active: true, createdAt: "2026-09-10T10:00:00+10:00" },
+  { id: "o4", title: "Summer Dash Cam Sale", subtitle: "Capture every kilometre of the holidays", highlight: "$40 OFF", image: "/images/dashcam.jpg", href: "/shop?dept=dash-cams", couponId: "c-summer", startsAt: "2026-12-01", endsAt: "2027-01-31", active: true, createdAt: "2026-10-01T10:00:00+10:00" },
 ];
