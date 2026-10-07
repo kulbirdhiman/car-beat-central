@@ -1,7 +1,8 @@
 "use client";
 
 import { Pencil, Plus, Search, Trash2 } from "lucide-react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { useAdminStore } from "@/components/admin/AdminStore";
@@ -14,7 +15,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { departmentLabel, departmentTree, LOW_STOCK, type AdminProduct, type VehicleMake } from "@/lib/admin/model";
 import { formatPrice } from "@/lib/data";
-import { ProductDialog } from "./ProductDialog";
 
 const ALL = "all";
 
@@ -30,8 +30,6 @@ export function fitsSummary(fits: AdminProduct["fits"], makes: VehicleMake[]) {
 
 export function ProductsManager() {
   const { products, departments, makes, deleteProduct } = useAdminStore();
-  const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const [query, setQuery] = useState("");
@@ -42,12 +40,7 @@ export function ProductsManager() {
   });
   const [make, setMake] = useState(ALL);
   const [status, setStatus] = useState(ALL);
-  const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<AdminProduct | null>(null);
-
-  // The product being edited lives in the URL (?edit=id) so dashboard links can open it directly.
-  const editing = products.find((p) => p.id === searchParams.get("edit")) ?? null;
-  const setEditing = (p: AdminProduct | null) => router.replace(p ? `${pathname}?edit=${p.id}` : pathname, { scroll: false });
 
   const makeModels = new Set(makes.find((m) => m.id === make)?.models.map((m) => m.id));
   const q = query.trim().toLowerCase();
@@ -68,8 +61,10 @@ export function ProductsManager() {
         title="Products"
         description={`${products.length} products across ${departments.length} departments.`}
         actions={
-          <Button onClick={() => setCreating(true)}>
-            <Plus /> Add product
+          <Button asChild>
+            <Link href="/admin/products/new">
+              <Plus /> Add product
+            </Link>
           </Button>
         }
       />
@@ -144,7 +139,9 @@ export function ProductsManager() {
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={p.image} alt="" className="size-10 shrink-0 rounded-md object-cover" />
                         <div className="min-w-0">
-                          <div className="max-w-36 truncate font-medium sm:max-w-72">{p.name}</div>
+                          <Link href={`/admin/products/${p.id}/edit`} className="block max-w-36 truncate font-medium hover:underline sm:max-w-72">
+                            {p.name}
+                          </Link>
                           <div className="font-mono text-xs text-muted-foreground">{p.sku}</div>
                         </div>
                       </div>
@@ -171,8 +168,10 @@ export function ProductsManager() {
                     </TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon-sm" onClick={() => setEditing(p)} aria-label={`Edit ${p.name}`}>
-                          <Pencil />
+                        <Button variant="ghost" size="icon-sm" asChild>
+                          <Link href={`/admin/products/${p.id}/edit`} aria-label={`Edit ${p.name}`}>
+                            <Pencil />
+                          </Link>
                         </Button>
                         <Button variant="ghost" size="icon-sm" onClick={() => setDeleting(p)} aria-label={`Delete ${p.name}`}>
                           <Trash2 />
@@ -186,14 +185,6 @@ export function ProductsManager() {
           )}
         </CardContent>
       </Card>
-
-      {(creating || editing) && (
-        <ProductDialog
-          key={editing?.id ?? "new"}
-          product={editing}
-          onClose={() => (editing ? setEditing(null) : setCreating(false))}
-        />
-      )}
 
       <ConfirmDialog
         open={deleting !== null}

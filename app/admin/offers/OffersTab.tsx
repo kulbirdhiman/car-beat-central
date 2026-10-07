@@ -6,6 +6,7 @@ import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { newId, useAdminStore } from "@/components/admin/AdminStore";
 import { RowActions } from "@/components/admin/RowActions";
 import { SortableTable } from "@/components/admin/SortableTable";
+import { ImageUpload } from "@/components/admin/ImageUpload";
 import { Empty, Field, PromoStatusBadge, fmtSchedule } from "@/components/admin/ui";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -182,8 +183,8 @@ function OfferDialog({ offer, onClose }: { offer: Offer | null; onClose: () => v
               </SelectContent>
             </Select>
           </Field>
-          <Field id="of-image" label="Banner image path or URL" error={errors.image}>
-            <Input id="of-image" value={form.image} onChange={set("image")} aria-invalid={!!errors.image} />
+          <Field id="of-image" label="Banner image" error={errors.image} className="sm:col-span-2">
+            <ImageUpload id="of-image" folder="offers" value={form.image} onChange={(image) => setForm((f) => ({ ...f, image }))} invalid={!!errors.image} preview={false} />
           </Field>
           <Field id="of-href" label="Links to" error={errors.href}>
             <Input id="of-href" value={form.href} onChange={set("href")} className="font-mono" aria-invalid={!!errors.href} />

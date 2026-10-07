@@ -6,6 +6,7 @@ import { useState } from "react";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { newId, slugify, useAdminStore } from "@/components/admin/AdminStore";
 import { SortableTable } from "@/components/admin/SortableTable";
+import { ImageUpload } from "@/components/admin/ImageUpload";
 import { Empty, Field, PageHeader, fmtDate } from "@/components/admin/ui";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -244,8 +245,8 @@ function DepartmentDialog({ department, defaultParentId, onClose }: { department
           <Field id="df-description" label="Description">
             <Textarea id="df-description" value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
           </Field>
-          <Field id="df-image" label="Banner image path or URL">
-            <Input id="df-image" value={image} onChange={(e) => setImage(e.target.value)} />
+          <Field id="df-image" label="Banner image">
+            <ImageUpload id="df-image" folder="departments" value={image} onChange={setImage} />
           </Field>
           <label className="flex items-center gap-2 text-sm">
             <Checkbox checked={active} onCheckedChange={(v) => setActive(v === true)} />
