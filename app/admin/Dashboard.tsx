@@ -188,7 +188,7 @@ export function Dashboard() {
               <ul className="divide-y">
                 {lowStock.map((p) => (
                   <li key={p.id} className="flex items-center justify-between gap-3 py-2.5">
-                    <Link href={`/admin/products?edit=${p.id}`} className="min-w-0 truncate text-sm hover:underline">
+                    <Link href={`/admin/products/${p.id}/edit`} className="min-w-0 truncate text-sm hover:underline">
                       {p.name}
                     </Link>
                     <span className={p.stock === 0 ? "text-sm font-medium text-destructive" : "text-sm tabular-nums text-amber-700 dark:text-amber-400"}>
