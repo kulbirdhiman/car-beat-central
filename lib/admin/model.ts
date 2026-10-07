@@ -80,6 +80,8 @@ export type AdminOrder = {
   shipping: number;
   discount: number;
   coupon?: string;
+  /** PayPal transaction (capture) id and when it was paid, once paid online. Refunds are made in PayPal with this id. */
+  payment?: { paypalCaptureId: string; paidAt: string };
 };
 
 export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {

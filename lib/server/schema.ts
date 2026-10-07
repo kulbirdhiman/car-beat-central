@@ -73,6 +73,11 @@ export const orders = pgTable(
     discount: integer("discount").notNull(),
     shipping: integer("shipping").notNull(),
     total: integer("total").notNull(),
+    /** The PayPal order the shopper is paying through; replaced if they start paying again. */
+    paypalOrderId: text("paypal_order_id"),
+    /** Set once the payment is captured: the PayPal capture (transaction) id, used for refunds. */
+    paypalCaptureId: text("paypal_capture_id"),
+    paidAt: text("paid_at"),
   },
   (t) => [index("orders_created").on(t.createdAt), index("orders_email").on(t.email)],
 ).enableRLS();

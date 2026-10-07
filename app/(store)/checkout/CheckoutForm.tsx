@@ -21,7 +21,8 @@ import { cn } from "@/lib/utils";
 
 const noop = () => () => {};
 
-export function CheckoutForm() {
+/** `payOnline`: PayPal is set up, so the order is paid on the next page instead of by an emailed link. */
+export function CheckoutForm({ payOnline }: { payOnline: boolean }) {
   const lines = useCart();
   const hydrated = useSyncExternalStore(noop, () => true, () => false);
   const [state, action, pending] = useActionState<FormState, FormData>(placeOrder, {});
@@ -143,7 +144,14 @@ export function CheckoutForm() {
         <Section step={4} title="Payment">
           <p className="flex items-start gap-3 rounded-xl bg-muted p-4 text-sm text-muted-foreground">
             <Lock className="mt-0.5 size-4 shrink-0" />
-            Online card payments aren&apos;t switched on yet. Place your order and we&apos;ll email you a secure payment link. Nothing is charged until you pay.
+            {payOnline ? (
+              <span>
+                <span className="font-medium text-foreground">PayPal, Pay Later or debit/credit card.</span> Continue to review your order, then pay securely with PayPal on the next
+                step. You don&apos;t need a PayPal account to pay by card.
+              </span>
+            ) : (
+              <>Online card payments aren&apos;t switched on yet. Place your order and we&apos;ll email you a secure payment link. Nothing is charged until you pay.</>
+            )}
           </p>
         </Section>
       </div>
@@ -206,7 +214,10 @@ export function CheckoutForm() {
                 <Loader2 className="animate-spin" /> Placing order…
               </>
             ) : (
-              <>Place order{totals && ` · ${formatCents(totals.total)}`}</>
+              <>
+                {payOnline ? "Continue to payment" : "Place order"}
+                {totals && ` · ${formatCents(totals.total)}`}
+              </>
             )}
           </Button>
           {couponError && <p className="text-center text-xs text-muted-foreground">Remove or fix the offer code to continue.</p>}

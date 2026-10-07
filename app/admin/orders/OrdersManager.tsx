@@ -185,6 +185,14 @@ function OrderDetail({ order }: { order: AdminOrder }) {
             <Line label="Total" value={formatCents(total)} strong />
             <Line label="Includes GST" value={formatCents(Math.round(total / 11))} muted />
           </dl>
+          {order.payment && (
+            <p className="mt-3 rounded-lg bg-muted p-3 text-sm">
+              Paid with PayPal {fmtDateTime(order.payment.paidAt)}
+              <br />
+              <span className="text-muted-foreground">Transaction </span>
+              <span className="font-mono">{order.payment.paypalCaptureId}</span>
+            </p>
+          )}
         </section>
 
         <Separator />

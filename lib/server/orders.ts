@@ -142,6 +142,7 @@ export async function listAdminOrders({ id = null, limit = 500 }: { id?: string 
     shipping: o.shipping,
     discount: o.discount,
     coupon: o.coupon ?? undefined,
+    payment: o.paypalCaptureId && o.paidAt ? { paypalCaptureId: o.paypalCaptureId, paidAt: o.paidAt } : undefined,
   }));
 }
 
