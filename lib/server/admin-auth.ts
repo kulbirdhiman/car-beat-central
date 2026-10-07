@@ -1,15 +1,24 @@
-import { timingSafeEqual } from "node:crypto";
+import "server-only";
+import { currentUser } from "@clerk/nextjs/server";
+
+/** Emails allowed into /admin, from ADMIN_EMAILS (comma-separated). Nobody is let in when it's unset. */
+function adminEmails() {
+  return new Set(
+    (process.env.ADMIN_EMAILS ?? "")
+      .split(",")
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean),
+  );
+}
 
 /**
- * HTTP Basic auth for /admin. Username is "admin", password comes from ADMIN_PASSWORD.
- * With no ADMIN_PASSWORD set, admin access is disabled entirely.
+ * Who's asking for /admin. Signing in alone isn't enough, since anyone can create a Clerk account:
+ * one of the user's verified emails must be listed in ADMIN_EMAILS.
  */
-export function isAdminAuthorized(authorization: string | null): boolean {
-  const password = process.env.ADMIN_PASSWORD;
-  if (!password || !authorization?.startsWith("Basic ")) return false;
-
-  const decoded = Buffer.from(authorization.slice(6), "base64").toString();
-  const expected = Buffer.from(`admin:${password}`);
-  const given = Buffer.from(decoded);
-  return given.length === expected.length && timingSafeEqual(given, expected);
+export async function adminAccess(): Promise<"signed-out" | "forbidden" | "admin"> {
+  const user = await currentUser();
+  if (!user) return "signed-out";
+  const allowed = adminEmails();
+  const ok = user.emailAddresses.some((e) => e.verification?.status === "verified" && allowed.has(e.emailAddress.toLowerCase()));
+  return ok ? "admin" : "forbidden";
 }

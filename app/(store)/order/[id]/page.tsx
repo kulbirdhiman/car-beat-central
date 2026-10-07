@@ -14,7 +14,7 @@ import { ClearCart } from "./ClearCart";
 export const metadata: Metadata = { title: "Order placed · CarBeat", robots: { index: false } };
 
 export default async function OrderPage(props: PageProps<"/order/[id]">) {
-  const order = getOrder((await props.params).id);
+  const order = await getOrder((await props.params).id);
   if (!order) notFound();
 
   const reference = order.id.slice(0, 8).toUpperCase();

@@ -10,10 +10,10 @@ import { getProductSpecs } from "@/lib/server/specs";
 import type { Product } from "@/lib/types";
 
 /** One hero product, sold on its specs: image left, spec tiles, fitment and price right. */
-export function UpgradeSpotlight({ product }: { product: Product }) {
+export async function UpgradeSpotlight({ product }: { product: Product }) {
   const price = product.deal?.price ?? product.price;
   const off = discountPercent(price, product.rrp);
-  const modelNames = Object.fromEntries(getCarBrands().flatMap((b) => b.models.map((m) => [m.id, m.name])));
+  const modelNames = Object.fromEntries((await getCarBrands()).flatMap((b) => b.models.map((m) => [m.id, m.name])));
   const fits = product.fits === "universal" ? [] : product.fits.map((id) => modelNames[id]).filter(Boolean);
   // The product's own spec rows, or its feature list when it has none.
   const specs = getProductSpecs(product).slice(0, 4);

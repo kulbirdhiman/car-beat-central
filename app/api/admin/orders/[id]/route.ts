@@ -14,7 +14,7 @@ async function orderId(ctx: Ctx) {
 /** GET /api/admin/orders/:id */
 export const GET = adminRoute(
   async (_request, ctx: Ctx) => {
-    const [order] = listAdminOrders({ id: await orderId(ctx) });
+    const [order] = await listAdminOrders({ id: await orderId(ctx) });
     if (!order) throw new AdminError("Order not found.", 404);
     return order;
   },

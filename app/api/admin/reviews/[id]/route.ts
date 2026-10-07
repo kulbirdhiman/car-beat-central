@@ -9,5 +9,5 @@ export const DELETE = adminRoute(async (_request, ctx: Ctx) => {
   const { id } = await ctx.params;
   // Review ids are UUIDs, not admin slugs.
   if (!/^[0-9a-f-]{36}$/.test(id)) throw new AdminError("Invalid id.");
-  deleteReview(id);
+  await deleteReview(id);
 });

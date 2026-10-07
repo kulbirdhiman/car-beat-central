@@ -7,8 +7,8 @@ import { getDeals } from "@/lib/server/queries";
 import { cn } from "@/lib/utils";
 import { Countdown } from "./Countdown";
 
-export function TodayDeals() {
-  const deals = getDeals();
+export async function TodayDeals() {
+  const deals = await getDeals();
   if (deals.length === 0) return null;
 
   const maxOff = Math.max(...deals.map((p) => discountPercent(p.deal!.price, p.rrp)));

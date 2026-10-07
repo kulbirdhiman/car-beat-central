@@ -16,12 +16,12 @@ import { FitmentCheck } from "./FitmentCheck";
 import { ProductGallery } from "./ProductGallery";
 import { ReviewForm } from "./ReviewForm";
 
-export function generateStaticParams() {
-  return listProducts().map((p) => ({ slug: p.slug }));
+export async function generateStaticParams() {
+  return (await listProducts()).map((p) => ({ slug: p.slug }));
 }
 
 export async function generateMetadata(props: PageProps<"/products/[slug]">): Promise<Metadata> {
-  const product = getProductBySlug((await props.params).slug);
+  const product = await getProductBySlug((await props.params).slug);
   return product ? { title: `${product.name} · CarBeat`, description: product.description } : {};
 }
 
@@ -33,8 +33,9 @@ const PERKS = [
 ];
 
 export default async function ProductPage(props: PageProps<"/products/[slug]">) {
-  const product = getProductBySlug((await props.params).slug);
+  const product = await getProductBySlug((await props.params).slug);
   if (!product) notFound();
+  const [brands, reviews, departments, related] = await Promise.all([getCarBrands(), listReviews(product.id), getStoreDepartments(), getRelated(product)]);
 
   const price = product.deal?.price ?? product.price;
   const off = discountPercent(price, product.rrp);
@@ -43,10 +44,9 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
   const groups =
     fits === "universal"
       ? null
-      : getCarBrands().map((b) => ({ brand: b.name, models: b.models.filter((m) => fits.includes(m.id)) })).filter((g) => g.models.length > 0);
-  const reviews = listReviews(product.id);
+      : brands.map((b) => ({ brand: b.name, models: b.models.filter((m) => fits.includes(m.id)) })).filter((g) => g.models.length > 0);
   // Breadcrumbs follow the product's department; products without one fall back to their type.
-  const dept = product.departmentId ? findDepartment(getStoreDepartments(), (d) => d.id === product.departmentId) : null;
+  const dept = product.departmentId ? findDepartment(departments, (d) => d.id === product.departmentId) : null;
   const section = dept
     ? { label: dept.department.name, href: `/shop?dept=${dept.department.slug}` }
     : { label: CATEGORY_LABELS[product.category], href: `/shop?category=${product.category}` };
@@ -258,7 +258,7 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
           </Link>
         </div>
         <ul className="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-4">
-          {getRelated(product).map((p) => (
+          {related.map((p) => (
             <li key={p.id}>
               <ProductCard product={p} />
             </li>

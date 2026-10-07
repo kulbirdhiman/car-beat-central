@@ -6,7 +6,7 @@ import { parseFilters } from "@/lib/server/validate";
  * Public catalogue search used by the search dialog and cart.
  */
 export async function GET(request: Request) {
-  const filters = parseFilters(new URL(request.url).searchParams);
-  const products = listProducts(filters);
+  const filters = await parseFilters(new URL(request.url).searchParams);
+  const products = await listProducts(filters);
   return Response.json({ products, count: products.length });
 }

@@ -12,11 +12,11 @@ type Ctx = RouteContext<"/api/admin/vehicles/[level]/[id]">;
 export const PUT = adminRoute(async (request, ctx: Ctx) => {
   const params = await ctx.params;
   const level = vehicleLevel(params.level);
-  saveVehicle(level, parseVehicle(level, id(params.id), await readJson(request)));
+  await saveVehicle(level, parseVehicle(level, id(params.id), await readJson(request)));
 });
 
 /** DELETE /api/admin/vehicles/{level}/:id: deletes everything beneath it and removes product fitment to deleted models. */
 export const DELETE = adminRoute(async (_request, ctx: Ctx) => {
   const params = await ctx.params;
-  deleteVehicle(vehicleLevel(params.level), id(params.id));
+  await deleteVehicle(vehicleLevel(params.level), id(params.id));
 });

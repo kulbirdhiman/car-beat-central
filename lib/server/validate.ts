@@ -15,7 +15,7 @@ export function str(form: FormData, key: string, max = 200) {
 }
 
 /** Parses shop/API filters from URL search params, dropping anything invalid. */
-export function parseFilters(params: URLSearchParams): ProductFilters {
+export async function parseFilters(params: URLSearchParams): Promise<ProductFilters> {
   const category = params.get("category");
   const dept = params.get("dept");
   const model = params.get("model");
@@ -27,7 +27,7 @@ export function parseFilters(params: URLSearchParams): ProductFilters {
     q: params.get("q")?.trim().slice(0, 80) || undefined,
     category: category && category in CATEGORY_LABELS ? (category as Category) : undefined,
     dept: dept && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(dept) ? dept.slice(0, 80) : undefined,
-    model: model && getCarBrands().some((b) => b.models.some((m) => m.id === model)) ? model : undefined,
+    model: model && (await getCarBrands()).some((b) => b.models.some((m) => m.id === model)) ? model : undefined,
     maxPrice: maxPrice > 0 ? maxPrice : undefined,
     onSale: params.get("sale") === "1" || undefined,
     sort: sort && sort in SORTS ? (sort as SortKey) : undefined,
