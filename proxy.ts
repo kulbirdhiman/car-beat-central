@@ -1,19 +1,12 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { isAdminAuthorized } from "./lib/server/admin-auth";
+import { clerkMiddleware } from "@clerk/nextjs/server";
 
-/** Guards the admin dashboard and its API with HTTP Basic auth. */
-export function proxy(request: NextRequest) {
-  if (!process.env.ADMIN_PASSWORD) {
-    return new NextResponse("Admin is disabled. Set ADMIN_PASSWORD to enable it.", { status: 503 });
-  }
-  if (isAdminAuthorized(request.headers.get("authorization"))) return NextResponse.next();
-
-  return new NextResponse("Authentication required", {
-    status: 401,
-    headers: { "WWW-Authenticate": 'Basic realm="CarBeat admin", charset="UTF-8"' },
-  });
-}
+/**
+ * Loads the Clerk session for admin and sign-in. Access is checked where the data is served
+ * (the admin layout and API routes), as Clerk recommends, rather than by path here.
+ */
+export const proxy = clerkMiddleware({ signInUrl: "/sign-in" });
 
 export const config = {
-  matcher: ["/admin", "/admin/:path*", "/api/admin", "/api/admin/:path*"],
+  // Only admin and sign-in need Clerk; the store stays static.
+  matcher: ["/admin", "/admin/:path*", "/api/admin", "/api/admin/:path*", "/sign-in", "/sign-in/:path*"],
 };

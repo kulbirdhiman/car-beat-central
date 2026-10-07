@@ -37,7 +37,7 @@ export async function placeOrder(_prev: FormState, form: FormData): Promise<Form
   }
   if (!cart) return { values, message: "Your cart is empty or invalid." };
 
-  const result = createOrder(data, cart);
+  const result = await createOrder(data, cart);
   if ("error" in result) return { values, message: result.error, errors: result.field ? { [result.field]: result.error } : undefined };
 
   redirect(`/order/${result.id}`);
@@ -46,7 +46,7 @@ export async function placeOrder(_prev: FormState, form: FormData): Promise<Form
 export async function bookFitting(_prev: FormState, form: FormData): Promise<FormState> {
   const { data, errors } = validateBooking(form);
   if (!data) return { errors, values: echo(form, BOOKING_FIELDS), message: "Please fix the highlighted fields." };
-  createBooking(data);
+  await createBooking(data);
   return {
     ok: true,
     message: `Thanks ${data.name.split(" ")[0]}! Our ${data.city} team will confirm your fitting within one business day.`,
@@ -56,7 +56,7 @@ export async function bookFitting(_prev: FormState, form: FormData): Promise<For
 export async function subscribe(_prev: FormState, form: FormData): Promise<FormState> {
   const email = str(form, "email").toLowerCase();
   if (!EMAIL_RE.test(email)) return { errors: { email: "Enter a valid email address." }, values: { email } };
-  const added = addSubscriber(email);
+  const added = await addSubscriber(email);
   return { ok: true, message: added ? "You're in. Watch your inbox for price drops." : "You're already subscribed. Good on ya!" };
 }
 
@@ -65,7 +65,7 @@ const REVIEW_FIELDS = ["name", "rating", "title", "body", "vehicle"];
 export async function submitReview(_prev: FormState, form: FormData): Promise<FormState> {
   const { data, errors } = validateReview(form);
   if (!data) return { errors, values: echo(form, REVIEW_FIELDS), message: "Please fix the highlighted fields." };
-  if (!addReview(data)) return { message: "That product no longer exists." };
+  if (!(await addReview(data))) return { message: "That product no longer exists." };
   revalidatePath(`/products/${str(form, "slug", 120)}`);
   return { ok: true, message: `Thanks ${data.name.split(" ")[0]}! Your review is live.` };
 }

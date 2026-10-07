@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   const coupon = typeof body.coupon === "string" ? body.coupon.slice(0, 20) : undefined;
   const email = typeof body.email === "string" && EMAIL_RE.test(body.email) ? body.email : undefined;
 
-  const { lines: priced, totals } = quoteCart(lines, { coupon, delivery, email });
+  const { lines: priced, totals } = await quoteCart(lines, { coupon, delivery, email });
   return Response.json({
     lines: priced.map((l) => ({ productId: l.product.id, qty: l.qty })),
     totals,

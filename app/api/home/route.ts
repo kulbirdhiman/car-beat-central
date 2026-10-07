@@ -6,9 +6,18 @@ import { getCarBrands, getDeals, getFitCounts, getLiveOffers, getStoreDepartment
  * Everything the home page reads from the database, in one response, for inspecting the live data.
  */
 export async function GET() {
-  const products = listProducts();
+  const [products, offers, departments, byRating, trending, deals, coupons, carBrands, fitCounts] = await Promise.all([
+    listProducts(),
+    getLiveOffers(),
+    getStoreDepartments(),
+    listProducts({ sort: "rating", limit: 10 }),
+    getTrending(),
+    getDeals(),
+    listCoupons(),
+    getCarBrands(),
+    getFitCounts(),
+  ]);
   const reviews = products.reduce((n, p) => n + p.reviews, 0);
-  const offers = getLiveOffers();
   const offerCodes = new Set(offers.map((o) => o.code));
 
   return Response.json({
@@ -17,14 +26,14 @@ export async function GET() {
       reviews,
       products: products.length,
     },
-    departments: getStoreDepartments(),
+    departments,
     products,
-    bestSellers: listProducts({ sort: "rating" }).slice(0, 10),
-    trending: getTrending(),
-    deals: getDeals(),
+    bestSellers: byRating,
+    trending,
+    deals,
     offers,
-    coupons: listCoupons().filter((c) => offerCodes.has(c.code)),
-    carBrands: getCarBrands(),
-    fitCounts: getFitCounts(),
+    coupons: coupons.filter((c) => offerCodes.has(c.code)),
+    carBrands,
+    fitCounts,
   });
 }

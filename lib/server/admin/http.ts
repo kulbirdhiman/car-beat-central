@@ -1,16 +1,17 @@
 import "server-only";
 import { revalidatePath } from "next/cache";
-import { isAdminAuthorized } from "../admin-auth";
+import { adminAccess } from "../admin-auth";
 import { AdminError } from "./validate";
 
 /**
- * Wraps an admin API handler: checks the admin password (the proxy does too; this guards against
- * a matcher change), turns AdminError into a JSON error with its status, and after a successful
+ * Wraps an admin API handler: checks the caller is a signed-in admin, turns AdminError into a JSON error with its status, and after a successful
  * write marks every store page stale so shoppers see the change on their next visit.
  */
 export function adminRoute<Ctx>(handler: (request: Request, ctx: Ctx) => unknown, { writes = true } = {}) {
   return async (request: Request, ctx: Ctx) => {
-    if (!isAdminAuthorized(request.headers.get("authorization"))) return Response.json({ error: "Authentication required." }, { status: 401 });
+    const access = await adminAccess();
+    if (access === "signed-out") return Response.json({ error: "Sign in required." }, { status: 401 });
+    if (access === "forbidden") return Response.json({ error: "Admin access required." }, { status: 403 });
     try {
       const result = await handler(request, ctx);
       if (writes) revalidatePath("/", "layout");

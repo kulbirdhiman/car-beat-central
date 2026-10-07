@@ -28,10 +28,17 @@ const PRICES = [
 export default async function ShopPage(props: PageProps<"/shop">) {
   const raw = await props.searchParams;
   const params = new URLSearchParams(Object.entries(raw).flatMap(([k, v]) => (typeof v === "string" ? [[k, v]] : [])));
-  const filters = parseFilters(params);
-  const products = listProducts(filters);
-  const car = getCarBrands().flatMap((b) => b.models.map((m) => ({ brand: b, model: m }))).find((c) => c.model.id === filters.model);
-  const departments = getStoreDepartments();
+  const filters = await parseFilters(params);
+  const [products, brands, departments, fitCounts, total, offers, deals] = await Promise.all([
+    listProducts(filters),
+    getCarBrands(),
+    getStoreDepartments(),
+    getFitCounts(),
+    getProductCount(),
+    getLiveOffers(),
+    getDeals(),
+  ]);
+  const car = brands.flatMap((b) => b.models.map((m) => ({ brand: b, model: m }))).find((c) => c.model.id === filters.model);
   const dept = filters.dept ? findDepartment(departments, (d) => d.slug === filters.dept) : null;
   // The top-level department whose sub-departments are shown in the sidebar.
   const openDept = dept?.parent ?? dept?.department;
@@ -68,10 +75,10 @@ export default async function ShopPage(props: PageProps<"/shop">) {
 
   const filterPanel = (
     <div className="space-y-4">
-      <VehicleFilter key={filters.model ?? "none"} modelId={filters.model} fitCounts={getFitCounts()} />
+      <VehicleFilter key={filters.model ?? "none"} modelId={filters.model} fitCounts={fitCounts} />
 
       <FilterCard title="Categories">
-        <CategoryLink href={hrefWith({ dept: null, category: null })} active={!filters.dept && !filters.category} label="All categories" count={getProductCount()}>
+        <CategoryLink href={hrefWith({ dept: null, category: null })} active={!filters.dept && !filters.category} label="All categories" count={total}>
           <LayoutGrid className="size-4" />
         </CategoryLink>
         {departments.map((d) => (
@@ -166,7 +173,7 @@ export default async function ShopPage(props: PageProps<"/shop">) {
           )}
 
           <div className="mt-5">
-            <OfferStrip offers={getLiveOffers()} dealCount={getDeals().length} />
+            <OfferStrip offers={offers} dealCount={deals.length} />
           </div>
 
           <div className="mt-6">
