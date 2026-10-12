@@ -51,42 +51,43 @@ export function isDelivery(value: string): value is Delivery {
   return value in DELIVERY_OPTIONS;
 }
 
-export type CheckoutInput = {
-  email: string;
-  name: string;
-  phone: string;
-  address: string;
-  suburb: string;
-  state: string;
-  postcode: string;
-  delivery: Delivery;
-  coupon: string;
-};
+export type AddressInput = { name: string; phone: string; address: string; suburb: string; state: string; postcode: string };
 
-export function validateCheckout(form: FormData): { data?: CheckoutInput; errors: FieldErrors } {
+export type CheckoutInput = AddressInput & { email: string; delivery: Delivery; coupon: string };
+
+/** A delivery address: the shared part of checkout and the customer's saved addresses. */
+export function validateAddress(form: FormData): { data?: AddressInput; errors: FieldErrors } {
   const errors: FieldErrors = {};
   const data = {
-    email: str(form, "email").toLowerCase(),
     name: str(form, "name", 100),
     phone: str(form, "phone", 20),
     address: str(form, "address"),
     suburb: str(form, "suburb", 80),
     state: str(form, "state", 3),
     postcode: str(form, "postcode", 4),
-    delivery: str(form, "delivery", 20),
-    coupon: str(form, "coupon", 20).toUpperCase(),
   };
 
-  if (!EMAIL_RE.test(data.email)) errors.email = "Enter a valid email address.";
   if (data.name.length < 2) errors.name = "Enter your full name.";
   if (!/^(\+?61|0)[2-478]\d{8}$/.test(data.phone.replace(/[\s()-]/g, ""))) errors.phone = "Enter an Australian phone number, e.g. 0412 345 678.";
   if (data.address.length < 5) errors.address = "Enter your street address.";
   if (data.suburb.length < 2) errors.suburb = "Enter your suburb.";
   if (!(AU_STATES as readonly string[]).includes(data.state)) errors.state = "Choose a state.";
   if (!/^\d{4}$/.test(data.postcode)) errors.postcode = "Postcodes are 4 digits.";
-  if (!isDelivery(data.delivery)) errors.delivery = "Choose a delivery option.";
 
-  return Object.keys(errors).length ? { errors } : { data: data as CheckoutInput, errors };
+  return Object.keys(errors).length ? { errors } : { data, errors };
+}
+
+export function validateCheckout(form: FormData): { data?: CheckoutInput; errors: FieldErrors } {
+  const address = validateAddress(form);
+  const errors: FieldErrors = { ...address.errors };
+  const email = str(form, "email").toLowerCase();
+  const delivery = str(form, "delivery", 20);
+  const coupon = str(form, "coupon", 20).toUpperCase();
+
+  if (!EMAIL_RE.test(email)) errors.email = "Enter a valid email address.";
+  if (!isDelivery(delivery)) errors.delivery = "Choose a delivery option.";
+
+  return address.data && isDelivery(delivery) && !Object.keys(errors).length ? { data: { ...address.data, email, delivery, coupon }, errors } : { errors };
 }
 
 export type BookingInput = { name: string; email: string; phone: string; city: string; vehicle: string; date: string; notes: string };

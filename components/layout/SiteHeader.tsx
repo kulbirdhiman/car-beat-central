@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, CalendarCheck, ChevronDown, LayoutGrid, Menu, ShoppingBag, Zap } from "lucide-react";
+import { ArrowRight, CalendarCheck, ChevronDown, CircleUserRound, LayoutGrid, Menu, ShoppingBag, Zap } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -59,6 +59,16 @@ export function SiteHeader({ departments, total }: { departments: StoreDepartmen
             >
               <CalendarCheck className="size-5" />
               <span className="hidden xl:inline">Book a fitting</span>
+            </Link>
+
+            {/* Signed-out shoppers are sent to sign in from here. */}
+            <Link
+              href="/account"
+              aria-label="My account"
+              className="flex h-10 items-center gap-2 rounded-full px-3 text-sm font-semibold transition-colors hover:bg-secondary"
+            >
+              <CircleUserRound className="size-5" />
+              <span className="hidden xl:inline">Account</span>
             </Link>
 
             <Link
@@ -211,6 +221,11 @@ function MobileMenu({ departments }: { departments: StoreDepartment[] }) {
             <Link href="/fitting" className="flex items-center gap-2 rounded-md px-3 py-2.5 font-medium hover:bg-muted">
               <CalendarCheck className="size-4" /> Book a fitting
               <span className="ml-auto text-xs text-muted-foreground">{FITTING_CITIES.length} cities</span>
+            </Link>
+          </SheetClose>
+          <SheetClose asChild>
+            <Link href="/account" className="flex items-center gap-2 rounded-md px-3 py-2.5 font-medium hover:bg-muted">
+              <CircleUserRound className="size-4" /> My account
             </Link>
           </SheetClose>
           <SheetClose asChild>

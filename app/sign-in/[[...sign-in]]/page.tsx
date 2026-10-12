@@ -7,6 +7,7 @@ export const metadata = {
   robots: { index: false },
 };
 
+/** Sign-in for customers and admins alike. Customers land on their account; /admin sends admins here with ?redirect_url=/admin. */
 export default function SignInPage() {
   return (
     <ClerkProvider>
@@ -15,7 +16,7 @@ export default function SignInPage() {
           <Link href="/">
             <Logo />
           </Link>
-          <SignIn fallbackRedirectUrl="/admin" />
+          <SignIn signUpUrl="/sign-up" fallbackRedirectUrl="/account" signUpFallbackRedirectUrl="/account" />
         </div>
       </div>
     </ClerkProvider>

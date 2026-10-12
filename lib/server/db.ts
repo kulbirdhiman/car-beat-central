@@ -4,8 +4,9 @@ import postgres from "postgres";
 import * as schema from "./schema";
 
 /**
- * Supabase Postgres. DATABASE_URL is the project's transaction pooler connection string (port 6543),
- * which suits serverless hosts. The pooler doesn't support prepared statements, so they're turned off.
+ * Supabase Postgres. DATABASE_URL is the project's session pooler connection string (port 5432), which is reachable
+ * over IPv4 (unlike the direct db.*.supabase.co host, so it works from Vercel). The transaction pooler (6543) is avoided:
+ * it hangs when queries run concurrently, as Promise.all in the store layout does. Prepared statements stay off.
  * Migrations aren't run here: apply them with `npm run db:migrate`.
  */
 function open() {

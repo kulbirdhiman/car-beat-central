@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { rememberFirstAddress } from "@/lib/server/account";
+import { getCustomer } from "@/lib/server/customer";
 import { addSubscriber, createBooking, createOrder } from "@/lib/server/orders";
 import { addReview } from "@/lib/server/reviews";
 import { EMAIL_RE, parseCart, str, validateBooking, validateCheckout, validateReview, type FieldErrors } from "@/lib/server/validate";
@@ -37,8 +39,10 @@ export async function placeOrder(_prev: FormState, form: FormData): Promise<Form
   }
   if (!cart) return { values, message: "Your cart is empty or invalid." };
 
-  const result = await createOrder(data, cart);
+  const customer = await getCustomer();
+  const result = await createOrder(data, cart, customer?.id);
   if ("error" in result) return { values, message: result.error, errors: result.field ? { [result.field]: result.error } : undefined };
+  if (customer) await rememberFirstAddress(customer.id, data);
 
   redirect(`/order/${result.id}`);
 }

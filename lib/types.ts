@@ -70,3 +70,6 @@ export type Offer = {
 export type CartLine = { productId: string; qty: number };
 
 export type OrderStatus = "pending_payment" | "paid" | "fulfilled" | "cancelled";
+
+/** An Australian suburb with its state and postcode. */
+export type Locality = { suburb: string; state: string; postcode: string };
