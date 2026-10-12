@@ -5,6 +5,7 @@ import { useActionState, useState, useTransition, type ReactElement, type ReactN
 import { toast } from "sonner";
 import { deleteAddressAction, saveAddressAction, setDefaultAddressAction } from "@/app/(store)/account/actions";
 import type { FormState } from "@/app/actions";
+import { SuburbInput } from "@/components/address/SuburbInput";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -98,7 +99,7 @@ function AddressForm({ address, onSaved }: { address?: SavedAddress; onSaved: ()
   }, {});
   const v = state.values ?? address ?? {};
   const errors = state.errors ?? {};
-  const [auState, setAuState] = useState(address?.state ?? "");
+  const [place, setPlace] = useState({ suburb: v.suburb ?? "", state: v.state ?? "", postcode: v.postcode ?? "" });
 
   return (
     <form action={action} noValidate className="grid gap-4 sm:grid-cols-6">
@@ -115,15 +116,12 @@ function AddressForm({ address, onSaved }: { address?: SavedAddress; onSaved: ()
         <Input id="phone" name="phone" defaultValue={v.phone} aria-invalid={!!errors.phone} type="tel" autoComplete="tel" inputMode="tel" placeholder="0412 345 678" required />
       </Field>
       <Field label="Street address" name="address" error={errors.address} className="sm:col-span-6">
-        <Input id="address" name="address" defaultValue={v.address} aria-invalid={!!errors.address} autoComplete="street-address" required />
+        <Input id="address" name="address" defaultValue={v.address} aria-invalid={!!errors.address} autoComplete="address-line1" placeholder="e.g. 12 Smith Street" required />
       </Field>
-      <Field label="Suburb" name="suburb" error={errors.suburb} className="sm:col-span-3">
-        <Input id="suburb" name="suburb" defaultValue={v.suburb} aria-invalid={!!errors.suburb} autoComplete="address-level2" required />
-      </Field>
-      <Field label="State" name="state" error={errors.state} className="sm:col-span-1">
-        <Select name="state" required value={auState} onValueChange={setAuState}>
+      <Field label="State" name="state" error={errors.state} className="sm:col-span-2">
+        <Select name="state" required value={place.state} onValueChange={(state) => setPlace((p) => ({ ...p, state }))}>
           <SelectTrigger id="state" className="w-full" aria-invalid={!!errors.state}>
-            <SelectValue placeholder="—" />
+            <SelectValue placeholder="Select state" />
           </SelectTrigger>
           <SelectContent>
             {AU_STATES.map((s) => (
@@ -134,8 +132,29 @@ function AddressForm({ address, onSaved }: { address?: SavedAddress; onSaved: ()
           </SelectContent>
         </Select>
       </Field>
+      <Field label="Suburb / city" name="suburb" error={errors.suburb} className="sm:col-span-2">
+        <SuburbInput
+          id="suburb"
+          name="suburb"
+          value={place.suburb}
+          state={place.state || undefined}
+          invalid={!!errors.suburb}
+          onChange={(suburb) => setPlace((p) => ({ ...p, suburb }))}
+          onPick={setPlace}
+        />
+      </Field>
       <Field label="Postcode" name="postcode" error={errors.postcode} className="sm:col-span-2">
-        <Input id="postcode" name="postcode" defaultValue={v.postcode} aria-invalid={!!errors.postcode} autoComplete="postal-code" inputMode="numeric" maxLength={4} required />
+        <Input
+          id="postcode"
+          name="postcode"
+          value={place.postcode}
+          onChange={(e) => setPlace((p) => ({ ...p, postcode: e.target.value.replace(/\D/g, "") }))}
+          aria-invalid={!!errors.postcode}
+          autoComplete="postal-code"
+          inputMode="numeric"
+          maxLength={4}
+          required
+        />
       </Field>
       {!address?.isDefault && (
         <Label className="flex items-center gap-2 font-normal sm:col-span-6">

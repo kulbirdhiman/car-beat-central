@@ -7,6 +7,7 @@ import { useActionState, useState, useSyncExternalStore, type ReactNode } from "
 import { placeOrder, type FormState } from "@/app/actions";
 import { useCartProducts, useQuote } from "@/components/cart/hooks";
 import { OrderSummary } from "@/components/cart/OrderSummary";
+import { SuburbInput } from "@/components/address/SuburbInput";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -38,7 +39,6 @@ export function CheckoutForm({ payOnline, prefill }: { payOnline: boolean; prefi
   const [email, setEmail] = useState(prefill?.email ?? "");
   const { products } = useCartProducts(lines);
   const { totals, stale } = useQuote(lines, { delivery, coupon, email: email.includes("@") ? email : undefined });
-  const [auState, setAuState] = useState("");
   // Hide a field's error once the shopper edits it (until the next submit).
   const [edited, setEdited] = useState<{ state: FormState; names: string[] }>({ state, names: [] });
   const editedNames = edited.state === state ? edited.names : [];
@@ -46,6 +46,7 @@ export function CheckoutForm({ payOnline, prefill }: { payOnline: boolean; prefi
     setEdited((e) => ({ state, names: [...(e.state === state ? e.names : []), name] }));
   const errors = Object.fromEntries(Object.entries(state.errors ?? {}).filter(([k]) => !editedNames.includes(k)));
   const v = state.values ?? prefill ?? {};
+  const [place, setPlace] = useState({ suburb: v.suburb ?? "", state: v.state ?? "", postcode: v.postcode ?? "" });
 
   if (!hydrated) return <Skeleton className="h-96 w-full rounded-xl" />;
 
@@ -115,18 +116,20 @@ export function CheckoutForm({ payOnline, prefill }: { payOnline: boolean; prefi
               <Input id="name" name="name" defaultValue={v.name} aria-invalid={!!errors.name} autoComplete="name" required />
             </Field>
             <Field label="Street address" name="address" error={errors.address} className="sm:col-span-6">
-              <Input id="address" name="address" defaultValue={v.address} aria-invalid={!!errors.address} autoComplete="street-address" required />
+              <Input id="address" name="address" defaultValue={v.address} aria-invalid={!!errors.address} autoComplete="address-line1" placeholder="e.g. 12 Smith Street" required />
             </Field>
-            <Field label="Suburb" name="suburb" error={errors.suburb} className="sm:col-span-3">
-              <Input id="suburb" name="suburb" defaultValue={v.suburb} aria-invalid={!!errors.suburb} autoComplete="address-level2" required />
-            </Field>
-            <Field label="State" name="state" error={errors.state} className="sm:col-span-1">
-              <Select name="state" required value={auState || v.state || ""} onValueChange={(s) => {
-                  setAuState(s);
+            <Field label="State" name="state" error={errors.state} className="sm:col-span-2">
+              <Select
+                name="state"
+                required
+                value={place.state}
+                onValueChange={(s) => {
+                  setPlace((p) => ({ ...p, state: s }));
                   markEdited("state");
-                }}>
+                }}
+              >
                 <SelectTrigger id="state" className="h-11! w-full" aria-invalid={!!errors.state}>
-                  <SelectValue placeholder="—" />
+                  <SelectValue placeholder="Select state" />
                 </SelectTrigger>
                 <SelectContent>
                   {AU_STATES.map((s) => (
@@ -137,8 +140,32 @@ export function CheckoutForm({ payOnline, prefill }: { payOnline: boolean; prefi
                 </SelectContent>
               </Select>
             </Field>
+            <Field label="Suburb / city" name="suburb" error={errors.suburb} className="sm:col-span-2">
+              <SuburbInput
+                id="suburb"
+                name="suburb"
+                value={place.suburb}
+                state={place.state || undefined}
+                invalid={!!errors.suburb}
+                onChange={(suburb) => setPlace((p) => ({ ...p, suburb }))}
+                onPick={(l) => {
+                  setPlace(l);
+                  ["suburb", "state", "postcode"].forEach(markEdited);
+                }}
+              />
+            </Field>
             <Field label="Postcode" name="postcode" error={errors.postcode} className="sm:col-span-2">
-              <Input id="postcode" name="postcode" defaultValue={v.postcode} aria-invalid={!!errors.postcode} autoComplete="postal-code" inputMode="numeric" maxLength={4} required />
+              <Input
+                id="postcode"
+                name="postcode"
+                value={place.postcode}
+                onChange={(e) => setPlace((p) => ({ ...p, postcode: e.target.value.replace(/\D/g, "") }))}
+                aria-invalid={!!errors.postcode}
+                autoComplete="postal-code"
+                inputMode="numeric"
+                maxLength={4}
+                required
+              />
             </Field>
           </div>
         </Section>
