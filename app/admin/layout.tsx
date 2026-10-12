@@ -16,7 +16,7 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
   // Always render per request: admin data must be live, never a build-time snapshot.
   await connection();
   const access = await adminAccess();
-  if (access === "signed-out") redirect("/sign-in");
+  if (access === "signed-out") redirect("/sign-in?redirect_url=/admin");
   if (access === "forbidden") {
     return (
       <ClerkProvider>
@@ -28,7 +28,7 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
               This account isn&apos;t an admin. Sign in with an admin email, or ask an admin to add yours to ADMIN_EMAILS.
             </p>
             <div className="mt-6 flex justify-center gap-3">
-              <SignOutButton redirectUrl="/sign-in">
+              <SignOutButton redirectUrl="/sign-in?redirect_url=/admin">
                 <Button>Sign in with another account</Button>
               </SignOutButton>
               <Button asChild variant="outline">

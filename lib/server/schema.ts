@@ -61,6 +61,8 @@ export const orders = pgTable(
     createdAt: text("created_at").notNull().$defaultFn(now),
     status: text("status").$type<OrderStatus>().notNull(),
     email: text("email").notNull(),
+    /** The Clerk user who placed it, when they were signed in. Their account also shows orders placed with their verified email. */
+    userId: text("user_id"),
     name: text("name").notNull(),
     phone: text("phone").notNull(),
     address: text("address").notNull(),
@@ -79,7 +81,26 @@ export const orders = pgTable(
     paypalCaptureId: text("paypal_capture_id"),
     paidAt: text("paid_at"),
   },
-  (t) => [index("orders_created").on(t.createdAt), index("orders_email").on(t.email)],
+  (t) => [index("orders_created").on(t.createdAt), index("orders_email").on(t.email), index("orders_user").on(t.userId)],
+).enableRLS();
+
+/** Delivery addresses a signed-in customer saved to their account. `userId` is their Clerk user id. */
+export const customerAddresses = pgTable(
+  "customer_addresses",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull(),
+    name: text("name").notNull(),
+    phone: text("phone").notNull(),
+    address: text("address").notNull(),
+    suburb: text("suburb").notNull(),
+    state: text("state").notNull(),
+    postcode: text("postcode").notNull(),
+    /** Prefilled at checkout. A customer with addresses has exactly one default. */
+    isDefault: boolean("is_default").notNull().default(false),
+    createdAt: text("created_at").notNull().$defaultFn(now),
+  },
+  (t) => [index("customer_addresses_user").on(t.userId)],
 ).enableRLS();
 
 export const orderItems = pgTable(

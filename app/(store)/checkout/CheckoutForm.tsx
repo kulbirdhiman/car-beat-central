@@ -21,15 +21,21 @@ import { cn } from "@/lib/utils";
 
 const noop = () => () => {};
 
-/** `payOnline`: PayPal is set up, so the order is paid on the next page instead of by an emailed link. */
-export function CheckoutForm({ payOnline }: { payOnline: boolean }) {
+/** A signed-in customer's email and default address, filled in for them. */
+export type CheckoutPrefill = Record<"email" | "name" | "phone" | "address" | "suburb" | "state" | "postcode", string>;
+
+/**
+ * `payOnline`: PayPal is set up, so the order is paid on the next page instead of by an emailed link.
+ * `prefill`: set when the shopper is signed in.
+ */
+export function CheckoutForm({ payOnline, prefill }: { payOnline: boolean; prefill: CheckoutPrefill | null }) {
   const lines = useCart();
   const hydrated = useSyncExternalStore(noop, () => true, () => false);
   const [state, action, pending] = useActionState<FormState, FormData>(placeOrder, {});
   const [delivery, setDelivery] = useState<Delivery>("standard");
   const [couponInput, setCouponInput] = useState("");
   const [coupon, setCoupon] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(prefill?.email ?? "");
   const { products } = useCartProducts(lines);
   const { totals, stale } = useQuote(lines, { delivery, coupon, email: email.includes("@") ? email : undefined });
   const [auState, setAuState] = useState("");
@@ -39,7 +45,7 @@ export function CheckoutForm({ payOnline }: { payOnline: boolean }) {
   const markEdited = (name: string) =>
     setEdited((e) => ({ state, names: [...(e.state === state ? e.names : []), name] }));
   const errors = Object.fromEntries(Object.entries(state.errors ?? {}).filter(([k]) => !editedNames.includes(k)));
-  const v = state.values ?? {};
+  const v = state.values ?? prefill ?? {};
 
   if (!hydrated) return <Skeleton className="h-96 w-full rounded-xl" />;
 
@@ -74,6 +80,25 @@ export function CheckoutForm({ payOnline }: { payOnline: boolean }) {
         )}
 
         <Section step={1} title="Contact">
+          <p className="-mt-2 mb-4 text-sm text-muted-foreground">
+            {prefill ? (
+              <>
+                Signed in as <span className="font-medium text-foreground">{prefill.email}</span>. This order will show in{" "}
+                <Link href="/account/orders" className="font-medium text-primary hover:underline">
+                  your account
+                </Link>
+                .
+              </>
+            ) : (
+              <>
+                Have an account?{" "}
+                <Link href="/sign-in?redirect_url=/checkout" className="font-medium text-primary hover:underline">
+                  Sign in
+                </Link>{" "}
+                to fill in your address and track this order.
+              </>
+            )}
+          </p>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Email" name="email" error={errors.email}>
               <Input id="email" name="email" defaultValue={v.email} aria-invalid={!!errors.email} type="email" autoComplete="email" required onBlur={(e) => setEmail(e.target.value.trim())} />
@@ -146,11 +171,14 @@ export function CheckoutForm({ payOnline }: { payOnline: boolean }) {
             <Lock className="mt-0.5 size-4 shrink-0" />
             {payOnline ? (
               <span>
-                <span className="font-medium text-foreground">PayPal, Pay Later or debit/credit card.</span> Continue to review your order, then pay securely with PayPal on the next
-                step. You don&apos;t need a PayPal account to pay by card.
+                <span className="font-medium text-foreground">PayPal, Pay Later, debit/credit card or bank transfer.</span> Continue to review your order, then choose how to
+                pay on the next step. You don&apos;t need a PayPal account to pay by card.
               </span>
             ) : (
-              <>Online card payments aren&apos;t switched on yet. Place your order and we&apos;ll email you a secure payment link. Nothing is charged until you pay.</>
+              <span>
+                <span className="font-medium text-foreground">Bank transfer.</span> Place your order and we&apos;ll show our bank details on the next step. We ship once your
+                payment arrives.
+              </span>
             )}
           </p>
         </Section>

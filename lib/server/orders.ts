@@ -34,9 +34,11 @@ export async function quoteCart(lines: CartLine[], opts: { coupon?: string; deli
   return { lines: priced, totals };
 }
 
+/** `userId`: the signed-in customer placing it, if any, so it shows in their account. */
 export async function createOrder(
   input: CheckoutInput,
   cart: CartLine[],
+  userId: string | null = null,
 ): Promise<{ id: string; totals: Totals } | { error: string; field?: "coupon" }> {
   const { lines, totals } = await quoteCart(cart, { coupon: input.coupon, delivery: input.delivery, email: input.email });
   if (lines.length === 0) return { error: "Your cart is empty." };
@@ -71,6 +73,7 @@ export async function createOrder(
           id,
           status: "pending_payment",
           email: input.email,
+          userId,
           name: input.name,
           phone: input.phone,
           address: input.address,
