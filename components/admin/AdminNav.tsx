@@ -1,6 +1,6 @@
 "use client";
 
-import { Car, Layers, LayoutDashboard, Menu, Package, ShoppingBag, TicketPercent, Users } from "lucide-react";
+import { Car, FilePlus2, Layers, LayoutDashboard, Menu, Package, ShoppingBag, TicketPercent, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -15,6 +15,7 @@ const LINKS = [
   { href: "/admin/departments", label: "Departments", icon: Layers },
   { href: "/admin/categories", label: "Vehicle Categories", icon: Car },
   { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
+  { href: "/admin/orders/new", label: "New invoice", icon: FilePlus2 },
   { href: "/admin/offers", label: "Offers & Coupons", icon: TicketPercent },
   { href: "/admin/customers", label: "Customers", icon: Users },
 ] as const;
@@ -23,11 +24,15 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const { orders } = useAdminStore();
   const toShip = orders.filter((o) => o.status === "paid").length;
+  // The most specific matching link is the active one, so New invoice doesn't also light up Orders.
+  const activeHref = LINKS.filter(({ href }) => (href === "/admin" ? pathname === href : pathname.startsWith(href)))
+    .map(({ href }) => href)
+    .sort((a, b) => b.length - a.length)[0];
 
   return (
     <nav className="flex flex-col gap-1" aria-label="Admin">
       {LINKS.map(({ href, label, icon: Icon }) => {
-        const active = href === "/admin" ? pathname === href : pathname.startsWith(href);
+        const active = href === activeHref;
         return (
           <Link
             key={href}

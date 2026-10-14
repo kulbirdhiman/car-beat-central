@@ -1,7 +1,8 @@
 import "server-only";
 import { and, count, desc, eq, gte, inArray, isNull, lt, ne, or, sql, sum } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
-import type { AdminOrder } from "../admin/model";
+import type { AdminOrder, InvoiceInput } from "../admin/model";
+import { DEFAULT_PAYMENT_METHODS } from "../payment";
 import { priceCart, unitPriceCents, type Delivery, type Totals } from "../pricing";
 import type { CartLine, OrderStatus } from "../types";
 import { getCouponByCode } from "./admin/promos";
@@ -98,6 +99,53 @@ export async function createOrder(
   return { id, totals };
 }
 
+/** A manual invoice raised by an admin: an order at the prices they set, paid through the customer's order page. Takes stock like a checkout order. */
+export async function createInvoice(input: InvoiceInput): Promise<AdminOrder> {
+  const found = await db
+    .select({ id: products.id, name: products.name })
+    .from(products)
+    .where(inArray(products.id, input.items.map((i) => i.productId)));
+  const lines = input.items.map((i) => {
+    const product = found.find((p) => p.id === i.productId);
+    if (!product) throw new AdminError("A product on this invoice no longer exists.");
+    return { ...i, name: product.name };
+  });
+  const subtotal = lines.reduce((n, l) => n + l.unitPrice * l.qty, 0);
+  if (input.discount > subtotal) throw new AdminError("The discount can't be more than the subtotal.");
+
+  const id = randomUUID();
+  await transaction(async (tx) => {
+    for (const l of lines) {
+      const taken = await tx
+        .update(products)
+        .set({ stock: sql`${products.stock} - ${l.qty}` })
+        .where(and(eq(products.id, l.productId), gte(products.stock, l.qty)))
+        .returning({ id: products.id });
+      if (taken.length === 0) throw new AdminError(`Not enough stock of ${l.name}. Update its stock first.`);
+    }
+    await tx.insert(orders).values({
+      id,
+      source: "invoice",
+      status: input.paid ? "paid" : "pending_payment",
+      paidAt: input.paid ? new Date().toISOString() : null,
+      email: input.customer.email,
+      name: input.customer.name,
+      phone: input.customer.phone,
+      ...input.shipTo,
+      delivery: input.delivery,
+      subtotal,
+      discount: input.discount,
+      shipping: input.shipping,
+      total: subtotal - input.discount + input.shipping,
+      paymentMethods: input.paymentMethods,
+      note: input.note || null,
+    });
+    await tx.insert(orderItems).values(lines.map((l) => ({ orderId: id, productId: l.productId, name: l.name, unitPrice: l.unitPrice, qty: l.qty })));
+  });
+  const [order] = await listAdminOrders({ id });
+  return order;
+}
+
 function stockMessage(name: string, stock: number) {
   return stock === 0 ? `Sorry, ${name} has just sold out. Please remove it from your cart.` : `Only ${stock} of ${name} left. Please lower the quantity.`;
 }
@@ -146,6 +194,9 @@ export async function listAdminOrders({ id = null, limit = 500 }: { id?: string 
     discount: o.discount,
     coupon: o.coupon ?? undefined,
     payment: o.paypalCaptureId && o.paidAt ? { paypalCaptureId: o.paypalCaptureId, paidAt: o.paidAt } : undefined,
+    source: o.source,
+    paymentMethods: o.paymentMethods ?? DEFAULT_PAYMENT_METHODS,
+    note: o.note ?? "",
   }));
 }
 

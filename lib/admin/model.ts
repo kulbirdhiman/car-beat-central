@@ -1,3 +1,4 @@
+import type { PaymentMethod } from "@/lib/payment";
 import type { Category, OrderStatus } from "@/lib/types";
 
 /** Admin entity types and display helpers, shared by the admin UI and the server. */
@@ -82,6 +83,27 @@ export type AdminOrder = {
   coupon?: string;
   /** PayPal transaction (capture) id and when it was paid, once paid online. Refunds are made in PayPal with this id. */
   payment?: { paypalCaptureId: string; paidAt: string };
+  /** "invoice" when an admin raised it as a manual invoice. */
+  source: "checkout" | "invoice";
+  /** How the customer may pay. */
+  paymentMethods: PaymentMethod[];
+  /** Message to the customer, shown on the invoice. Empty for none. */
+  note: string;
+};
+
+/** A manual invoice as the admin form sends it. Amounts in cents, GST inclusive. */
+export type InvoiceInput = {
+  customer: { name: string; email: string; phone: string };
+  shipTo: { address: string; suburb: string; state: string; postcode: string };
+  delivery: AdminOrder["delivery"];
+  /** Unit prices can differ from the catalogue price, e.g. a quoted price. */
+  items: { productId: string; unitPrice: number; qty: number }[];
+  shipping: number;
+  discount: number;
+  paymentMethods: PaymentMethod[];
+  /** Already paid (e.g. in store), so the invoice is a receipt and is created as paid. */
+  paid: boolean;
+  note: string;
 };
 
 export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
