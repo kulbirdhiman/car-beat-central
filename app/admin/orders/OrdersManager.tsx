@@ -1,8 +1,10 @@
 "use client";
 
-import { Search, Truck } from "lucide-react";
+import { Copy, ExternalLink, Plus, Search, Truck } from "lucide-react";
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 import { useAdminStore } from "@/components/admin/AdminStore";
 import { Empty, OrderStatusBadge, PageHeader, fmtDateTime } from "@/components/admin/ui";
 import { Button } from "@/components/ui/button";
@@ -15,6 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DELIVERY_LABEL, ORDER_STATUS_LABEL, orderSubtotal, orderTotal, type AdminOrder } from "@/lib/admin/model";
 import { formatCents } from "@/lib/data";
+import { PAYMENT_METHODS } from "@/lib/payment";
 import type { OrderStatus } from "@/lib/types";
 
 const ALL = "all";
@@ -49,7 +52,17 @@ export function OrdersManager() {
 
   return (
     <>
-      <PageHeader title="Orders" description={`${orders.length} orders · ${orders.filter((o) => o.status === "paid").length} ready to ship.`} />
+      <PageHeader
+        title="Orders"
+        description={`${orders.length} orders · ${orders.filter((o) => o.status === "paid").length} ready to ship.`}
+        actions={
+          <Button asChild>
+            <Link href="/admin/orders/new">
+              <Plus /> New invoice
+            </Link>
+          </Button>
+        }
+      />
 
       <Card>
         <CardContent className="space-y-4">
@@ -96,6 +109,7 @@ export function OrdersManager() {
                         }}>
                         {o.number}
                       </button>
+                      {o.source === "invoice" && <span className="ml-2 font-sans text-xs text-muted-foreground">Invoice</span>}
                     </TableCell>
                     <TableCell className="hidden text-muted-foreground md:table-cell">{fmtDateTime(o.createdAt)}</TableCell>
                     <TableCell>
@@ -137,7 +151,9 @@ function OrderDetail({ order }: { order: AdminOrder }) {
           <span className="font-mono">{order.number}</span>
           <OrderStatusBadge status={order.status} />
         </SheetTitle>
-        <SheetDescription>Placed {fmtDateTime(order.createdAt)}</SheetDescription>
+        <SheetDescription>
+          {order.source === "invoice" ? "Invoice raised" : "Placed"} {fmtDateTime(order.createdAt)}
+        </SheetDescription>
       </SheetHeader>
 
       <div className="space-y-6 px-4">
@@ -185,6 +201,10 @@ function OrderDetail({ order }: { order: AdminOrder }) {
             <Line label="Total" value={formatCents(total)} strong />
             <Line label="Includes GST" value={formatCents(Math.round(total / 11))} muted />
           </dl>
+          {order.status === "pending_payment" && (
+            <p className="mt-3 text-sm text-muted-foreground">Customer can pay by {order.paymentMethods.map((m) => PAYMENT_METHODS[m].toLowerCase()).join(", ")}.</p>
+          )}
+          {order.note && <p className="mt-3 whitespace-pre-line rounded-lg bg-muted p-3 text-sm">{order.note}</p>}
           {order.payment && (
             <p className="mt-3 rounded-lg bg-muted p-3 text-sm">
               Paid with PayPal {fmtDateTime(order.payment.paidAt)}
@@ -194,6 +214,10 @@ function OrderDetail({ order }: { order: AdminOrder }) {
             </p>
           )}
         </section>
+
+        <Separator />
+
+        <InvoiceLink orderId={order.id} />
 
         <Separator />
 
@@ -222,6 +246,38 @@ function OrderDetail({ order }: { order: AdminOrder }) {
         </SheetFooter>
       )}
     </>
+  );
+}
+
+/** The customer's order page, which doubles as the invoice they pay from. */
+export function InvoiceLink({ orderId }: { orderId: string }) {
+  const path = `/order/${orderId}`;
+  return (
+    <section>
+      <h3 className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">Invoice link</h3>
+      <p className="mb-2 text-sm text-muted-foreground">Send this to the customer. They can view the invoice and pay from it.</p>
+      <div className="flex gap-2">
+        <Button
+          variant="outline"
+          className="flex-1"
+          onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(new URL(path, window.location.origin).href);
+              toast.success("Invoice link copied.");
+            } catch {
+              toast.error("Couldn't copy the link.");
+            }
+          }}
+        >
+          <Copy /> Copy link
+        </Button>
+        <Button asChild variant="outline">
+          <a href={path} target="_blank" rel="noreferrer">
+            <ExternalLink /> Open
+          </a>
+        </Button>
+      </div>
+    </section>
   );
 }
 

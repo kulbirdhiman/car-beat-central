@@ -1,7 +1,9 @@
 import "server-only";
-import type { AdminProduct, Coupon, CouponScope, CouponType, Department, Offer } from "@/lib/admin/model";
-import { CATEGORY_LABELS } from "@/lib/data";
+import type { AdminProduct, Coupon, CouponScope, CouponType, Department, InvoiceInput, Offer } from "@/lib/admin/model";
+import { AU_STATES, CATEGORY_LABELS } from "@/lib/data";
+import { PAYMENT_METHODS, type PaymentMethod } from "@/lib/payment";
 import type { Category, OrderStatus } from "@/lib/types";
+import { EMAIL_RE } from "../validate";
 
 /**
  * Parses admin API request bodies. Every field is checked here, mirroring the admin forms,
@@ -170,6 +172,51 @@ const ORDER_STATUSES: readonly OrderStatus[] = ["pending_payment", "paid", "fulf
 
 export function parseOrderStatus(value: unknown): OrderStatus {
   return oneOf(asBody(value), "status", ORDER_STATUSES);
+}
+
+export function parseInvoice(value: unknown): InvoiceInput {
+  const body = asBody(value);
+  const customer = asBody(body.customer);
+  const shipTo = asBody(body.shipTo);
+  const email = text(customer, "email", { min: 1, max: 200, label: "Email" }).toLowerCase();
+  if (!EMAIL_RE.test(email)) throw new AdminError("Enter a valid email address.");
+  const postcode = text(shipTo, "postcode", { min: 1, max: 4, label: "Postcode" });
+  if (!/^\d{4}$/.test(postcode)) throw new AdminError("Postcodes are 4 digits.");
+
+  if (!Array.isArray(body.items) || body.items.length === 0) throw new AdminError("Add at least one product.");
+  if (body.items.length > 50) throw new AdminError("An invoice can have at most 50 lines.");
+  const items = body.items.map((raw) => {
+    const item = asBody(raw);
+    return {
+      productId: id(item.productId, "product"),
+      unitPrice: int(item, "unitPrice", { max: 10_000_000, label: "Unit price" }),
+      qty: int(item, "qty", { min: 1, max: 999, label: "Quantity" }),
+    };
+  });
+  if (new Set(items.map((i) => i.productId)).size !== items.length) throw new AdminError("Each product can only be listed once.");
+
+  const methods = body.paymentMethods;
+  const allMethods = Object.keys(PAYMENT_METHODS) as PaymentMethod[];
+  if (!Array.isArray(methods) || methods.some((m) => !allMethods.includes(m))) throw new AdminError("Unknown payment method.");
+  const paid = bool(body, "paid");
+  if (!paid && methods.length === 0) throw new AdminError("Choose at least one way to pay.");
+
+  return {
+    customer: { name: text(customer, "name", { min: 1, max: 100, label: "Name" }), email, phone: text(customer, "phone", { min: 1, max: 20, label: "Phone" }) },
+    shipTo: {
+      address: text(shipTo, "address", { min: 1, max: 200, label: "Address" }),
+      suburb: text(shipTo, "suburb", { min: 1, max: 100, label: "Suburb" }),
+      state: oneOf(shipTo, "state", AU_STATES),
+      postcode,
+    },
+    delivery: oneOf(body, "delivery", ["standard", "express", "collect"] as const),
+    items,
+    shipping: int(body, "shipping", { max: 1_000_000, label: "Shipping" }),
+    discount: int(body, "discount", { max: 100_000_000, label: "Discount" }),
+    paymentMethods: [...new Set(methods as PaymentMethod[])],
+    paid,
+    note: text(body, "note", { max: 1000, label: "Note" }),
+  };
 }
 
 const COUPON_TYPES: readonly CouponType[] = ["percent", "fixed", "free_shipping", "buy_x_get_y"];

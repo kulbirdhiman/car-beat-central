@@ -1,5 +1,6 @@
 import { boolean, doublePrecision, index, integer, jsonb, pgTable, text } from "drizzle-orm/pg-core";
 import type { CouponScope, CouponType } from "../admin/model";
+import type { PaymentMethod } from "../payment";
 import type { Category, OrderStatus } from "../types";
 
 /**
@@ -80,6 +81,12 @@ export const orders = pgTable(
     /** Set once the payment is captured: the PayPal capture (transaction) id, used for refunds. */
     paypalCaptureId: text("paypal_capture_id"),
     paidAt: text("paid_at"),
+    /** "invoice" for orders an admin raised as a manual invoice. */
+    source: text("source").$type<"checkout" | "invoice">().notNull().default("checkout"),
+    /** How the customer may pay; null offers the defaults (PayPal and bank transfer). Set on invoices. */
+    paymentMethods: jsonb("payment_methods").$type<PaymentMethod[]>(),
+    /** Message to the customer, shown on the invoice. */
+    note: text("note"),
   },
   (t) => [index("orders_created").on(t.createdAt), index("orders_email").on(t.email), index("orders_user").on(t.userId)],
 ).enableRLS();

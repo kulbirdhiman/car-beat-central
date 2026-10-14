@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useMemo, useState } from "react";
 import { toast } from "sonner";
-import type { AdminProduct, Coupon, Department, Offer, SubModel, VehicleMake, VehicleModel } from "@/lib/admin/model";
+import type { AdminOrder, AdminProduct, Coupon, Department, InvoiceInput, Offer, SubModel, VehicleMake, VehicleModel } from "@/lib/admin/model";
 import type { AdminData } from "@/lib/server/admin/data";
 import type { OrderStatus } from "@/lib/types";
 
@@ -24,6 +24,8 @@ type Store = AdminData & {
   saveProduct: (p: AdminProduct) => void;
   deleteProduct: (id: string) => void;
   setOrderStatus: (id: string, status: OrderStatus) => void;
+  /** Saved before it's shown, since the server numbers and prices it. Rejects with the server's error. */
+  createInvoice: (input: InvoiceInput) => Promise<AdminOrder>;
   saveMake: (make: MakeFields) => void;
   deleteMake: (id: string) => void;
   reorderMakes: (makes: VehicleMake[]) => void;
@@ -49,7 +51,7 @@ function upsert<T extends { id: string }>(list: T[], item: T, addAt: "start" | "
 }
 
 /** Calls the admin API; rejects with the server's error message. */
-async function api<T = unknown>(method: "GET" | "PUT" | "PATCH" | "DELETE", path: string, body?: unknown): Promise<T> {
+async function api<T = unknown>(method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE", path: string, body?: unknown): Promise<T> {
   const res = await fetch(`/api/admin${path}`, {
     method,
     headers: body === undefined ? undefined : { "Content-Type": "application/json" },
@@ -157,6 +159,14 @@ export function AdminStoreProvider({ initial, children }: { initial: AdminData; 
           // Cancelling or reinstating changes stock levels, so pick those up.
           done: () => api<AdminProduct[]>("GET", "/products").then(setProducts, () => {}),
         });
+      },
+
+      createInvoice: async (input) => {
+        const order = await api<AdminOrder>("POST", "/orders", input);
+        setOrders((list) => upsert(list, order));
+        // The invoice took stock.
+        api<AdminProduct[]>("GET", "/products").then(setProducts, () => {});
+        return order;
       },
 
       saveMake: (make) => {

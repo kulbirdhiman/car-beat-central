@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Building2, CircleCheck, CircleX, Clock, Lock, Mail, Package, Wrench } from "lucide-react";
+import { Building2, CircleCheck, CircleX, Clock, Lock, Mail, Package, Store, Wrench } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/components/layout/PageShell";
@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { formatCents } from "@/lib/data";
-import { orderReference } from "@/lib/payment";
+import { DEFAULT_PAYMENT_METHODS, orderReference } from "@/lib/payment";
 import { DELIVERY_OPTIONS } from "@/lib/pricing";
 import { getOrder } from "@/lib/server/orders";
 import { paypalEnabled } from "@/lib/server/paypal";
@@ -26,24 +26,36 @@ export default async function OrderPage(props: PageProps<"/order/[id]">) {
   const paid = order.status === "paid" || order.status === "fulfilled";
   const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
   const awaitingPayment = order.status === "pending_payment";
-  const payOnline = awaitingPayment && paypalEnabled() && clientId;
+  const isInvoice = order.source === "invoice";
+  const methods = order.paymentMethods ?? DEFAULT_PAYMENT_METHODS;
+  const payOnline = awaitingPayment && methods.includes("paypal") && paypalEnabled() && clientId;
+  const payByBank = awaitingPayment && methods.includes("bank_transfer");
+  const payInStore = awaitingPayment && methods.includes("in_store");
+  const howToPay = [payOnline && "PayPal or card", payByBank && "bank transfer", payInStore && "in store"].filter(Boolean).join(", ");
 
   const header = paid
     ? { icon: <CircleCheck className="size-8 text-success" />, tone: "bg-success/10", title: `Thanks, ${firstName}.`, body: <>Order {reference} is paid. We&apos;ll email {order.email} with tracking.</> }
     : order.status === "cancelled"
       ? { icon: <CircleX className="size-8 text-destructive" />, tone: "bg-destructive/10", title: "Order cancelled", body: <>Order {reference} was cancelled. Questions? Reply to any of our emails.</> }
       : awaitingPayment
-        ? { icon: <Clock className="size-8 text-primary" />, tone: "bg-primary/10", title: `Almost done, ${firstName}.`, body: <>Order {reference} is reserved for you. Pay below to confirm it.</> }
+        ? isInvoice
+          ? { icon: <Clock className="size-8 text-primary" />, tone: "bg-primary/10", title: `Invoice for ${firstName}`, body: <>Invoice {reference} for {formatCents(order.total)}. Pay below and we&apos;ll get it moving.</> }
+          : { icon: <Clock className="size-8 text-primary" />, tone: "bg-primary/10", title: `Almost done, ${firstName}.`, body: <>Order {reference} is reserved for you. Pay below to confirm it.</> }
         : { icon: <CircleCheck className="size-8 text-success" />, tone: "bg-success/10", title: `Thanks, ${firstName}.`, body: <>Order {reference} is in. We&apos;ll email {order.email} with tracking.</> };
 
   return (
     <PageShell className="max-w-3xl">
-      <ClearCart />
+      {/* An invoice link isn't a checkout, so it leaves the customer's cart alone. */}
+      {!isInvoice && <ClearCart />}
       <div className="text-center animate-in fade-in slide-in-from-bottom-4 duration-700">
         <span className={`mx-auto grid size-16 place-items-center rounded-lg animate-in zoom-in duration-500 ${header.tone}`}>{header.icon}</span>
         <h1 className="mt-6 font-display text-4xl font-bold sm:text-5xl">{header.title}</h1>
         <p className="mt-2 text-muted-foreground">{header.body}</p>
       </div>
+
+      {order.note && (
+        <p className="mt-8 whitespace-pre-line rounded-lg bg-muted p-4 text-sm">{order.note}</p>
+      )}
 
       {payOnline && (
         <Card className="mt-10">
@@ -62,7 +74,7 @@ export default async function OrderPage(props: PageProps<"/order/[id]">) {
         </Card>
       )}
 
-      {awaitingPayment && (
+      {payByBank && (
         <Card className={payOnline ? "mt-4" : "mt-10"}>
           <CardHeader>
             <CardTitle className="flex items-center justify-between gap-4 font-display text-2xl font-bold">
@@ -80,11 +92,27 @@ export default async function OrderPage(props: PageProps<"/order/[id]">) {
         </Card>
       )}
 
+      {payInStore && (
+        <Card className={payOnline || payByBank ? "mt-4" : "mt-10"}>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between gap-4 font-display text-2xl font-bold">
+              {payOnline || payByBank ? "Or pay in store" : `Pay ${formatCents(order.total)} in store`}
+              <Store className="size-5 shrink-0 text-muted-foreground" />
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Pay by cash or EFTPOS when you visit. Quote <span className="font-mono font-medium text-foreground">{orderReference(order.id)}</span> so we can find your invoice.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       <ol className="mt-10 grid gap-3 sm:grid-cols-3">
         {[
           paid
             ? { icon: CircleCheck, title: "Paid", body: "Your payment went through." }
-            : { icon: Mail, title: "Pay securely", body: payOnline ? "With PayPal, card or bank transfer, above." : "By bank transfer, above." },
+            : { icon: Mail, title: "Pay securely", body: howToPay ? `By ${howToPay}, above.` : "We'll be in touch about payment." },
           { icon: Package, title: "We pack & ship", body: DELIVERY_OPTIONS[order.delivery].label },
           { icon: Wrench, title: "Need fitting?", body: "Book a local installer any time." },
         ].map(({ icon: Icon, title, body }) => (

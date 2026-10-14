@@ -88,6 +88,7 @@ async function payableOrder(orderId: string) {
 /** Starts a PayPal payment for one of our orders and returns the PayPal order id the buttons need. */
 export async function createPayPalOrder(orderId: string): Promise<string> {
   const order = await payableOrder(orderId);
+  if (order.paymentMethods && !order.paymentMethods.includes("paypal")) throw new PaymentError("PayPal isn't available for this order.");
   const created = await paypal<{ id: string }>("/v2/checkout/orders", {
     body: {
       intent: "CAPTURE",
