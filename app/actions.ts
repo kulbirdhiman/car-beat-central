@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { rememberFirstAddress } from "@/lib/server/account";
 import { getCustomer } from "@/lib/server/customer";
 import { addSubscriber, createBooking, createOrder } from "@/lib/server/orders";
+import { paypalEnabled } from "@/lib/server/paypal";
 import { addReview } from "@/lib/server/reviews";
 import { EMAIL_RE, parseCart, str, validateBooking, validateCheckout, validateReview, type FieldErrors } from "@/lib/server/validate";
 
@@ -30,6 +31,7 @@ export async function placeOrder(_prev: FormState, form: FormData): Promise<Form
   const { data, errors } = validateCheckout(form);
   const values = echo(form, CHECKOUT_FIELDS);
   if (!data) return { errors, values, message: "Please fix the highlighted fields." };
+  if (data.payment === "paypal" && !paypalEnabled()) return { values, errors: { payment: "Card payments are unavailable right now." }, message: "Please choose another way to pay." };
 
   let cart;
   try {

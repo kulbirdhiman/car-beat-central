@@ -87,6 +87,7 @@ export async function createOrder(
           discount: totals.discount,
           shipping: totals.shipping,
           total: totals.total,
+          paymentMethods: [input.payment],
         });
       await tx
         .insert(orderItems)
