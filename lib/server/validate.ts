@@ -1,5 +1,6 @@
 import "server-only";
 import { AU_STATES, CATEGORY_LABELS, FITTING_CITIES } from "../data";
+import { PAYMENT_METHODS, type PaymentMethod } from "../payment";
 import { DELIVERY_OPTIONS, type Delivery } from "../pricing";
 import type { CartLine, Category } from "../types";
 import { getCarBrands, SORTS, type ProductFilters, type SortKey } from "./queries";
@@ -53,7 +54,7 @@ export function isDelivery(value: string): value is Delivery {
 
 export type AddressInput = { name: string; phone: string; address: string; suburb: string; state: string; postcode: string };
 
-export type CheckoutInput = AddressInput & { email: string; delivery: Delivery; coupon: string };
+export type CheckoutInput = AddressInput & { email: string; delivery: Delivery; coupon: string; payment: PaymentMethod };
 
 /** A delivery address: the shared part of checkout and the customer's saved addresses. */
 export function validateAddress(form: FormData): { data?: AddressInput; errors: FieldErrors } {
@@ -83,11 +84,21 @@ export function validateCheckout(form: FormData): { data?: CheckoutInput; errors
   const email = str(form, "email").toLowerCase();
   const delivery = str(form, "delivery", 20);
   const coupon = str(form, "coupon", 20).toUpperCase();
+  const payment = str(form, "payment", 20);
 
   if (!EMAIL_RE.test(email)) errors.email = "Enter a valid email address.";
   if (!isDelivery(delivery)) errors.delivery = "Choose a delivery option.";
+  if (!isPaymentMethod(payment)) errors.payment = "Choose how you'd like to pay.";
+  // Paying in store only makes sense when the order is picked up.
+  else if (payment === "in_store" && delivery !== "collect") errors.payment = "Pay on pickup is only available with local pickup.";
 
-  return address.data && isDelivery(delivery) && !Object.keys(errors).length ? { data: { ...address.data, email, delivery, coupon }, errors } : { errors };
+  return address.data && isDelivery(delivery) && isPaymentMethod(payment) && !Object.keys(errors).length
+    ? { data: { ...address.data, email, delivery, coupon, payment }, errors }
+    : { errors };
+}
+
+function isPaymentMethod(value: string): value is PaymentMethod {
+  return value in PAYMENT_METHODS;
 }
 
 export type BookingInput = { name: string; email: string; phone: string; city: string; vehicle: string; date: string; notes: string };

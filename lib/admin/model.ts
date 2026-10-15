@@ -116,7 +116,7 @@ export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
 export const DELIVERY_LABEL: Record<AdminOrder["delivery"], string> = {
   standard: "Standard",
   express: "Express",
-  collect: "Click & collect",
+  collect: "Local pickup",
 };
 
 export function orderSubtotal(order: AdminOrder) {
