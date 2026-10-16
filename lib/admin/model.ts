@@ -1,4 +1,5 @@
 import type { PaymentMethod } from "@/lib/payment";
+import type { Shipment } from "@/lib/shipping";
 import type { Category, OrderStatus } from "@/lib/types";
 
 /** Admin entity types and display helpers, shared by the admin UI and the server. */
@@ -81,14 +82,18 @@ export type AdminOrder = {
   shipping: number;
   discount: number;
   coupon?: string;
-  /** PayPal transaction (capture) id and when it was paid, once paid online. Refunds are made in PayPal with this id. */
-  payment?: { paypalCaptureId: string; paidAt: string };
+  /** Who took the payment, their transaction id and when it was paid, once paid online. Refunds are made with that provider using this id. */
+  payment?: { provider: "PayPal" | "Afterpay"; transactionId: string; paidAt: string };
   /** "invoice" when an admin raised it as a manual invoice. */
   source: "checkout" | "invoice";
   /** How the customer may pay. */
   paymentMethods: PaymentMethod[];
   /** Message to the customer, shown on the invoice. Empty for none. */
   note: string;
+  /** The carrier and tracking number, once entered. */
+  shipment?: Shipment;
+  /** When it was marked shipped (or picked up). */
+  shippedAt?: string;
 };
 
 /** A manual invoice as the admin form sends it. Amounts in cents, GST inclusive. */

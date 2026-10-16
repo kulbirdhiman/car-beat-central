@@ -2,6 +2,7 @@ import "server-only";
 import type { AdminProduct, Coupon, CouponScope, CouponType, Department, InvoiceInput, Offer } from "@/lib/admin/model";
 import { AU_STATES, CATEGORY_LABELS } from "@/lib/data";
 import { PAYMENT_METHODS, type PaymentMethod } from "@/lib/payment";
+import { CARRIER_KEYS, type Shipment } from "@/lib/shipping";
 import type { Category, OrderStatus } from "@/lib/types";
 import { EMAIL_RE } from "../validate";
 
@@ -172,6 +173,17 @@ const ORDER_STATUSES: readonly OrderStatus[] = ["pending_payment", "paid", "fulf
 
 export function parseOrderStatus(value: unknown): OrderStatus {
   return oneOf(asBody(value), "status", ORDER_STATUSES);
+}
+
+/** The carrier and tracking number sent with a status change: undefined when not sent, null to clear them. */
+export function parseShipment(value: unknown): Shipment | null | undefined {
+  const body = asBody(value);
+  if (body.carrier === undefined) return undefined;
+  if (body.carrier === null) return null;
+  const carrier = oneOf(body, "carrier", CARRIER_KEYS);
+  const trackingNumber = text(body, "trackingNumber", { min: 1, max: 60, label: "Tracking number" });
+  if (!/^[A-Za-z0-9][A-Za-z0-9 -]*$/.test(trackingNumber)) throw new AdminError("Tracking numbers can only have letters, numbers, spaces and dashes.");
+  return { carrier, trackingNumber };
 }
 
 export function parseInvoice(value: unknown): InvoiceInput {

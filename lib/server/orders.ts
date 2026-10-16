@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import type { AdminOrder, InvoiceInput } from "../admin/model";
 import { DEFAULT_PAYMENT_METHODS } from "../payment";
 import { priceCart, unitPriceCents, type Delivery, type Totals } from "../pricing";
+import type { Shipment } from "../shipping";
 import type { CartLine, OrderStatus } from "../types";
 import { getCouponByCode } from "./admin/promos";
 import { AdminError } from "./admin/validate";
@@ -194,20 +195,31 @@ export async function listAdminOrders({ id = null, limit = 500 }: { id?: string 
     shipping: o.shipping,
     discount: o.discount,
     coupon: o.coupon ?? undefined,
-    payment: o.paypalCaptureId && o.paidAt ? { paypalCaptureId: o.paypalCaptureId, paidAt: o.paidAt } : undefined,
+    payment: !o.paidAt
+      ? undefined
+      : o.paypalCaptureId
+        ? { provider: "PayPal", transactionId: o.paypalCaptureId, paidAt: o.paidAt }
+        : o.afterpayOrderId
+          ? { provider: "Afterpay", transactionId: o.afterpayOrderId, paidAt: o.paidAt }
+          : undefined,
     source: o.source,
     paymentMethods: o.paymentMethods ?? DEFAULT_PAYMENT_METHODS,
     note: o.note ?? "",
+    shipment: o.shippingCarrier && o.trackingNumber ? { carrier: o.shippingCarrier, trackingNumber: o.trackingNumber } : undefined,
+    shippedAt: o.shippedAt ?? undefined,
   }));
 }
 
-/** Cancelling an order puts its stock back; reinstating a cancelled order takes it out again. */
-export async function setOrderStatus(id: string, status: OrderStatus) {
+/**
+ * Cancelling an order puts its stock back; reinstating a cancelled order takes it out again.
+ * `shipment`: the carrier and tracking number to save with it (null clears them, undefined leaves them).
+ */
+export async function setOrderStatus(id: string, status: OrderStatus, shipment?: Shipment | null) {
   await transaction(async (tx) => {
     // Locks the order, so two status changes at once can't both restock it.
     const [order] = await tx.select({ status: orders.status }).from(orders).where(eq(orders.id, id)).for("update");
     if (!order) throw new AdminError("Order not found.", 404);
-    if (order.status === status) return;
+    if (order.status === status && shipment === undefined) return;
     const sign = status === "cancelled" ? 1 : order.status === "cancelled" ? -1 : 0;
     if (sign) {
       const lines = await tx
@@ -222,7 +234,14 @@ export async function setOrderStatus(id: string, status: OrderStatus) {
           .where(eq(products.id, l.productId));
       }
     }
-    await tx.update(orders).set({ status }).where(eq(orders.id, id));
+    await tx
+      .update(orders)
+      .set({
+        status,
+        ...(shipment !== undefined && { shippingCarrier: shipment?.carrier ?? null, trackingNumber: shipment?.trackingNumber ?? null }),
+        ...(status === "fulfilled" && order.status !== "fulfilled" && { shippedAt: new Date().toISOString() }),
+      })
+      .where(eq(orders.id, id));
   });
 }
 

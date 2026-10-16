@@ -1,9 +1,10 @@
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { OrderStatusBadge } from "@/components/admin/ui";
 import { Button } from "@/components/ui/button";
 import { formatCents } from "@/lib/data";
 import { orderReference } from "@/lib/payment";
+import { CARRIERS, trackingUrl } from "@/lib/shipping";
 import type { CustomerOrder } from "@/lib/server/account";
 
 export const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("en-AU", { dateStyle: "medium", timeZone: "Australia/Sydney" });
@@ -12,6 +13,7 @@ export const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("en-AU"
 export function OrderCard({ order }: { order: CustomerOrder }) {
   const units = order.items.reduce((n, i) => n + i.qty, 0);
   const names = order.items.map((i) => i.name);
+  const track = order.status === "fulfilled" && order.shippingCarrier && order.trackingNumber ? trackingUrl(order.shippingCarrier, order.trackingNumber) : null;
   const summary = names.length > 2 ? `${names.slice(0, 2).join(", ")} and ${names.length - 2} more` : names.join(" and ");
 
   return (
@@ -29,6 +31,13 @@ export function OrderCard({ order }: { order: CustomerOrder }) {
         {order.status === "pending_payment" && (
           <Button asChild size="sm">
             <Link href={`/order/${order.id}`}>Pay now</Link>
+          </Button>
+        )}
+        {track && (
+          <Button asChild size="sm">
+            <a href={track} target="_blank" rel="noreferrer" title={`Track with ${CARRIERS[order.shippingCarrier!].name}`}>
+              Track parcel <ExternalLink />
+            </a>
           </Button>
         )}
         <Button asChild size="sm" variant="outline">

@@ -50,9 +50,18 @@ export type CheckoutPrefill = Record<"email" | "name" | "phone" | "address" | "s
 
 /**
  * `payOnline`: PayPal is set up, so the order is paid on the next page instead of by an emailed link.
+ * `afterpay`: the order totals (in cents) Afterpay accepts, when it's set up.
  * `prefill`: set when the shopper is signed in.
  */
-export function CheckoutForm({ payOnline, prefill }: { payOnline: boolean; prefill: CheckoutPrefill | null }) {
+export function CheckoutForm({
+  payOnline,
+  afterpay,
+  prefill,
+}: {
+  payOnline: boolean;
+  afterpay: { min: number; max: number } | null;
+  prefill: CheckoutPrefill | null;
+}) {
   const lines = useCart();
   const hydrated = useSyncExternalStore(noop, () => true, () => false);
   const [state, action, pending] = useActionState<FormState, FormData>(placeOrder, {});
@@ -100,11 +109,17 @@ export function CheckoutForm({ payOnline, prefill }: { payOnline: boolean; prefi
   }
 
   const couponError = coupon && !stale ? totals?.couponError : null;
-  // Pay on pickup goes away if the shopper switches from pickup to delivery.
+  // Pay on pickup goes away if the shopper switches from pickup to delivery, and Afterpay if the total leaves its range.
   const defaultPayment: PaymentMethod = payOnline ? "paypal" : "bank_transfer";
-  const paymentMethod = payment === "in_store" && delivery !== "collect" ? defaultPayment : payment;
+  const afterpayOk = !!afterpay && !!totals && totals.total >= afterpay.min && totals.total <= afterpay.max;
+  const paymentMethod = (payment === "in_store" && delivery !== "collect") || (payment === "afterpay" && !afterpayOk) ? defaultPayment : payment;
   const paymentOptions = [
     payOnline && { key: "paypal" as const, title: "PayPal or card", body: "PayPal, Pay Later, or a debit or credit card. You don't need a PayPal account." },
+    afterpayOk && {
+      key: "afterpay" as const,
+      title: "Afterpay",
+      body: `4 interest-free payments of ${formatCents(Math.ceil(totals.total / 4))}. You'll finish paying on Afterpay.`,
+    },
     { key: "bank_transfer" as const, title: "Bank transfer", body: "We'll show our bank details on the next page. Your order goes out once the payment arrives." },
     delivery === "collect" && { key: "in_store" as const, title: "Pay on pickup", body: "Pay by cash or EFTPOS when you collect your order." },
   ].filter((o) => !!o);
@@ -331,7 +346,8 @@ export function CheckoutForm({ payOnline, prefill }: { payOnline: boolean; prefi
           </RadioGroup>
           {errors.payment && <p className="mt-2 text-xs text-destructive">{errors.payment}</p>}
           <p className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
-            <Lock className="size-3.5 shrink-0" /> You&apos;ll review the total and pay on the next page.
+            <Lock className="size-3.5 shrink-0" />{" "}
+            {paymentMethod === "afterpay" ? "You'll be taken to Afterpay to pay securely." : <>You&apos;ll review the total and pay on the next page.</>}
           </p>
           <StepButtons onBack={() => goTo(2)}>
             <Button type="submit" size="lg" className="h-11 px-6" disabled={pending || !!couponError}>

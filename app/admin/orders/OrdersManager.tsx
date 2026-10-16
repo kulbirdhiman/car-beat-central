@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, ExternalLink, Plus, Search, Truck } from "lucide-react";
+import { Check, Copy, ExternalLink, Pencil, Plus, Search, Truck } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -10,14 +10,15 @@ import { Empty, OrderStatusBadge, PageHeader, fmtDateTime } from "@/components/a
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DELIVERY_LABEL, ORDER_STATUS_LABEL, orderSubtotal, orderTotal, type AdminOrder } from "@/lib/admin/model";
 import { formatCents } from "@/lib/data";
 import { PAYMENT_METHODS } from "@/lib/payment";
+import { CARRIER_KEYS, CARRIERS, trackingUrl, type Carrier } from "@/lib/shipping";
 import type { OrderStatus } from "@/lib/types";
 
 const ALL = "all";
@@ -133,7 +134,7 @@ export function OrdersManager() {
       </Card>
 
       <Sheet open={openOrder !== null} onOpenChange={(open) => !open && setParam("open", null)}>
-        <SheetContent className="w-full overflow-y-auto sm:max-w-lg">{openOrder && <OrderDetail order={openOrder} />}</SheetContent>
+        <SheetContent className="w-full overflow-y-auto sm:max-w-lg">{openOrder && <OrderDetail key={openOrder.id} order={openOrder} />}</SheetContent>
       </Sheet>
     </>
   );
@@ -143,109 +144,238 @@ function OrderDetail({ order }: { order: AdminOrder }) {
   const { setOrderStatus } = useAdminStore();
   const subtotal = orderSubtotal(order);
   const total = orderTotal(order);
+  const pickup = order.delivery === "collect";
+  const units = order.items.reduce((n, i) => n + i.qty, 0);
 
   return (
     <>
-      <SheetHeader>
+      <SheetHeader className="border-b pr-12">
         <SheetTitle className="flex items-center gap-3">
-          <span className="font-mono">{order.number}</span>
+          <span className="font-mono text-lg">{order.number}</span>
           <OrderStatusBadge status={order.status} />
+          {order.source === "invoice" && <span className="text-xs font-normal text-muted-foreground">Invoice</span>}
         </SheetTitle>
         <SheetDescription>
-          {order.source === "invoice" ? "Invoice raised" : "Placed"} {fmtDateTime(order.createdAt)}
+          {order.source === "invoice" ? "Raised" : "Placed"} {fmtDateTime(order.createdAt)} · {formatCents(total)}
         </SheetDescription>
       </SheetHeader>
 
-      <div className="space-y-6 px-4">
-        <section className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <h3 className="mb-1 text-xs font-medium tracking-wide text-muted-foreground uppercase">Customer</h3>
-            <p className="text-sm font-medium">{order.customer.name}</p>
-            <p className="text-sm">
-              <a href={`mailto:${order.customer.email}`} className="hover:underline">
+      <div className="space-y-4 p-4">
+        {(order.status === "paid" || order.status === "fulfilled") && <Fulfilment order={order} />}
+
+        <Panel title="Customer">
+          <div className="grid gap-4 text-sm sm:grid-cols-2">
+            <div className="space-y-0.5">
+              <p className="font-medium">{order.customer.name}</p>
+              <a href={`mailto:${order.customer.email}`} className="block truncate text-muted-foreground hover:text-foreground hover:underline">
                 {order.customer.email}
               </a>
-            </p>
-            <p className="text-sm">{order.customer.phone}</p>
+              <a href={`tel:${order.customer.phone}`} className="block text-muted-foreground hover:text-foreground hover:underline">
+                {order.customer.phone}
+              </a>
+            </div>
+            <div className="space-y-0.5">
+              <p className="font-medium">{pickup ? "Local pickup" : `${DELIVERY_LABEL[order.delivery]} delivery`}</p>
+              <p className="text-muted-foreground">{order.shipTo.address}</p>
+              <p className="text-muted-foreground">
+                {order.shipTo.suburb} {order.shipTo.state} {order.shipTo.postcode}
+              </p>
+            </div>
           </div>
-          <div>
-            <h3 className="mb-1 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-              {order.delivery === "collect" ? "Billing address" : "Ship to"}
-            </h3>
-            <p className="text-sm">{order.shipTo.address}</p>
-            <p className="text-sm">
-              {order.shipTo.suburb} {order.shipTo.state} {order.shipTo.postcode}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">{DELIVERY_LABEL[order.delivery]}</p>
-          </div>
-        </section>
+        </Panel>
 
-        <Separator />
-
-        <section>
-          <h3 className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">Items</h3>
-          <ul className="divide-y">
+        <Panel title={`Items (${units})`}>
+          <ul className="space-y-2 text-sm">
             {order.items.map((i) => (
-              <li key={i.productId} className="flex justify-between gap-3 py-2 text-sm">
-                <span>
+              <li key={i.productId} className="flex justify-between gap-3">
+                <span className="min-w-0">
                   {i.name} <span className="text-muted-foreground">× {i.qty}</span>
                 </span>
-                <span className="tabular-nums">{formatCents(i.unitPrice * i.qty)}</span>
+                <span className="shrink-0 tabular-nums">{formatCents(i.unitPrice * i.qty)}</span>
               </li>
             ))}
           </ul>
           <dl className="mt-3 space-y-1 border-t pt-3 text-sm">
-            <Line label="Subtotal" value={formatCents(subtotal)} />
-            {order.discount > 0 && <Line label={`Discount${order.coupon ? ` (${order.coupon})` : ""}`} value={`−${formatCents(order.discount)}`} />}
-            <Line label="Shipping" value={order.shipping ? formatCents(order.shipping) : "Free"} />
-            <Line label="Total" value={formatCents(total)} strong />
-            <Line label="Includes GST" value={formatCents(Math.round(total / 11))} muted />
+            <Line label="Subtotal" value={formatCents(subtotal)} muted />
+            {order.discount > 0 && <Line label={`Discount${order.coupon ? ` (${order.coupon})` : ""}`} value={`−${formatCents(order.discount)}`} muted />}
+            <Line label="Shipping" value={order.shipping ? formatCents(order.shipping) : "Free"} muted />
+            <Line label="Total (incl. GST)" value={formatCents(total)} strong />
+            <Line label="GST" value={formatCents(Math.round(total / 11))} muted />
           </dl>
-          {order.status === "pending_payment" && (
-            <p className="mt-3 text-sm text-muted-foreground">Customer can pay by {order.paymentMethods.map((m) => PAYMENT_METHODS[m].toLowerCase()).join(", ")}.</p>
-          )}
-          {order.note && <p className="mt-3 whitespace-pre-line rounded-lg bg-muted p-3 text-sm">{order.note}</p>}
-          {order.payment && (
-            <p className="mt-3 rounded-lg bg-muted p-3 text-sm">
-              Paid with PayPal {fmtDateTime(order.payment.paidAt)}
-              <br />
-              <span className="text-muted-foreground">Transaction </span>
-              <span className="font-mono">{order.payment.paypalCaptureId}</span>
+        </Panel>
+
+        <Panel title="Payment">
+          {order.payment ? (
+            <div className="space-y-0.5 text-sm">
+              <p className="font-medium">
+                Paid with {order.payment.provider} · {fmtDateTime(order.payment.paidAt)}
+              </p>
+              <p className="text-muted-foreground">
+                {order.payment.provider === "Afterpay" ? "Afterpay order " : "Transaction "}
+                <span className="font-mono text-foreground">{order.payment.transactionId}</span>
+              </p>
+            </div>
+          ) : order.status === "pending_payment" ? (
+            <p className="text-sm text-muted-foreground">
+              Awaiting payment by {order.paymentMethods.map((m) => PAYMENT_METHODS[m].toLowerCase()).join(", ")}.
             </p>
+          ) : (
+            <p className="text-sm text-muted-foreground">{order.status === "cancelled" ? "Not paid." : "Paid offline (bank transfer or in store)."}</p>
           )}
-        </section>
+        </Panel>
 
-        <Separator />
+        {order.note && (
+          <Panel title="Note to customer">
+            <p className="whitespace-pre-line text-sm">{order.note}</p>
+          </Panel>
+        )}
 
-        <InvoiceLink orderId={order.id} />
-
-        <Separator />
-
-        <section>
-          <h3 className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">Status</h3>
-          <Select value={order.status} onValueChange={(v) => setOrderStatus(order.id, v as OrderStatus)}>
-            <SelectTrigger className="w-full" aria-label="Order status">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {STATUSES.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {ORDER_STATUS_LABEL[s]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </section>
+        <Panel title="Invoice link">
+          <InvoiceLink orderId={order.id} />
+        </Panel>
       </div>
 
-      {order.status === "paid" && (
-        <SheetFooter>
-          <Button onClick={() => setOrderStatus(order.id, "fulfilled")}>
-            <Truck /> Mark as shipped
-          </Button>
-        </SheetFooter>
-      )}
+      <SheetFooter className="border-t">
+        <label htmlFor="order-status" className="text-xs font-medium text-muted-foreground">
+          Change status
+        </label>
+        <Select value={order.status} onValueChange={(v) => setOrderStatus(order.id, v as OrderStatus)}>
+          <SelectTrigger id="order-status" className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUSES.map((s) => (
+              <SelectItem key={s} value={s}>
+                {ORDER_STATUS_LABEL[s]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </SheetFooter>
     </>
+  );
+}
+
+/** A titled block in the order panel. */
+function Panel({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="rounded-lg border p-4">
+      <h3 className="mb-3 text-sm font-semibold">{title}</h3>
+      {children}
+    </section>
+  );
+}
+
+/**
+ * Shipping a paid order: pick the carrier and enter the tracking number, then mark it shipped.
+ * Once shipped, shows the tracking (with a link to the carrier) and lets it be corrected.
+ */
+function Fulfilment({ order }: { order: AdminOrder }) {
+  const { setOrderStatus } = useAdminStore();
+  const shipped = order.status === "fulfilled";
+  const pickup = order.delivery === "collect";
+  const [editing, setEditing] = useState(false);
+  const [carrier, setCarrier] = useState<Carrier>(order.shipment?.carrier ?? "auspost");
+  const [trackingNumber, setTrackingNumber] = useState(order.shipment?.trackingNumber ?? "");
+  const [error, setError] = useState<string | null>(null);
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    const number = trackingNumber.trim();
+    if (!number && !pickup) return setError("Enter the tracking number.");
+    if (number && !/^[A-Za-z0-9][A-Za-z0-9 -]*$/.test(number)) return setError("Tracking numbers can only have letters, numbers, spaces and dashes.");
+    setError(null);
+    setOrderStatus(order.id, "fulfilled", number ? { carrier, trackingNumber: number } : null);
+    setEditing(false);
+  }
+
+  if (shipped && !editing) {
+    const url = order.shipment && trackingUrl(order.shipment.carrier, order.shipment.trackingNumber);
+    return (
+      <Panel title={pickup ? "Picked up" : "Shipped"}>
+        <div className="flex items-start justify-between gap-3 text-sm">
+          <div className="min-w-0 space-y-0.5">
+            {order.shipment ? (
+              <>
+                <p className="font-medium">{CARRIERS[order.shipment.carrier].name}</p>
+                <p className="font-mono break-all">{order.shipment.trackingNumber}</p>
+              </>
+            ) : (
+              <p className="text-muted-foreground">{pickup ? "Collected by the customer." : "No tracking number added."}</p>
+            )}
+            {order.shippedAt && <p className="text-xs text-muted-foreground">{fmtDateTime(order.shippedAt)}</p>}
+          </div>
+          <div className="flex shrink-0 gap-2">
+            {url && (
+              <Button asChild size="sm" variant="outline">
+                <a href={url} target="_blank" rel="noreferrer">
+                  <ExternalLink /> Track
+                </a>
+              </Button>
+            )}
+            <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+              <Pencil /> {order.shipment ? "Edit" : "Add tracking"}
+            </Button>
+          </div>
+        </div>
+      </Panel>
+    );
+  }
+
+  return (
+    <Panel title={shipped ? "Edit tracking" : pickup ? "Ready for pickup" : "Ship this order"}>
+      <form onSubmit={submit} noValidate className="space-y-3">
+        <div className="grid gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+          <div className="grid gap-1.5">
+            <Label htmlFor="ship-carrier">Carrier</Label>
+            <Select value={carrier} onValueChange={(v) => setCarrier(v as Carrier)}>
+              <SelectTrigger id="ship-carrier" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CARRIER_KEYS.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {CARRIERS[c].name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="ship-tracking">Tracking number{pickup && <span className="font-normal text-muted-foreground"> (optional)</span>}</Label>
+            <Input
+              id="ship-tracking"
+              value={trackingNumber}
+              onChange={(e) => setTrackingNumber(e.target.value)}
+              placeholder="e.g. 33ABC1234567"
+              autoComplete="off"
+              maxLength={60}
+              aria-invalid={!!error}
+              className="font-mono"
+            />
+          </div>
+        </div>
+        {error && <p className="text-xs text-destructive">{error}</p>}
+        <div className="flex gap-2">
+          <Button type="submit" className="flex-1">
+            {shipped ? (
+              <>
+                <Check /> Save tracking
+              </>
+            ) : (
+              <>
+                <Truck /> {pickup ? "Mark as picked up" : "Mark as shipped"}
+              </>
+            )}
+          </Button>
+          {shipped && (
+            <Button type="button" variant="outline" onClick={() => setEditing(false)}>
+              Cancel
+            </Button>
+          )}
+        </div>
+      </form>
+    </Panel>
   );
 }
 
@@ -253,9 +383,8 @@ function OrderDetail({ order }: { order: AdminOrder }) {
 export function InvoiceLink({ orderId }: { orderId: string }) {
   const path = `/order/${orderId}`;
   return (
-    <section>
-      <h3 className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">Invoice link</h3>
-      <p className="mb-2 text-sm text-muted-foreground">Send this to the customer. They can view the invoice and pay from it.</p>
+    <div>
+      <p className="mb-3 text-sm text-muted-foreground">Send this to the customer. They can view the invoice and pay from it.</p>
       <div className="flex gap-2">
         <Button
           variant="outline"
@@ -277,7 +406,7 @@ export function InvoiceLink({ orderId }: { orderId: string }) {
           </a>
         </Button>
       </div>
-    </section>
+    </div>
   );
 }
 
