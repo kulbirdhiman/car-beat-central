@@ -1,5 +1,5 @@
 import { adminRoute, readJson } from "@/lib/server/admin/http";
-import { AdminError, parseOrderStatus } from "@/lib/server/admin/validate";
+import { AdminError, parseOrderStatus, parseShipment } from "@/lib/server/admin/validate";
 import { listAdminOrders, setOrderStatus } from "@/lib/server/orders";
 
 type Ctx = RouteContext<"/api/admin/orders/[id]">;
@@ -21,5 +21,11 @@ export const GET = adminRoute(
   { writes: false },
 );
 
-/** PATCH /api/admin/orders/:id { status }: cancelling restocks its items. */
-export const PATCH = adminRoute(async (request, ctx: Ctx) => setOrderStatus(await orderId(ctx), parseOrderStatus(await readJson(request))));
+/**
+ * PATCH /api/admin/orders/:id { status, carrier?, trackingNumber? }: cancelling restocks its items.
+ * The carrier and tracking number are saved with it (a null carrier clears them).
+ */
+export const PATCH = adminRoute(async (request, ctx: Ctx) => {
+  const body = await readJson(request);
+  return setOrderStatus(await orderId(ctx), parseOrderStatus(body), parseShipment(body));
+});

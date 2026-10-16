@@ -1,16 +1,17 @@
 import "server-only";
 import { eq, sql } from "drizzle-orm";
 import { db } from "./db";
-import { getOrder, type OrderRecord } from "./orders";
+import type { OrderRecord } from "./orders";
+import { PaymentError, payableOrder } from "./payments";
 import { orders } from "./schema";
+
+export { PaymentError };
 
 /**
  * PayPal Checkout (Orders v2 REST API). The browser only ever sees our order id: the amount PayPal charges
  * is always built here from the order in the database, and a payment only counts once we've captured it
  * ourselves and checked the captured amount. PAYPAL_ENV=live switches from the sandbox to real payments.
  */
-
-export class PaymentError extends Error {}
 
 const API = () => (process.env.PAYPAL_ENV === "live" ? "https://api-m.paypal.com" : "https://api-m.sandbox.paypal.com");
 const CURRENCY = "AUD";
@@ -75,14 +76,6 @@ function purchaseUnit(order: OrderRecord) {
     amount: { ...money(order.total), breakdown: { item_total: money(order.subtotal), shipping: money(order.shipping), discount: money(order.discount) } },
     items: order.items.map((i) => ({ name: i.name.slice(0, 127), sku: i.productId.slice(0, 127), quantity: String(i.qty), unit_amount: money(i.unitPrice), category: "PHYSICAL_GOODS" })),
   };
-}
-
-async function payableOrder(orderId: string) {
-  const order = await getOrder(orderId);
-  if (!order) throw new PaymentError("We couldn't find that order.");
-  if (order.status === "paid" || order.status === "fulfilled") throw new PaymentError("This order has already been paid.");
-  if (order.status === "cancelled") throw new PaymentError("This order was cancelled, so it can't be paid.");
-  return order;
 }
 
 /** Starts a PayPal payment for one of our orders and returns the PayPal order id the buttons need. */

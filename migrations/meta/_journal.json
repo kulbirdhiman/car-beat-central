@@ -29,6 +29,20 @@
       "when": 1791956777308,
       "tag": "0003_manual_invoices",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792129619602,
+      "tag": "0004_afterpay",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792130556674,
+      "tag": "0005_order_tracking",
+      "breakpoints": true
     }
   ]
 }

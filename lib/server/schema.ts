@@ -1,6 +1,7 @@
 import { boolean, doublePrecision, index, integer, jsonb, pgTable, text } from "drizzle-orm/pg-core";
 import type { CouponScope, CouponType } from "../admin/model";
 import type { PaymentMethod } from "../payment";
+import type { Carrier } from "../shipping";
 import type { Category, OrderStatus } from "../types";
 
 /**
@@ -80,10 +81,18 @@ export const orders = pgTable(
     paypalOrderId: text("paypal_order_id"),
     /** Set once the payment is captured: the PayPal capture (transaction) id, used for refunds. */
     paypalCaptureId: text("paypal_capture_id"),
+    /** The Afterpay checkout token the shopper is paying through; replaced if they start paying again. */
+    afterpayToken: text("afterpay_token"),
+    /** Set once the payment is captured: the Afterpay order id, used for refunds in the Afterpay portal. */
+    afterpayOrderId: text("afterpay_order_id"),
     paidAt: text("paid_at"),
+    /** Who carried it and the parcel's tracking number, entered when it's marked shipped. */
+    shippingCarrier: text("shipping_carrier").$type<Carrier>(),
+    trackingNumber: text("tracking_number"),
+    shippedAt: text("shipped_at"),
     /** "invoice" for orders an admin raised as a manual invoice. */
     source: text("source").$type<"checkout" | "invoice">().notNull().default("checkout"),
-    /** How the customer may pay; null offers the defaults (PayPal and bank transfer). Set on invoices. */
+    /** How the customer may pay; null offers the defaults (PayPal, Afterpay and bank transfer). Set on invoices. */
     paymentMethods: jsonb("payment_methods").$type<PaymentMethod[]>(),
     /** Message to the customer, shown on the invoice. */
     note: text("note"),

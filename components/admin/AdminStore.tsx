@@ -4,6 +4,7 @@ import { createContext, useContext, useMemo, useState } from "react";
 import { toast } from "sonner";
 import type { AdminOrder, AdminProduct, Coupon, Department, InvoiceInput, Offer, SubModel, VehicleMake, VehicleModel } from "@/lib/admin/model";
 import type { AdminData } from "@/lib/server/admin/data";
+import type { Shipment } from "@/lib/shipping";
 import type { OrderStatus } from "@/lib/types";
 
 /**
@@ -23,7 +24,8 @@ type Store = AdminData & {
   reorderDepartments: (siblings: Department[]) => void;
   saveProduct: (p: AdminProduct) => void;
   deleteProduct: (id: string) => void;
-  setOrderStatus: (id: string, status: OrderStatus) => void;
+  /** `shipment`: the carrier and tracking number to save with it (null clears them). */
+  setOrderStatus: (id: string, status: OrderStatus, shipment?: Shipment | null) => void;
   /** Saved before it's shown, since the server numbers and prices it. Rejects with the server's error. */
   createInvoice: (input: InvoiceInput) => Promise<AdminOrder>;
   saveMake: (make: MakeFields) => void;
@@ -153,9 +155,21 @@ export function AdminStoreProvider({ initial, children }: { initial: AdminData; 
         save(api("DELETE", `/products/${id}`), { success: "Product deleted." });
       },
 
-      setOrderStatus: (id, status) => {
-        setOrders((list) => list.map((o) => (o.id === id ? { ...o, status } : o)));
-        save(api("PATCH", `/orders/${id}`, { status }), {
+      setOrderStatus: (id, status, shipment) => {
+        const shippedAt = new Date().toISOString();
+        setOrders((list) =>
+          list.map((o) =>
+            o.id !== id
+              ? o
+              : {
+                  ...o,
+                  status,
+                  ...(shipment !== undefined && { shipment: shipment ?? undefined }),
+                  ...(status === "fulfilled" && o.status !== "fulfilled" && { shippedAt }),
+                },
+          ),
+        );
+        save(api("PATCH", `/orders/${id}`, { status, ...(shipment !== undefined && { carrier: shipment?.carrier ?? null, trackingNumber: shipment?.trackingNumber ?? null }) }), {
           // Cancelling or reinstating changes stock levels, so pick those up.
           done: () => api<AdminProduct[]>("GET", "/products").then(setProducts, () => {}),
         });

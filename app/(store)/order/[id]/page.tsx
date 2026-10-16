@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Building2, CircleCheck, CircleX, Clock, Lock, Mail, Package, Store, Wrench } from "lucide-react";
+import { Building2, CircleCheck, CircleX, Clock, ExternalLink, Lock, Mail, Package, Store, Truck, Wrench } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/components/layout/PageShell";
@@ -9,8 +9,11 @@ import { Separator } from "@/components/ui/separator";
 import { formatCents } from "@/lib/data";
 import { DEFAULT_PAYMENT_METHODS, orderReference } from "@/lib/payment";
 import { DELIVERY_OPTIONS } from "@/lib/pricing";
+import { CARRIERS, trackingUrl } from "@/lib/shipping";
+import { afterpayAvailableFor } from "@/lib/server/afterpay";
 import { getOrder } from "@/lib/server/orders";
 import { paypalEnabled } from "@/lib/server/paypal";
+import { AfterpayButton } from "./AfterpayButton";
 import { BankTransfer } from "./BankTransfer";
 import { ClearCart } from "./ClearCart";
 import { PayPalCheckout } from "./PayPalCheckout";
@@ -24,16 +27,28 @@ export default async function OrderPage(props: PageProps<"/order/[id]">) {
   const reference = <span className="font-mono font-medium text-foreground">#{orderReference(order.id)}</span>;
   const firstName = order.name.split(" ")[0];
   const paid = order.status === "paid" || order.status === "fulfilled";
+  const shipped = order.status === "fulfilled";
+  const tracking = shipped && order.shippingCarrier && order.trackingNumber ? { carrier: CARRIERS[order.shippingCarrier].name, number: order.trackingNumber, url: trackingUrl(order.shippingCarrier, order.trackingNumber) } : null;
   const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
   const awaitingPayment = order.status === "pending_payment";
   const isInvoice = order.source === "invoice";
   const methods = order.paymentMethods ?? DEFAULT_PAYMENT_METHODS;
   const payOnline = awaitingPayment && methods.includes("paypal") && paypalEnabled() && clientId;
+  const payAfterpay = awaitingPayment && methods.includes("afterpay") && (await afterpayAvailableFor(order.total));
+  // Why an Afterpay payment didn't go through, set by /api/afterpay/return.
+  const afterpayProblem = awaitingPayment ? (await props.searchParams).afterpay : undefined;
   const payByBank = awaitingPayment && methods.includes("bank_transfer");
   const payInStore = awaitingPayment && methods.includes("in_store");
-  const howToPay = [payOnline && "PayPal or card", payByBank && "bank transfer", payInStore && "in store"].filter(Boolean).join(", ");
+  const howToPay = [payOnline && "PayPal or card", payAfterpay && "Afterpay", payByBank && "bank transfer", payInStore && "in store"].filter(Boolean).join(", ");
 
-  const header = paid
+  const header = shipped
+    ? {
+        icon: <Truck className="size-8 text-success" />,
+        tone: "bg-success/10",
+        title: order.delivery === "collect" ? `Enjoy, ${firstName}.` : `On its way, ${firstName}.`,
+        body: order.delivery === "collect" ? <>Order {reference} has been picked up.</> : <>Order {reference} has shipped.</>,
+      }
+    : paid
     ? { icon: <CircleCheck className="size-8 text-success" />, tone: "bg-success/10", title: `Thanks, ${firstName}.`, body: <>Order {reference} is paid. We&apos;ll email {order.email} with tracking.</> }
     : order.status === "cancelled"
       ? { icon: <CircleX className="size-8 text-destructive" />, tone: "bg-destructive/10", title: "Order cancelled", body: <>Order {reference} was cancelled. Questions? Reply to any of our emails.</> }
@@ -57,6 +72,12 @@ export default async function OrderPage(props: PageProps<"/order/[id]">) {
         <p className="mt-8 whitespace-pre-line rounded-lg bg-muted p-4 text-sm">{order.note}</p>
       )}
 
+      {typeof afterpayProblem === "string" && (
+        <p role="alert" className="mt-8 rounded-xl bg-destructive/10 p-4 text-sm font-medium text-destructive">
+          {afterpayProblem.slice(0, 300)}
+        </p>
+      )}
+
       {payOnline && (
         <Card className="mt-10">
           <CardHeader>
@@ -74,11 +95,30 @@ export default async function OrderPage(props: PageProps<"/order/[id]">) {
         </Card>
       )}
 
-      {payByBank && (
+      {payAfterpay && (
         <Card className={payOnline ? "mt-4" : "mt-10"}>
           <CardHeader>
             <CardTitle className="flex items-center justify-between gap-4 font-display text-2xl font-bold">
-              {payOnline ? "Or pay by bank transfer" : `Pay ${formatCents(order.total)} by bank transfer`}
+              {payOnline ? "Or pay in 4 with Afterpay" : `Pay ${formatCents(order.total)} with Afterpay`}
+              <span className="flex items-center gap-1.5 text-xs font-normal text-muted-foreground">
+                <Lock className="size-3.5" /> Secured by Afterpay
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <AfterpayButton orderId={order.id} />
+            <p className="mt-3 text-center text-xs text-muted-foreground">
+              4 interest-free payments of {formatCents(Math.ceil(order.total / 4))}, paid fortnightly. You&apos;ll finish paying on Afterpay.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {payByBank && (
+        <Card className={payOnline || payAfterpay ? "mt-4" : "mt-10"}>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between gap-4 font-display text-2xl font-bold">
+              {payOnline || payAfterpay ? "Or pay by bank transfer" : `Pay ${formatCents(order.total)} by bank transfer`}
               <Building2 className="size-5 shrink-0 text-muted-foreground" />
             </CardTitle>
           </CardHeader>
@@ -93,10 +133,10 @@ export default async function OrderPage(props: PageProps<"/order/[id]">) {
       )}
 
       {payInStore && (
-        <Card className={payOnline || payByBank ? "mt-4" : "mt-10"}>
+        <Card className={payOnline || payAfterpay || payByBank ? "mt-4" : "mt-10"}>
           <CardHeader>
             <CardTitle className="flex items-center justify-between gap-4 font-display text-2xl font-bold">
-              {payOnline || payByBank ? "Or pay in store" : `Pay ${formatCents(order.total)} in store`}
+              {payOnline || payAfterpay || payByBank ? "Or pay in store" : `Pay ${formatCents(order.total)} in store`}
               <Store className="size-5 shrink-0 text-muted-foreground" />
             </CardTitle>
           </CardHeader>
@@ -108,12 +148,32 @@ export default async function OrderPage(props: PageProps<"/order/[id]">) {
         </Card>
       )}
 
+      {tracking && (
+        <Card className="mt-10">
+          <CardContent className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-sm text-muted-foreground">Tracking with {tracking.carrier}</p>
+              <p className="font-mono text-lg font-semibold break-all">{tracking.number}</p>
+            </div>
+            {tracking.url && (
+              <Button asChild size="xl">
+                <a href={tracking.url} target="_blank" rel="noreferrer">
+                  Track parcel <ExternalLink />
+                </a>
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       <ol className="mt-10 grid gap-3 sm:grid-cols-3">
         {[
           paid
             ? { icon: CircleCheck, title: "Paid", body: "Your payment went through." }
             : { icon: Mail, title: "Pay securely", body: howToPay ? `By ${howToPay}, above.` : "We'll be in touch about payment." },
-          { icon: Package, title: "We pack & ship", body: DELIVERY_OPTIONS[order.delivery].label },
+          shipped
+            ? { icon: Truck, title: order.delivery === "collect" ? "Picked up" : "Shipped", body: tracking ? `With ${tracking.carrier}` : DELIVERY_OPTIONS[order.delivery].label }
+            : { icon: Package, title: "We pack & ship", body: DELIVERY_OPTIONS[order.delivery].label },
           { icon: Wrench, title: "Need fitting?", body: "Book a local installer any time." },
         ].map(({ icon: Icon, title, body }) => (
           <li key={title} className="rounded-xl bg-card ring-1 ring-foreground/[0.07] p-5">
