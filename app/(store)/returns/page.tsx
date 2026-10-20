@@ -103,14 +103,15 @@ const SECTIONS: PolicySection[] = [
         <PolicySteps
           steps={[
             {
-              title: "Get in touch",
+              title: "Request a return",
               body: (
                 <>
-                  Email <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> with your order number and the reason for the return.
+                  Open the order in <Link href="/account/orders">your account</Link>, choose <strong>Return items</strong>, and tell us what&apos;s coming back and why. No
+                  account? Email <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> with your order number instead.
                 </>
               ),
             },
-            { title: "Get your return number", body: "We'll reply within one business day with a return number, the address, and a prepaid label if we're covering postage." },
+            { title: "Get your return instructions", body: "We'll reply within one business day with the return address, and a prepaid label if we're covering postage. You'll see our reply on your order too." },
             { title: "Pack and send", body: "Pack the item securely in its original box, write the return number on the outside, and send it with tracking." },
             { title: "Inspection and refund", body: "We inspect returns within 2 business days of arrival, then process your refund or send the replacement." },
           ]}
@@ -140,7 +141,8 @@ const SECTIONS: PolicySection[] = [
     content: (
       <>
         <p>
-          Need to cancel? Email us as soon as possible. If your order <strong>hasn&apos;t been dispatched</strong>, we&apos;ll cancel it and refund you in full.
+          Need to cancel? Open the order in <Link href="/account/orders">your account</Link> and choose <strong>Cancel</strong>, or email us, as soon as possible. Unpaid
+          orders cancel straight away. If a paid order <strong>hasn&apos;t been dispatched</strong>, we&apos;ll cancel it and refund you in full.
         </p>
         <p>Once an order has shipped we can&apos;t stop it, but you can return it under our change-of-mind terms above when it arrives.</p>
       </>

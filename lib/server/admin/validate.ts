@@ -1,5 +1,5 @@
 import "server-only";
-import type { AdminProduct, Coupon, CouponScope, CouponType, Department, InvoiceInput, Offer } from "@/lib/admin/model";
+import type { AdminProduct, Coupon, CouponScope, CouponType, Department, InvoiceInput, Offer, RefundInput } from "@/lib/admin/model";
 import { AU_STATES, CATEGORY_LABELS } from "@/lib/data";
 import { PAYMENT_METHODS, type PaymentMethod } from "@/lib/payment";
 import { CARRIER_KEYS, type Shipment } from "@/lib/shipping";
@@ -169,10 +169,38 @@ export function parseVehicle(level: VehicleLevel, vehicleId: string, value: unkn
   };
 }
 
+// "refunded" isn't here: an order gets it by being refunded in full.
 const ORDER_STATUSES: readonly OrderStatus[] = ["pending_payment", "paid", "fulfilled", "cancelled"];
 
 export function parseOrderStatus(value: unknown): OrderStatus {
   return oneOf(asBody(value), "status", ORDER_STATUSES);
+}
+
+export function parseRefund(value: unknown): RefundInput {
+  const body = asBody(value);
+  const restock = body.restock ?? [];
+  if (!Array.isArray(restock) || restock.length > 50) throw new AdminError("restock must be a list of items.");
+  return {
+    amount: int(body, "amount", { min: 1, max: 100_000_000, label: "Refund amount" }),
+    reason: text(body, "reason", { min: 1, max: 300, label: "Reason" }),
+    restock: restock.map((raw) => {
+      const item = asBody(raw);
+      return { productId: id(item.productId, "product"), qty: int(item, "qty", { max: 1000, label: "Restock quantity" }) };
+    }),
+    returnId: body.returnId == null ? undefined : uuid(body.returnId, "request"),
+  };
+}
+
+/** An admin's answer to a cancellation or return request. */
+export function parseReturnResponse(value: unknown): { action: "approve" | "reject"; response: string } {
+  const body = asBody(value);
+  return { action: oneOf(body, "action", ["approve", "reject"] as const), response: text(body, "response", { max: 1000, label: "Message" }) };
+}
+
+/** Ids the server generates with randomUUID (orders, return requests). */
+export function uuid(value: unknown, label = "id"): string {
+  if (typeof value !== "string" || !/^[0-9a-f-]{36}$/.test(value)) throw new AdminError(`Invalid ${label}.`);
+  return value;
 }
 
 /** The carrier and tracking number sent with a status change: undefined when not sent, null to clear them. */

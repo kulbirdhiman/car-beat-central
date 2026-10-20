@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Building2, CircleCheck, CircleX, Clock, ExternalLink, Lock, Mail, Package, Store, Truck, Wrench } from "lucide-react";
+import { Building2, CircleCheck, CircleX, Clock, ExternalLink, Lock, Mail, Package, RotateCcw, Store, Truck, Wrench } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/components/layout/PageShell";
@@ -9,13 +9,16 @@ import { Separator } from "@/components/ui/separator";
 import { formatCents } from "@/lib/data";
 import { DEFAULT_PAYMENT_METHODS, orderReference } from "@/lib/payment";
 import { DELIVERY_OPTIONS } from "@/lib/pricing";
+import { isOpenReturn, returnDeadline, returnableQty } from "@/lib/returns";
 import { CARRIERS, trackingUrl } from "@/lib/shipping";
 import { afterpayAvailableFor } from "@/lib/server/afterpay";
-import { getOrder } from "@/lib/server/orders";
+import { getCustomer } from "@/lib/server/customer";
+import { getOrder, listReturnsAndRefunds } from "@/lib/server/orders";
 import { paypalEnabled } from "@/lib/server/paypal";
 import { AfterpayButton } from "./AfterpayButton";
 import { BankTransfer } from "./BankTransfer";
 import { ClearCart } from "./ClearCart";
+import { OrderHelp, type HelpProps } from "./OrderHelp";
 import { PayPalCheckout } from "./PayPalCheckout";
 
 export const metadata: Metadata = { title: "Your order · CarBeat", robots: { index: false } };
@@ -39,9 +42,12 @@ export default async function OrderPage(props: PageProps<"/order/[id]">) {
   const afterpayProblem = awaitingPayment ? (await props.searchParams).afterpay : undefined;
   const payByBank = awaitingPayment && methods.includes("bank_transfer");
   const payInStore = awaitingPayment && methods.includes("in_store");
+  const help = await helpFor(order);
   const howToPay = [payOnline && "PayPal or card", payAfterpay && "Afterpay", payByBank && "bank transfer", payInStore && "in store"].filter(Boolean).join(", ");
 
-  const header = shipped
+  const header = order.status === "refunded"
+    ? { icon: <RotateCcw className="size-8 text-primary" />, tone: "bg-primary/10", title: "Order refunded", body: <>Order {reference} was refunded in full. It can take 3–5 business days to reach you.</> }
+    : shipped
     ? {
         icon: <Truck className="size-8 text-success" />,
         tone: "bg-success/10",
@@ -214,12 +220,20 @@ export default async function OrderPage(props: PageProps<"/order/[id]">) {
             <span>Total (incl. GST)</span>
             <span>{formatCents(order.total)}</span>
           </div>
+          {order.refundedTotal > 0 && (
+            <div className="flex justify-between text-muted-foreground">
+              <span>Refunded</span>
+              <span>−{formatCents(order.refundedTotal)}</span>
+            </div>
+          )}
           <Separator />
           <p className="text-muted-foreground">
             Delivering to {order.name}, {order.address}, {order.suburb} {order.state} {order.postcode}
           </p>
         </CardContent>
       </Card>
+
+      {help && <OrderHelp {...help} />}
 
       <div className="mt-8 flex flex-wrap justify-center gap-3">
         <Button asChild size="xl">
@@ -231,4 +245,36 @@ export default async function OrderPage(props: PageProps<"/order/[id]">) {
       </div>
     </PageShell>
   );
+}
+
+/** What the order's cancellations & returns section shows the person viewing it, or null to leave it out. */
+async function helpFor(order: NonNullable<Awaited<ReturnType<typeof getOrder>>>): Promise<HelpProps | null> {
+  const [customer, history] = await Promise.all([getCustomer(), listReturnsAndRefunds([order.id])]);
+  const returns = history.returns.get(order.id) ?? [];
+  const refunds = history.refunds.get(order.id) ?? [];
+  // A cancelled unpaid order has nothing to show.
+  if (order.status === "cancelled" && returns.length === 0 && refunds.length === 0) return null;
+
+  const viewer = !customer ? "guest" : order.userId === customer.id || customer.emails.includes(order.email.toLowerCase()) ? "owner" : "other";
+  const open = returns.some(isOpenReturn);
+  const deadline = returnDeadline(order.shippedAt);
+  const windowOpen = order.status === "fulfilled" && !!deadline && deadline.getTime() > Date.now();
+  const left = returnableQty(order.items, returns);
+  const returnable =
+    windowOpen && !open
+      ? [...left].filter(([, max]) => max > 0).map(([productId, max]) => ({ productId, max, name: order.items.find((i) => i.productId === productId)!.name }))
+      : [];
+
+  return {
+    orderId: order.id,
+    viewer,
+    email: order.email,
+    canCancel: order.status === "pending_payment",
+    canRequestCancel: order.status === "paid" && !open,
+    returnable,
+    returnBy: deadline?.toISOString() ?? null,
+    windowClosed: order.status === "fulfilled" && !!deadline && !windowOpen,
+    returns,
+    refunds,
+  };
 }

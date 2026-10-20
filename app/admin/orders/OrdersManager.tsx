@@ -19,10 +19,18 @@ import { DELIVERY_LABEL, ORDER_STATUS_LABEL, orderSubtotal, orderTotal, type Adm
 import { formatCents } from "@/lib/data";
 import { PAYMENT_METHODS } from "@/lib/payment";
 import { CARRIER_KEYS, CARRIERS, trackingUrl, type Carrier } from "@/lib/shipping";
+import { RETURN_KIND_LABEL, isOpenReturn } from "@/lib/returns";
 import type { OrderStatus } from "@/lib/types";
+import { RefundDialog, Refunds, ReturnRequests } from "./Refunds";
 
 const ALL = "all";
+/** A filter for orders with an open cancellation or return request. */
+const RETURNS = "returns";
 const STATUSES = Object.keys(ORDER_STATUS_LABEL) as OrderStatus[];
+/** Statuses an admin can pick by hand: "refunded" comes from refunding in full. */
+const MANUAL_STATUSES = STATUSES.filter((s) => s !== "refunded");
+
+const openReturn = (o: AdminOrder) => o.returns.find(isOpenReturn);
 
 export function OrdersManager() {
   const { orders } = useAdminStore();
@@ -33,7 +41,7 @@ export function OrdersManager() {
 
   // Status filter and open order live in the URL so the dashboard can link straight to them.
   const statusParam = searchParams.get("status");
-  const status = statusParam && (STATUSES as string[]).includes(statusParam) ? (statusParam as OrderStatus) : ALL;
+  const status = statusParam === RETURNS ? RETURNS : statusParam && (STATUSES as string[]).includes(statusParam) ? (statusParam as OrderStatus) : ALL;
   const openOrder = orders.find((o) => o.id === searchParams.get("open")) ?? null;
 
   function setParam(key: string, value: string | null) {
@@ -47,7 +55,7 @@ export function OrdersManager() {
   const q = query.trim().toLowerCase();
   const rows = orders.filter(
     (o) =>
-      (status === ALL || o.status === status) &&
+      (status === ALL || o.status === status || (status === RETURNS && !!openReturn(o))) &&
       (!q || o.number.toLowerCase().includes(q) || o.customer.name.toLowerCase().includes(q) || o.customer.email.toLowerCase().includes(q)),
   );
 
@@ -55,7 +63,7 @@ export function OrdersManager() {
     <>
       <PageHeader
         title="Orders"
-        description={`${orders.length} orders · ${orders.filter((o) => o.status === "paid").length} ready to ship.`}
+        description={`${orders.length} orders · ${orders.filter((o) => o.status === "paid").length} ready to ship · ${orders.filter(openReturn).length} open returns.`}
         actions={
           <Button asChild>
             <Link href="/admin/orders/new">
@@ -76,6 +84,7 @@ export function OrdersManager() {
                     {ORDER_STATUS_LABEL[s]} ({orders.filter((o) => o.status === s).length})
                   </TabsTrigger>
                 ))}
+                <TabsTrigger value={RETURNS}>Returns ({orders.filter(openReturn).length})</TabsTrigger>
               </TabsList>
             </Tabs>
             <div className="relative w-full sm:w-72">
@@ -124,6 +133,9 @@ export function OrdersManager() {
                     <TableCell className="text-right tabular-nums">{formatCents(orderTotal(o))}</TableCell>
                     <TableCell>
                       <OrderStatusBadge status={o.status} />
+                      {openReturn(o) && (
+                        <span className="mt-1 block text-xs font-medium text-amber-700 dark:text-amber-400">{RETURN_KIND_LABEL[openReturn(o)!.kind]} requested</span>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -146,6 +158,7 @@ function OrderDetail({ order }: { order: AdminOrder }) {
   const total = orderTotal(order);
   const pickup = order.delivery === "collect";
   const units = order.items.reduce((n, i) => n + i.qty, 0);
+  const [refunding, setRefunding] = useState<{ preset: Parameters<typeof RefundDialog>[0]["preset"] } | null>(null);
 
   return (
     <>
@@ -161,6 +174,8 @@ function OrderDetail({ order }: { order: AdminOrder }) {
       </SheetHeader>
 
       <div className="space-y-4 p-4">
+        <ReturnRequests order={order} onRefund={(preset) => setRefunding({ preset })} />
+
         {(order.status === "paid" || order.status === "fulfilled") && <Fulfilment order={order} />}
 
         <Panel title="Customer">
@@ -201,6 +216,7 @@ function OrderDetail({ order }: { order: AdminOrder }) {
             <Line label="Shipping" value={order.shipping ? formatCents(order.shipping) : "Free"} muted />
             <Line label="Total (incl. GST)" value={formatCents(total)} strong />
             <Line label="GST" value={formatCents(Math.round(total / 11))} muted />
+            {order.refunded > 0 && <Line label="Refunded" value={`−${formatCents(order.refunded)}`} muted />}
           </dl>
         </Panel>
 
@@ -220,9 +236,11 @@ function OrderDetail({ order }: { order: AdminOrder }) {
               Awaiting payment by {order.paymentMethods.map((m) => PAYMENT_METHODS[m].toLowerCase()).join(", ")}.
             </p>
           ) : (
-            <p className="text-sm text-muted-foreground">{order.status === "cancelled" ? "Not paid." : "Paid offline (bank transfer or in store)."}</p>
+            <p className="text-sm text-muted-foreground">{order.status === "cancelled" && !order.paidAt ? "Not paid." : "Paid offline (bank transfer or in store)."}</p>
           )}
         </Panel>
+
+        <Refunds order={order} onRefund={() => setRefunding({ preset: null })} />
 
         {order.note && (
           <Panel title="Note to customer">
@@ -235,16 +253,26 @@ function OrderDetail({ order }: { order: AdminOrder }) {
         </Panel>
       </div>
 
+      <RefundDialog order={order} preset={refunding?.preset ?? null} open={refunding !== null} onOpenChange={(open) => !open && setRefunding(null)} />
+
       <SheetFooter className="border-t">
         <label htmlFor="order-status" className="text-xs font-medium text-muted-foreground">
           Change status
         </label>
-        <Select value={order.status} onValueChange={(v) => setOrderStatus(order.id, v as OrderStatus)}>
+        <Select
+          value={order.status}
+          disabled={order.status === "refunded"}
+          onValueChange={(v) => {
+            // Cancelling here doesn't move money: warn when there's a payment to give back.
+            if (v === "cancelled" && order.payment && order.refunded < total && !confirm("Cancelling doesn't refund the payment. Use Refund for that. Cancel anyway?")) return;
+            setOrderStatus(order.id, v as OrderStatus);
+          }}
+        >
           <SelectTrigger id="order-status" className="w-full">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {STATUSES.map((s) => (
+            {(order.status === "refunded" ? STATUSES : MANUAL_STATUSES).map((s) => (
               <SelectItem key={s} value={s}>
                 {ORDER_STATUS_LABEL[s]}
               </SelectItem>

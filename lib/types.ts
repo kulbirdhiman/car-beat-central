@@ -69,7 +69,8 @@ export type Offer = {
 
 export type CartLine = { productId: string; qty: number };
 
-export type OrderStatus = "pending_payment" | "paid" | "fulfilled" | "cancelled";
+/** "refunded": paid, then refunded in full. Partly refunded orders keep their status. */
+export type OrderStatus = "pending_payment" | "paid" | "fulfilled" | "cancelled" | "refunded";
 
 /** An Australian suburb with its state and postcode. */
 export type Locality = { suburb: string; state: string; postcode: string };
