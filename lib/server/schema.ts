@@ -1,6 +1,7 @@
 import { boolean, doublePrecision, index, integer, jsonb, pgTable, text } from "drizzle-orm/pg-core";
 import type { CouponScope, CouponType } from "../admin/model";
 import type { PaymentMethod } from "../payment";
+import type { RefundMethod, ReturnItem, ReturnKind, ReturnReason, ReturnStatus } from "../returns";
 import type { Carrier } from "../shipping";
 import type { Category, OrderStatus } from "../types";
 
@@ -90,6 +91,8 @@ export const orders = pgTable(
     shippingCarrier: text("shipping_carrier").$type<Carrier>(),
     trackingNumber: text("tracking_number"),
     shippedAt: text("shipped_at"),
+    /** Cents refunded so far, the sum of its order_refunds. Locked with the order row so two refunds can't overdraw it. */
+    refundedTotal: integer("refunded_total").notNull().default(0),
     /** "invoice" for orders an admin raised as a manual invoice. */
     source: text("source").$type<"checkout" | "invoice">().notNull().default("checkout"),
     /** How the customer may pay; null offers the defaults (PayPal, Afterpay and bank transfer). Set on invoices. */
@@ -133,6 +136,46 @@ export const orderItems = pgTable(
     qty: integer("qty").notNull(),
   },
   (t) => [index("order_items_order").on(t.orderId)],
+).enableRLS();
+
+/** A customer's request to cancel a paid order or return items from a shipped one. See lib/returns.ts. */
+export const orderReturns = pgTable(
+  "order_returns",
+  {
+    id: text("id").primaryKey(),
+    orderId: text("order_id")
+      .notNull()
+      .references(() => orders.id),
+    createdAt: text("created_at").notNull().$defaultFn(now),
+    kind: text("kind").$type<ReturnKind>().notNull(),
+    status: text("status").$type<ReturnStatus>().notNull(),
+    reason: text("reason").$type<ReturnReason>().notNull(),
+    details: text("details").notNull(),
+    items: jsonb("items").$type<ReturnItem[]>().notNull(),
+    /** Our reply to the customer. */
+    response: text("response"),
+    resolvedAt: text("resolved_at"),
+  },
+  (t) => [index("order_returns_order").on(t.orderId), index("order_returns_status").on(t.status)],
+).enableRLS();
+
+/** Money given back on an order: through PayPal or Afterpay, or recorded after paying it back by hand ("manual"). Amounts in cents. */
+export const orderRefunds = pgTable(
+  "order_refunds",
+  {
+    id: text("id").primaryKey(),
+    orderId: text("order_id")
+      .notNull()
+      .references(() => orders.id),
+    createdAt: text("created_at").notNull().$defaultFn(now),
+    amount: integer("amount").notNull(),
+    method: text("method").$type<RefundMethod>().notNull(),
+    providerRefundId: text("provider_refund_id"),
+    reason: text("reason").notNull(),
+    restocked: jsonb("restocked").$type<{ productId: string; qty: number }[]>().notNull(),
+    returnId: text("return_id").references(() => orderReturns.id),
+  },
+  (t) => [index("order_refunds_order").on(t.orderId)],
 ).enableRLS();
 
 export const bookings = pgTable("bookings", {

@@ -1,4 +1,4 @@
-import { ArrowRight, ExternalLink } from "lucide-react";
+import { ArrowRight, ExternalLink, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { OrderStatusBadge } from "@/components/admin/ui";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,12 @@ export function OrderCard({ order }: { order: CustomerOrder }) {
         <span className="font-mono font-semibold">#{orderReference(order.id)}</span>
         <OrderStatusBadge status={order.status} />
         <span className="text-sm text-muted-foreground">{fmtDate(order.createdAt)}</span>
-        <span className="ml-auto font-semibold tabular-nums">{formatCents(order.total)}</span>
+        <span className="ml-auto text-right font-semibold tabular-nums">
+          {formatCents(order.total)}
+          {order.refundedTotal > 0 && order.status !== "refunded" && (
+            <span className="block text-xs font-normal text-muted-foreground">{formatCents(order.refundedTotal)} refunded</span>
+          )}
+        </span>
       </div>
       <p className="mt-3 line-clamp-2 text-sm text-muted-foreground">
         {units} {units === 1 ? "item" : "items"}: {summary}
@@ -38,6 +43,13 @@ export function OrderCard({ order }: { order: CustomerOrder }) {
             <a href={track} target="_blank" rel="noreferrer" title={`Track with ${CARRIERS[order.shippingCarrier!].name}`}>
               Track parcel <ExternalLink />
             </a>
+          </Button>
+        )}
+        {(order.status === "paid" || order.status === "fulfilled") && (
+          <Button asChild size="sm" variant="outline">
+            <Link href={`/order/${order.id}#help`}>
+              <RotateCcw /> {order.status === "paid" ? "Cancel" : "Return items"}
+            </Link>
           </Button>
         )}
         <Button asChild size="sm" variant="outline">

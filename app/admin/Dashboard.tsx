@@ -13,8 +13,9 @@ import type { OrderStatus } from "@/lib/types";
 export function Dashboard() {
   const { orders, products, departments, makes } = useAdminStore();
 
-  const counted = orders.filter((o) => o.status !== "cancelled");
-  const revenue = counted.reduce((sum, o) => sum + orderTotal(o), 0);
+  const counted = orders.filter((o) => o.status !== "cancelled" && o.status !== "refunded");
+  // Less partial refunds; fully refunded orders are left out above.
+  const revenue = counted.reduce((sum, o) => sum + orderTotal(o) - o.refunded, 0);
   const toShip = orders.filter((o) => o.status === "paid").length;
   const lowStock = products.filter((p) => p.status === "active" && p.stock <= LOW_STOCK).sort((a, b) => a.stock - b.stock);
   const models = makes.reduce((n, m) => n + m.models.length, 0);
@@ -44,7 +45,7 @@ export function Dashboard() {
 
   const stats = [
     { label: "Revenue (incl. GST)", value: formatCents(revenue), hint: `${counted.length} orders` },
-    { label: "Average order", value: formatCents(counted.length ? Math.round(revenue / counted.length) : 0), hint: "Excludes cancelled" },
+    { label: "Average order", value: formatCents(counted.length ? Math.round(revenue / counted.length) : 0), hint: "Excludes cancelled and refunded" },
     { label: "Ready to ship", value: toShip.toLocaleString("en-AU"), hint: "Paid, not yet shipped", href: "/admin/orders?status=paid" },
     { label: "Catalogue", value: products.length.toLocaleString("en-AU"), hint: `${departments.length} departments · ${makes.length} makes · ${models} models` },
   ];

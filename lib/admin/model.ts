@@ -1,5 +1,6 @@
 import type { PaymentMethod } from "@/lib/payment";
 import type { Shipment } from "@/lib/shipping";
+import type { Refund, ReturnRequest } from "@/lib/returns";
 import type { Category, OrderStatus } from "@/lib/types";
 
 /** Admin entity types and display helpers, shared by the admin UI and the server. */
@@ -94,6 +95,14 @@ export type AdminOrder = {
   shipment?: Shipment;
   /** When it was marked shipped (or picked up). */
   shippedAt?: string;
+  /** When it was paid online, or marked paid on an invoice. Unset for offline payments marked paid by changing the status. */
+  paidAt?: string;
+  /** Cents refunded so far. */
+  refunded: number;
+  /** Cancellation and return requests, oldest first. */
+  returns: ReturnRequest[];
+  /** Money given back, oldest first. */
+  refunds: Refund[];
 };
 
 /** A manual invoice as the admin form sends it. Amounts in cents, GST inclusive. */
@@ -116,6 +125,7 @@ export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   paid: "Paid",
   fulfilled: "Shipped",
   cancelled: "Cancelled",
+  refunded: "Refunded",
 };
 
 export const DELIVERY_LABEL: Record<AdminOrder["delivery"], string> = {
@@ -131,6 +141,21 @@ export function orderSubtotal(order: AdminOrder) {
 export function orderTotal(order: AdminOrder) {
   return orderSubtotal(order) - order.discount + order.shipping;
 }
+
+/** Whether money was taken for it, so it can be refunded (mirrors the server's check). */
+export function orderWasPaid(order: AdminOrder) {
+  return !!order.paidAt || order.status === "paid" || order.status === "fulfilled" || order.status === "refunded";
+}
+
+/** A refund as the admin form sends it. Amount in cents. */
+export type RefundInput = {
+  amount: number;
+  reason: string;
+  /** Items to put back into stock. */
+  restock: { productId: string; qty: number }[];
+  /** The return request it settles. */
+  returnId?: string;
+};
 
 export const LOW_STOCK = 5;
 

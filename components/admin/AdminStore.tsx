@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useMemo, useState } from "react";
 import { toast } from "sonner";
-import type { AdminOrder, AdminProduct, Coupon, Department, InvoiceInput, Offer, SubModel, VehicleMake, VehicleModel } from "@/lib/admin/model";
+import type { AdminOrder, AdminProduct, Coupon, Department, InvoiceInput, Offer, RefundInput, SubModel, VehicleMake, VehicleModel } from "@/lib/admin/model";
 import type { AdminData } from "@/lib/server/admin/data";
 import type { Shipment } from "@/lib/shipping";
 import type { OrderStatus } from "@/lib/types";
@@ -28,6 +28,10 @@ type Store = AdminData & {
   setOrderStatus: (id: string, status: OrderStatus, shipment?: Shipment | null) => void;
   /** Saved before it's shown, since the server numbers and prices it. Rejects with the server's error. */
   createInvoice: (input: InvoiceInput) => Promise<AdminOrder>;
+  /** Money moves, so these wait for the server rather than updating first. Both reject with the server's error. */
+  refundOrder: (orderId: string, input: RefundInput) => Promise<void>;
+  /** Approve or decline a cancellation or return request. Approving a cancellation refunds the order. */
+  respondToReturn: (returnId: string, action: "approve" | "reject", response: string) => Promise<void>;
   saveMake: (make: MakeFields) => void;
   deleteMake: (id: string) => void;
   reorderMakes: (makes: VehicleMake[]) => void;
@@ -181,6 +185,18 @@ export function AdminStoreProvider({ initial, children }: { initial: AdminData; 
         // The invoice took stock.
         api<AdminProduct[]>("GET", "/products").then(setProducts, () => {});
         return order;
+      },
+
+      refundOrder: async (orderId, input) => {
+        const order = await api<AdminOrder>("POST", `/orders/${orderId}/refunds`, input);
+        setOrders((list) => upsert(list, order));
+        // It may have restocked items.
+        api<AdminProduct[]>("GET", "/products").then(setProducts, () => {});
+      },
+      respondToReturn: async (returnId, action, response) => {
+        const order = await api<AdminOrder>("PATCH", `/returns/${returnId}`, { action, response });
+        setOrders((list) => upsert(list, order));
+        api<AdminProduct[]>("GET", "/products").then(setProducts, () => {});
       },
 
       saveMake: (make) => {

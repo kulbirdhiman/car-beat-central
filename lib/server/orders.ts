@@ -1,16 +1,17 @@
 import "server-only";
-import { and, count, desc, eq, gte, inArray, isNull, lt, ne, or, sql, sum } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, isNull, lt, ne, notInArray, or, sql, sum } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import type { AdminOrder, InvoiceInput } from "../admin/model";
 import { DEFAULT_PAYMENT_METHODS } from "../payment";
 import { priceCart, unitPriceCents, type Delivery, type Totals } from "../pricing";
 import type { Shipment } from "../shipping";
+import type { Refund, ReturnRequest } from "../returns";
 import type { CartLine, OrderStatus } from "../types";
 import { getCouponByCode } from "./admin/promos";
 import { AdminError } from "./admin/validate";
-import { db, transaction } from "./db";
+import { db, transaction, type Tx } from "./db";
 import { listProducts } from "./queries";
-import { bookings, coupons, orderItems, orders, products, subscribers } from "./schema";
+import { bookings, coupons, orderItems, orderRefunds, orderReturns, orders, products, subscribers } from "./schema";
 import type { BookingInput, CheckoutInput } from "./validate";
 
 // Cancelled orders don't count, so a shopper whose first order fell through keeps first-order codes.
@@ -163,6 +164,43 @@ export async function getOrder(id: string): Promise<OrderRecord | null> {
   return { ...order, items };
 }
 
+type ReturnRow = typeof orderReturns.$inferSelect;
+type RefundRow = typeof orderRefunds.$inferSelect;
+
+const toReturn = (r: ReturnRow): ReturnRequest => ({
+  id: r.id,
+  createdAt: r.createdAt,
+  kind: r.kind,
+  status: r.status,
+  reason: r.reason,
+  details: r.details,
+  items: r.items,
+  response: r.response ?? "",
+  resolvedAt: r.resolvedAt ?? undefined,
+});
+
+const toRefund = (r: RefundRow): Refund => ({
+  id: r.id,
+  createdAt: r.createdAt,
+  amount: r.amount,
+  method: r.method,
+  reason: r.reason,
+  restocked: r.restocked,
+  returnId: r.returnId ?? undefined,
+});
+
+/** The return requests and refunds on these orders, oldest first, keyed by order id. */
+export async function listReturnsAndRefunds(orderIds: string[]) {
+  if (orderIds.length === 0) return { returns: new Map<string, ReturnRequest[]>(), refunds: new Map<string, Refund[]>() };
+  const [returnRows, refundRows] = await Promise.all([
+    db.select().from(orderReturns).where(inArray(orderReturns.orderId, orderIds)).orderBy(orderReturns.createdAt),
+    db.select().from(orderRefunds).where(inArray(orderRefunds.orderId, orderIds)).orderBy(orderRefunds.createdAt),
+  ]);
+  const group = <R extends { orderId: string }, T>(rows: R[], map: (r: R) => T) =>
+    new Map([...Map.groupBy(rows, (r) => r.orderId)].map(([id, list]) => [id, list.map(map)]));
+  return { returns: group(returnRows, toReturn), refunds: group(refundRows, toRefund) };
+}
+
 /** Orders for the admin panel, newest first, with their items (two queries in total). Pass `id` for just that order. */
 export async function listAdminOrders({ id = null, limit = 500 }: { id?: string | null; limit?: number } = {}): Promise<AdminOrder[]> {
   const rows = await db
@@ -183,6 +221,7 @@ export async function listAdminOrders({ id = null, limit = 500 }: { id?: string 
     )
     .orderBy(orderItems.id);
   const itemsByOrder = Map.groupBy(items, (i) => i.orderId);
+  const history = await listReturnsAndRefunds(rows.map((o) => o.id));
   return rows.map((o) => ({
     id: o.id,
     number: `CB-${o.number}`,
@@ -207,33 +246,53 @@ export async function listAdminOrders({ id = null, limit = 500 }: { id?: string 
     note: o.note ?? "",
     shipment: o.shippingCarrier && o.trackingNumber ? { carrier: o.shippingCarrier, trackingNumber: o.trackingNumber } : undefined,
     shippedAt: o.shippedAt ?? undefined,
+    paidAt: o.paidAt ?? undefined,
+    refunded: o.refundedTotal,
+    returns: history.returns.get(o.id) ?? [],
+    refunds: history.refunds.get(o.id) ?? [],
   }));
+}
+
+/**
+ * Puts an order's items back into stock (sign 1, when it's cancelled) or takes them out again (-1, when it's reinstated).
+ * Items a refund already restocked are skipped, so they're never counted twice. Call with the order row locked.
+ */
+export async function moveOrderStock(tx: Tx, orderId: string, sign: 1 | -1) {
+  const [lines, refunds] = await Promise.all([
+    tx
+      .select({ productId: orderItems.productId, qty: sum(orderItems.qty).mapWith(Number) })
+      .from(orderItems)
+      .where(eq(orderItems.orderId, orderId))
+      .groupBy(orderItems.productId),
+    tx.select({ restocked: orderRefunds.restocked }).from(orderRefunds).where(eq(orderRefunds.orderId, orderId)),
+  ]);
+  for (const l of lines) {
+    const already = refunds.flatMap((r) => r.restocked).reduce((n, r) => n + (r.productId === l.productId ? r.qty : 0), 0);
+    const qty = l.qty - already;
+    if (qty <= 0) continue;
+    await tx
+      .update(products)
+      .set({ stock: sql`GREATEST(0, ${products.stock} + ${sign * qty})` })
+      .where(eq(products.id, l.productId));
+  }
 }
 
 /**
  * Cancelling an order puts its stock back; reinstating a cancelled order takes it out again.
  * `shipment`: the carrier and tracking number to save with it (null clears them, undefined leaves them).
+ * `from`: the statuses it may change from; anything else is refused (e.g. a customer cancelling an order that was just paid).
  */
-export async function setOrderStatus(id: string, status: OrderStatus, shipment?: Shipment | null) {
+export async function setOrderStatus(id: string, status: OrderStatus, shipment?: Shipment | null, from?: OrderStatus[]) {
   await transaction(async (tx) => {
     // Locks the order, so two status changes at once can't both restock it.
     const [order] = await tx.select({ status: orders.status }).from(orders).where(eq(orders.id, id)).for("update");
     if (!order) throw new AdminError("Order not found.", 404);
+    if (from && !from.includes(order.status)) throw new AdminError("This order has changed. Refresh the page and try again.", 409);
     if (order.status === status && shipment === undefined) return;
+    // Refunded is set by refunding the order in full, and is final.
+    if (order.status === "refunded" || status === "refunded") throw new AdminError("Refunded orders are changed by refunding them, not by changing their status.");
     const sign = status === "cancelled" ? 1 : order.status === "cancelled" ? -1 : 0;
-    if (sign) {
-      const lines = await tx
-        .select({ productId: orderItems.productId, qty: sum(orderItems.qty).mapWith(Number) })
-        .from(orderItems)
-        .where(eq(orderItems.orderId, id))
-        .groupBy(orderItems.productId);
-      for (const l of lines) {
-        await tx
-          .update(products)
-          .set({ stock: sql`GREATEST(0, ${products.stock} + ${sign * l.qty})` })
-          .where(eq(products.id, l.productId));
-      }
-    }
+    if (sign) await moveOrderStock(tx, id, sign);
     await tx
       .update(orders)
       .set({
@@ -270,9 +329,9 @@ export function listSubscribers(limit = 200) {
 export async function getStats() {
   const [[sales], [booked], [subscribed]] = await Promise.all([
     db
-      .select({ n: count(), revenue: sql<number>`COALESCE(SUM(${orders.total}), 0)`.mapWith(Number) })
+      .select({ n: count(), revenue: sql<number>`COALESCE(SUM(${orders.total} - ${orders.refundedTotal}), 0)`.mapWith(Number) })
       .from(orders)
-      .where(ne(orders.status, "cancelled")),
+      .where(notInArray(orders.status, ["cancelled", "refunded"])),
     db.select({ n: count() }).from(bookings),
     db.select({ n: count() }).from(subscribers),
   ]);
