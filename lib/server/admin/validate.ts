@@ -3,7 +3,7 @@ import type { AdminProduct, Coupon, CouponScope, CouponType, Department, Invoice
 import { AU_STATES, CATEGORY_LABELS } from "@/lib/data";
 import { PAYMENT_METHODS, type PaymentMethod } from "@/lib/payment";
 import { CARRIER_KEYS, type Shipment } from "@/lib/shipping";
-import type { Category, OrderStatus } from "@/lib/types";
+import type { Category, OrderStatus, Spec } from "@/lib/types";
 import { EMAIL_RE } from "../validate";
 
 /**
@@ -120,6 +120,25 @@ export function parseProduct(productId: string, value: unknown): ProductInput {
   if (!Array.isArray(features) || features.length > 12 || features.some((f) => typeof f !== "string" || f.trim().length === 0 || f.length > 200)) {
     throw new AdminError("Features must be up to 12 lines of at most 200 characters.");
   }
+  const specs = body.specs ?? [];
+  if (
+    !Array.isArray(specs) ||
+    specs.length > 30 ||
+    specs.some(
+      (row) =>
+        !Array.isArray(row) ||
+        row.length !== 2 ||
+        row.some((v) => typeof v !== "string") ||
+        !row[0].trim() ||
+        !row[1].trim() ||
+        row[0].length > 60 ||
+        row[1].length > 200,
+    )
+  ) {
+    throw new AdminError("Specifications must be up to 30 rows, each a name (60 characters) and a value (200 characters).");
+  }
+  const addOnIds = idList(body, "addOnIds").filter((a) => a !== productId);
+  if (addOnIds.length > 12) throw new AdminError("Pick at most 12 add-ons.");
   let fits: AdminProduct["fits"];
   if (body.fits === "universal") fits = "universal";
   else {
@@ -142,6 +161,8 @@ export function parseProduct(productId: string, value: unknown): ProductInput {
     description: text(body, "description", { max: 2000 }),
     badge: text(body, "badge", { max: 30, label: "Badge" }),
     features: features.map((f: string) => f.trim()),
+    specs: specs.map(([label, value]: Spec) => [label.trim(), value.trim()] as Spec),
+    addOnIds,
     dealPrice,
     trending: body.trending === true,
   };

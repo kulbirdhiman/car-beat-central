@@ -91,6 +91,8 @@ const productColumns = {
   description: products.description,
   badge: products.badge,
   features: products.features,
+  specs: products.specs,
+  addOnIds: products.addOnIds,
   trendingRank: products.trendingRank,
   rating: products.rating,
   reviews: products.reviews,
@@ -146,6 +148,10 @@ export async function saveProduct(p: ProductInput): Promise<AdminProduct> {
     const [known] = await db.select({ n: count() }).from(vehicleModels).where(inArray(vehicleModels.id, p.fits));
     if (known.n !== p.fits.length) throw new AdminError("Some of the fitted vehicle models don't exist.");
   }
+  if (p.addOnIds.length) {
+    const [known] = await db.select({ n: count() }).from(products).where(inArray(products.id, p.addOnIds));
+    if (known.n !== p.addOnIds.length) throw new AdminError("Some of the add-on products don't exist.");
+  }
 
   const { id, dealPrice, trending, badge, ...fields } = p;
   // A new product's slug is picked before the transaction, which mustn't query outside itself (on Vercel the pool has one connection).
@@ -167,10 +173,14 @@ export async function saveProduct(p: ProductInput): Promise<AdminProduct> {
   return toAdminProduct(saved);
 }
 
-/** Removes the product with its deal and reviews. Past orders keep their own copy of the name and price. */
+/** Removes the product with its deal and reviews, and from other products' add-ons. Past orders keep their own copy of the name and price. */
 export async function deleteProduct(id: string) {
   await transaction(async (tx) => {
     await tx.delete(deals).where(eq(deals.productId, id));
+    await tx
+      .update(products)
+      .set({ addOnIds: sql`${products.addOnIds} - ${id}::text` })
+      .where(sql`${products.addOnIds} ? ${id}`);
     await tx.delete(productReviews).where(eq(productReviews.productId, id));
     const deleted = await tx.delete(products).where(eq(products.id, id)).returning({ id: products.id });
     if (deleted.length === 0) throw new AdminError("Product not found.", 404);

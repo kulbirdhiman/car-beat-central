@@ -1,27 +1,35 @@
 "use client";
 
-import { Check, Minus, Plus, ShoppingBag, Zap } from "lucide-react";
+import { Check, Minus, Plus, PackagePlus, ShoppingBag, Zap } from "lucide-react";
+import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { addToCart } from "@/lib/cart";
 import { formatPrice } from "@/lib/data";
 import { cn } from "@/lib/utils";
 
-type Props = { productId: string; name: string; image: string; price: number; stock: number };
+export type AddOn = { id: string; slug: string; name: string; image: string; price: number };
+
+type Props = { productId: string; name: string; image: string; price: number; stock: number; addOns: AddOn[] };
 
 /**
- * Quantity, Add to cart and Buy now. Once those buttons scroll out of view, a bar with the
- * same actions sticks to the bottom of the screen, so buying is always one tap away.
+ * Add-ons, quantity, Add to cart and Buy now. Ticked add-ons go in the cart alongside the product, one of each.
+ * Once the buttons scroll out of view, a bar with the same actions sticks to the bottom of the screen,
+ * so buying is always one tap away.
  */
-export function BuyBox({ productId, name, image, price, stock }: Props) {
+export function BuyBox({ productId, name, image, price, stock, addOns }: Props) {
   const router = useRouter();
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
   const [showBar, setShowBar] = useState(false);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
   const anchor = useRef<HTMLDivElement>(null);
+  const extras = addOns.filter((a) => picked.has(a.id));
+  const total = price * qty + extras.reduce((n, a) => n + a.price, 0);
 
   useEffect(() => {
     const el = anchor.current;
@@ -32,16 +40,28 @@ export function BuyBox({ productId, name, image, price, stock }: Props) {
     return () => observer.disconnect();
   }, []);
 
-  const add = () => {
+  const addAll = () => {
     addToCart(productId, qty);
+    for (const a of extras) addToCart(a.id, 1);
+  };
+  const add = () => {
+    addAll();
     setAdded(true);
     setTimeout(() => setAdded(false), 1800);
-    toast.success(`Added ${qty} to cart`, { description: name, action: { label: "Checkout", onClick: () => router.push("/checkout") } });
+    const description = extras.length ? `${name} + ${extras.length} add-on${extras.length > 1 ? "s" : ""}` : name;
+    toast.success(`Added ${qty + extras.length} to cart`, { description, action: { label: "Checkout", onClick: () => router.push("/checkout") } });
   };
   const buyNow = () => {
-    addToCart(productId, qty);
+    addAll();
     router.push("/checkout");
   };
+  const toggle = (id: string, on: boolean) =>
+    setPicked((s) => {
+      const next = new Set(s);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
 
   if (stock === 0) {
     return (
@@ -57,6 +77,41 @@ export function BuyBox({ productId, name, image, price, stock }: Props) {
 
   return (
     <>
+      {addOns.length > 0 && (
+        <fieldset className="mt-5">
+          <legend className="flex items-center gap-2 text-sm font-semibold">
+            <PackagePlus className="size-4 text-primary" /> Add to your order
+          </legend>
+          <ul className="mt-2 grid gap-2">
+            {addOns.map((a) => {
+              const on = picked.has(a.id);
+              return (
+                <li key={a.id}>
+                  <label
+                    className={cn(
+                      "flex cursor-pointer items-center gap-3 rounded-xl border bg-background p-2.5 pr-3 transition-colors hover:border-foreground/30",
+                      on && "border-primary bg-primary/5 hover:border-primary",
+                    )}
+                  >
+                    <Checkbox checked={on} onCheckedChange={(v) => toggle(a.id, v === true)} aria-label={`Add ${a.name}`} />
+                    <span className="relative size-12 shrink-0 overflow-hidden rounded-lg bg-muted">
+                      <Image src={a.image} alt="" fill sizes="48px" className="object-cover" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="line-clamp-2 text-sm font-medium leading-snug">{a.name}</span>
+                      <Link href={`/products/${a.slug}`} className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
+                        View details
+                      </Link>
+                    </span>
+                    <span className="shrink-0 text-sm font-semibold tabular-nums">+{formatPrice(a.price)}</span>
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+        </fieldset>
+      )}
+
       <div ref={anchor} className="mt-5 grid gap-3">
         <div className="flex gap-3">
           <div className="flex h-14 shrink-0 items-center rounded-xl border bg-background">
@@ -75,7 +130,7 @@ export function BuyBox({ productId, name, image, price, stock }: Props) {
           </Button>
         </div>
         <Button size="xl" variant="ink" className="h-14 w-full rounded-xl text-base" onClick={buyNow}>
-          <Zap className="fill-current" /> Buy now · {formatPrice(price * qty)}
+          <Zap className="fill-current" /> Buy now · {formatPrice(total)}
         </Button>
       </div>
 
@@ -92,7 +147,12 @@ export function BuyBox({ productId, name, image, price, stock }: Props) {
           </span>
           <div className="min-w-0 flex-1">
             <p className="hidden truncate text-sm font-semibold sm:block">{name}</p>
-            <p className="font-display text-lg font-bold leading-tight">{formatPrice(price)}</p>
+            <p className="font-display text-lg font-bold leading-tight">{formatPrice(total)}</p>
+            {extras.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Incl. {extras.length} add-on{extras.length > 1 ? "s" : ""}
+              </p>
+            )}
           </div>
           <Button size="xl" variant="outline" className="h-12 rounded-xl bg-background px-4" onClick={add} tabIndex={showBar ? 0 : -1}>
             {added ? <Check /> : <ShoppingBag />}

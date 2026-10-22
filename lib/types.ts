@@ -33,9 +33,16 @@ export type Product = {
   image: string;
   description: string;
   features: string[];
+  /** The product's own specification rows. */
+  specs: Spec[];
+  /** Products offered as optional extras on this product's page. */
+  addOnIds: string[];
   /** Present when the product is in today's deals. */
   deal?: { price: number; claimed: number };
 };
+
+/** A specification row, e.g. ["Screen", '9" HD touchscreen']. */
+export type Spec = [label: string, value: string];
 
 /** An active admin department as the store shows it, with its live product count. */
 export type StoreDepartment = {

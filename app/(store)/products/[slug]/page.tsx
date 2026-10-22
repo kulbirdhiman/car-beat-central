@@ -6,7 +6,7 @@ import { PageShell } from "@/components/layout/PageShell";
 import { ProductCard } from "@/components/product/ProductCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CATEGORY_GALLERY, CATEGORY_LABELS, discountPercent, findDepartment, formatPrice } from "@/lib/data";
-import { getCarBrands, getProductBySlug, getRelated, getStoreDepartments, listProducts } from "@/lib/server/queries";
+import { getAddOns, getCarBrands, getProductBySlug, getRelated, getStoreDepartments, listProducts } from "@/lib/server/queries";
 import { listReviews } from "@/lib/server/reviews";
 import { getSpecs } from "@/lib/server/specs";
 import { cn } from "@/lib/utils";
@@ -35,7 +35,13 @@ const PERKS = [
 export default async function ProductPage(props: PageProps<"/products/[slug]">) {
   const product = await getProductBySlug((await props.params).slug);
   if (!product) notFound();
-  const [brands, reviews, departments, related] = await Promise.all([getCarBrands(), listReviews(product.id), getStoreDepartments(), getRelated(product)]);
+  const [brands, reviews, departments, related, addOns] = await Promise.all([
+    getCarBrands(),
+    listReviews(product.id),
+    getStoreDepartments(),
+    getRelated(product),
+    getAddOns(product),
+  ]);
 
   const price = product.deal?.price ?? product.price;
   const off = discountPercent(price, product.rrp);
@@ -93,7 +99,16 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
             <span className="text-muted-foreground underline decoration-foreground/20 underline-offset-4">{product.reviews.toLocaleString("en-AU")} ratings</span>
           </a>
 
-          <p className="mt-4 leading-relaxed text-muted-foreground">{product.description}</p>
+          {product.description && (
+            <p className="mt-4 line-clamp-3 whitespace-pre-line leading-relaxed text-muted-foreground">
+              {product.description}
+            </p>
+          )}
+          {(product.description.length > 220 || product.description.includes("\n")) && (
+            <a href="#details" className="mt-1 inline-block text-sm font-semibold text-primary underline-offset-4 hover:underline">
+              Read more
+            </a>
+          )}
 
           <div className="mt-6 rounded-2xl border bg-card p-5 sm:p-6">
             <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
@@ -124,7 +139,15 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
             )}
 
             <FitmentCheck fits={product.fits} />
-            <BuyBox productId={product.id} name={product.name} image={product.image} price={price} stock={product.stock} />
+            <BuyBox
+              productId={product.id}
+              name={product.name}
+              image={product.image}
+              price={price}
+              stock={product.stock}
+              // Sold-out add-ons can't be bought, so they're left out.
+              addOns={addOns.filter((a) => a.stock > 0).map((a) => ({ id: a.id, slug: a.slug, name: a.name, image: a.image, price: a.deal?.price ?? a.price }))}
+            />
           </div>
 
           <ul className="mt-4 grid grid-cols-2 gap-2">
@@ -141,29 +164,39 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
             ))}
           </ul>
 
-          <Tabs defaultValue="overview" className="mt-8">
+          <Tabs id="details" defaultValue="overview" className="mt-8 scroll-mt-28">
             <TabsList className="w-full">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="specs">Specifications</TabsTrigger>
               <TabsTrigger value="delivery">Delivery</TabsTrigger>
             </TabsList>
-            <TabsContent value="overview" className="pt-4">
-              <h2 className="font-semibold">Key features</h2>
-              <ul className="mt-3 grid gap-2.5 sm:grid-cols-2">
-                {product.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2.5 rounded-xl bg-card p-3 text-sm ring-1 ring-border">
-                    <span className="grid size-5 shrink-0 place-items-center rounded-full bg-success/15">
-                      <Check className="size-3 text-success" />
-                    </span>
-                    {f}
-                  </li>
-                ))}
-              </ul>
+            <TabsContent value="overview" className="space-y-6 pt-4">
+              {product.description && (
+                <div>
+                  <h2 className="font-semibold">Description</h2>
+                  <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">{product.description}</p>
+                </div>
+              )}
+              {product.features.length > 0 && (
+                <div>
+                  <h2 className="font-semibold">Key features</h2>
+                  <ul className="mt-3 grid gap-2.5 sm:grid-cols-2">
+                    {product.features.map((f) => (
+                      <li key={f} className="flex items-start gap-2.5 rounded-xl bg-card p-3 text-sm ring-1 ring-border">
+                        <span className="grid size-5 shrink-0 place-items-center rounded-full bg-success/15">
+                          <Check className="size-3 text-success" />
+                        </span>
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </TabsContent>
             <TabsContent value="specs" className="pt-4">
               <dl className="overflow-hidden rounded-xl border bg-card text-sm">
-                {getSpecs(product).map(([label, value]) => (
-                  <div key={label} className="grid grid-cols-[40%_1fr] gap-4 px-4 py-3 even:bg-secondary/60">
+                {getSpecs(product).map(([label, value], i) => (
+                  <div key={`${i}-${label}`} className="grid grid-cols-[40%_1fr] gap-4 px-4 py-3 even:bg-secondary/60">
                     <dt className="text-muted-foreground">{label}</dt>
                     <dd className="font-medium">{value}</dd>
                   </div>
