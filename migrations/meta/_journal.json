@@ -50,6 +50,13 @@
       "when": 1792396619105,
       "tag": "0006_returns_refunds",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792647161723,
+      "tag": "0007_product_specs_addons",
+      "breakpoints": true
     }
   ]
 }

@@ -155,7 +155,7 @@ export function AdminStoreProvider({ initial, children }: { initial: AdminData; 
         });
       },
       deleteProduct: (id) => {
-        setProducts((list) => list.filter((p) => p.id !== id));
+        setProducts((list) => list.filter((p) => p.id !== id).map((p) => (p.addOnIds.includes(id) ? { ...p, addOnIds: p.addOnIds.filter((a) => a !== id) } : p)));
         save(api("DELETE", `/products/${id}`), { success: "Product deleted." });
       },
 

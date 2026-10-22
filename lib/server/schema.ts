@@ -3,7 +3,7 @@ import type { CouponScope, CouponType } from "../admin/model";
 import type { PaymentMethod } from "../payment";
 import type { RefundMethod, ReturnItem, ReturnKind, ReturnReason, ReturnStatus } from "../returns";
 import type { Carrier } from "../shipping";
-import type { Category, OrderStatus } from "../types";
+import type { Category, OrderStatus, Spec } from "../types";
 
 /**
  * Database schema, the source of truth for every table. After changing it, run `npm run db:generate`
@@ -37,6 +37,10 @@ export const products = pgTable(
     image: text("image").notNull(),
     description: text("description").notNull(),
     features: jsonb("features").$type<string[]>().notNull(),
+    /** Rows of the product page's Specifications tab, in display order. */
+    specs: jsonb("specs").$type<Spec[]>().notNull().default([]),
+    /** Other products offered as optional extras on this product's page, in display order. */
+    addOnIds: jsonb("add_on_ids").$type<string[]>().notNull().default([]),
     trendingRank: integer("trending_rank"),
     sku: text("sku").notNull().default(""),
     departmentId: text("department_id"),

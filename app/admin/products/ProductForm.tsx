@@ -1,12 +1,12 @@
 "use client";
 
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Plus, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { newId, useAdminStore } from "@/components/admin/AdminStore";
 import { ImageUpload } from "@/components/admin/ImageUpload";
-import { ModelPicker } from "@/components/admin/Pickers";
+import { ModelPicker, ProductPicker } from "@/components/admin/Pickers";
 import { Field, PageHeader } from "@/components/admin/ui";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,16 +18,21 @@ import { departmentTree, type AdminProduct } from "@/lib/admin/model";
 import { CATEGORY_LABELS } from "@/lib/data";
 import type { Category } from "@/lib/types";
 
-type Errors = Partial<Record<"name" | "sku" | "brand" | "departmentId" | "category" | "price" | "rrp" | "stock" | "image" | "fits" | "dealPrice" | "features", string>>;
+type Errors = Partial<Record<"name" | "sku" | "brand" | "departmentId" | "category" | "price" | "rrp" | "stock" | "image" | "fits" | "dealPrice" | "features" | "specs" | "addOns", string>>;
 
 const LIST = "/admin/products";
+
+/** A specification row being edited; `key` keeps inputs stable while rows are added and removed. */
+type SpecRow = { key: number; label: string; value: string };
+let specKey = 0;
+const specRow = (label = "", value = ""): SpecRow => ({ key: specKey++, label, value });
 
 /**
  * Full-page product editor. `product` is null when creating. When `onAddAnother` is given,
  * a "Save & add another" button calls it after saving instead of returning to the list.
  */
 export function ProductForm({ product, onAddAnother }: { product: AdminProduct | null; onAddAnother?: () => void }) {
-  const { departments, makes, saveProduct } = useAdminStore();
+  const { departments, makes, products, saveProduct } = useAdminStore();
   const router = useRouter();
   const [form, setForm] = useState({
     name: product?.name ?? "",
@@ -48,6 +53,8 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
   const [trending, setTrending] = useState(product?.trending ?? false);
   const [universal, setUniversal] = useState(product?.fits === "universal");
   const [models, setModels] = useState<Set<string>>(new Set(product && product.fits !== "universal" ? product.fits : []));
+  const [specs, setSpecs] = useState<SpecRow[]>(() => product?.specs.map(([label, value]) => specRow(label, value)) ?? []);
+  const [addOns, setAddOns] = useState<Set<string>>(new Set(product?.addOnIds ?? []));
   const [errors, setErrors] = useState<Errors>({});
   // Which submit button was pressed.
   const addAnother = useRef(false);
@@ -63,6 +70,8 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
     const stock = Number(form.stock);
     const dealPrice = form.dealPrice.trim() ? Number(form.dealPrice) : null;
     const features = form.features.split("\n").map((f) => f.trim()).filter(Boolean);
+    // Fully blank rows are dropped; half-filled ones are an error.
+    const specRows = specs.map((r) => ({ label: r.label.trim(), value: r.value.trim() })).filter((r) => r.label || r.value);
     const next: Errors = {};
     if (form.name.trim().length < 2) next.name = "Enter a product name.";
     if (!form.sku.trim()) next.sku = "Enter a SKU.";
@@ -74,6 +83,9 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
     if (!Number.isInteger(stock) || stock < 0) next.stock = "0 or more.";
     if (dealPrice !== null && (!Number.isInteger(dealPrice) || dealPrice <= 0 || dealPrice >= price)) next.dealPrice = "Whole dollars, below the price.";
     if (features.length > 12 || features.some((f) => f.length > 200)) next.features = "Up to 12 lines of 200 characters.";
+    if (specRows.some((r) => !r.label || !r.value)) next.specs = "Give every row both a name and a value.";
+    else if (specRows.length > 30 || specRows.some((r) => r.label.length > 60 || r.value.length > 200)) next.specs = "Up to 30 rows; names up to 60 characters, values up to 200.";
+    if (addOns.size > 12) next.addOns = "Pick at most 12 add-ons.";
     if (!form.image.trim()) next.image = "Upload an image or add its path or URL.";
     if (!universal && models.size === 0) next.fits = "Pick at least one model, or mark it universal.";
     setErrors(next);
@@ -101,6 +113,8 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
       fits: universal ? "universal" : [...models],
       badge: form.badge.trim(),
       features,
+      specs: specRows.map((r): [string, string] => [r.label, r.value]),
+      addOnIds: [...addOns],
       dealPrice,
       trending,
       // Ratings come from customer reviews; the server ignores these.
@@ -142,11 +156,72 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
                 <Input id="pf-brand" value={form.brand} onChange={set("brand")} aria-invalid={!!errors.brand} />
               </Field>
               <Field id="pf-description" label="Description" className="sm:col-span-2">
-                <Textarea id="pf-description" value={form.description} onChange={set("description")} rows={4} />
+                <Textarea
+                  id="pf-description"
+                  value={form.description}
+                  onChange={set("description")}
+                  rows={6}
+                  maxLength={2000}
+                  placeholder="What it is, what it does and why it's worth it. Blank lines start new paragraphs."
+                />
               </Field>
               <Field id="pf-features" label="Features (one per line)" error={errors.features} className="sm:col-span-2">
                 <Textarea id="pf-features" value={form.features} onChange={set("features")} rows={5} aria-invalid={!!errors.features} />
               </Field>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Specifications</CardTitle>
+              <CardDescription>Shown in the Specifications tab, after brand and category. The first four also feature on the homepage spotlight.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {specs.length > 0 && (
+                <div className="hidden grid-cols-[2fr_3fr_2.25rem] gap-2 text-xs font-medium text-muted-foreground sm:grid">
+                  <span>Name</span>
+                  <span>Value</span>
+                </div>
+              )}
+              {specs.map((row, i) => (
+                <div key={row.key} className="grid grid-cols-[1fr_2.25rem] gap-2 sm:grid-cols-[2fr_3fr_2.25rem]">
+                  <Input
+                    value={row.label}
+                    onChange={(e) => setSpecs((rows) => rows.map((r) => (r.key === row.key ? { ...r, label: e.target.value } : r)))}
+                    placeholder="e.g. Screen"
+                    maxLength={60}
+                    aria-label={`Specification ${i + 1} name`}
+                    aria-invalid={!!errors.specs && !row.label.trim() && !!row.value.trim()}
+                  />
+                  <Input
+                    value={row.value}
+                    onChange={(e) => setSpecs((rows) => rows.map((r) => (r.key === row.key ? { ...r, value: e.target.value } : r)))}
+                    placeholder='e.g. 9" HD touchscreen'
+                    maxLength={200}
+                    aria-label={`Specification ${i + 1} value`}
+                    aria-invalid={!!errors.specs && !row.value.trim() && !!row.label.trim()}
+                    className="col-start-1 sm:col-start-auto"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="col-start-2 row-start-1 sm:col-start-auto sm:row-start-auto"
+                    aria-label={`Remove specification ${i + 1}`}
+                    onClick={() => setSpecs((rows) => rows.filter((r) => r.key !== row.key))}
+                  >
+                    <X />
+                  </Button>
+                </div>
+              ))}
+              {errors.specs && (
+                <p data-error className="text-xs text-destructive">
+                  {errors.specs}
+                </p>
+              )}
+              <Button type="button" variant="outline" size="sm" onClick={() => setSpecs((rows) => [...rows, specRow()])} disabled={specs.length >= 30}>
+                <Plus /> Add specification
+              </Button>
             </CardContent>
           </Card>
 
@@ -192,6 +267,23 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
               {errors.fits && (
                 <p data-error className="mt-2 text-xs text-destructive">
                   {errors.fits}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Add-ons</CardTitle>
+              <CardDescription>
+                Optional extras shoppers can tick to add with this product, like a wiring harness or reversing camera. Drafts and sold-out products are hidden in the store.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ProductPicker products={products.filter((p) => p.id !== product?.id)} value={addOns} onChange={setAddOns} />
+              {errors.addOns && (
+                <p data-error className="mt-2 text-xs text-destructive">
+                  {errors.addOns}
                 </p>
               )}
             </CardContent>

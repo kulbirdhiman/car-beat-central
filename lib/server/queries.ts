@@ -48,6 +48,8 @@ function toProduct({ product: p, dealPrice, claimed, departmentName, departmentP
     image: p.image,
     description: p.description,
     features: p.features,
+    specs: p.specs,
+    addOnIds: p.addOnIds,
     departmentId: p.departmentId,
     departmentName,
     departmentParentId,
@@ -146,6 +148,12 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
     .where(and(isActive, eq(products.slug, slug)))
     .limit(1);
   return row ? toProduct(row) : null;
+}
+
+/** The product's add-ons that are live in the store, in the order the admin picked them. */
+export async function getAddOns(product: Product): Promise<Product[]> {
+  const addOns = await listProducts({ ids: product.addOnIds });
+  return product.addOnIds.flatMap((id) => addOns.find((p) => p.id === id) ?? []);
 }
 
 export async function getTrending(): Promise<Product[]> {

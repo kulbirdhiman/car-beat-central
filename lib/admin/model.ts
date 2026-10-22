@@ -1,7 +1,7 @@
 import type { PaymentMethod } from "@/lib/payment";
 import type { Shipment } from "@/lib/shipping";
 import type { Refund, ReturnRequest } from "@/lib/returns";
-import type { Category, OrderStatus } from "@/lib/types";
+import type { Category, OrderStatus, Spec } from "@/lib/types";
 
 /** Admin entity types and display helpers, shared by the admin UI and the server. */
 
@@ -60,6 +60,10 @@ export type AdminProduct = {
   badge: string;
   /** Bullet points on the product page. */
   features: string[];
+  /** Rows of the product page's Specifications tab. */
+  specs: Spec[];
+  /** Other products offered as optional extras on the product page. */
+  addOnIds: string[];
   /** Today's-deal price in whole AUD, below the price; null when not on deal. */
   dealPrice: number | null;
   /** Shown in the homepage spotlight and trending lists. */

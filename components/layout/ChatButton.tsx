@@ -4,8 +4,8 @@ import { MessageCircle } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
-// CarBeat's Facebook page, where shoppers can message us. Opens in a new tab.
-export const CHAT_HREF = "https://www.facebook.com/profile.php?id=100063935581016";
+// Opens a Messenger chat with CarBeat (the app on phones, messenger.com on desktop), in a new tab.
+export const CHAT_HREF = "https://m.me/carbeats.com.au";
 
 export function ChatButton() {
   const pathname = usePathname();
@@ -19,7 +19,7 @@ export function ChatButton() {
       href={CHAT_HREF}
       target="_blank"
       rel="noopener noreferrer"
-      aria-label="Chat with us on Facebook (opens in a new tab)"
+      aria-label="Chat with us on Messenger (opens in a new tab)"
       className={cn(
         "group fixed right-4 z-40 rounded-full focus-visible:outline-none sm:right-6",
         "animate-in fade-in slide-in-from-bottom-4 duration-500",
