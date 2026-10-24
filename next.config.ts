@@ -4,6 +4,12 @@ import type { NextConfig } from "next";
 const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname : null;
 
 const nextConfig: NextConfig = {
+  // Keep Turbopack's file watcher scoped to this app instead of scanning `/`.
+  turbopack: {
+    root: process.cwd(),
+  },
+  // The hosted preview uses a generated subdomain for its dev-server requests.
+  allowedDevOrigins: ["**.preview.c35.airoapp.ai"],
   images: {
     remotePatterns: supabaseHost ? [{ protocol: "https", hostname: supabaseHost, pathname: "/storage/v1/object/public/**" }] : [],
   },
