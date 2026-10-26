@@ -55,6 +55,8 @@ export type AdminProduct = {
   /** Vehicle model ids this product fits, or "universal". */
   fits: string[] | "universal";
   image: string;
+  /** Product-specific gallery photos, in display order. */
+  images: string[];
   description: string;
   /** Short label on the product card, e.g. "Best seller". Empty for none. */
   badge: string;

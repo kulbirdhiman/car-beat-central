@@ -46,6 +46,7 @@ function toProduct({ product: p, dealPrice, claimed, departmentName, departmentP
     fits: p.fits,
     badge: p.badge ?? undefined,
     image: p.image,
+    images: p.images ?? [],
     description: p.description,
     features: p.features,
     specs: p.specs,

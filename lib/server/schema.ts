@@ -35,6 +35,7 @@ export const products = pgTable(
     fits: jsonb("fits").$type<string[] | "universal">().notNull(),
     badge: text("badge"),
     image: text("image").notNull(),
+    images: jsonb("images").$type<string[]>().notNull().default([]),
     description: text("description").notNull(),
     features: jsonb("features").$type<string[]>().notNull(),
     /** Rows of the product page's Specifications tab, in display order. */

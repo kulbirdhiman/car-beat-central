@@ -18,10 +18,21 @@ function open() {
 
 export type DB = PostgresJsDatabase<typeof schema>;
 
-// Reuse one connection pool across hot reloads in development.
+// Defer opening the connection until a query runs. Next.js loads route modules
+// while collecting build metadata, and DATABASE_URL is only needed at runtime.
 const globalForDb = globalThis as unknown as { carbeatDb?: DB };
-export const db = globalForDb.carbeatDb ?? open();
-if (process.env.NODE_ENV !== "production") globalForDb.carbeatDb = db;
+function getDb(): DB {
+  if (!globalForDb.carbeatDb) globalForDb.carbeatDb = open();
+  return globalForDb.carbeatDb;
+}
+
+export const db = new Proxy({} as DB, {
+  get(_target, property) {
+    const instance = getDb();
+    const value = Reflect.get(instance, property, instance) as unknown;
+    return typeof value === "function" ? value.bind(instance) : value;
+  },
+});
 
 export type Tx = Parameters<Parameters<DB["transaction"]>[0]>[0];
 

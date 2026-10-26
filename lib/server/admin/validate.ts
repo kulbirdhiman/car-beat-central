@@ -79,6 +79,18 @@ function image(body: Body, key: string): string {
   return value;
 }
 
+function productImages(body: Body): string[] {
+  const value = body.images ?? [];
+  if (!Array.isArray(value) || value.length > 10 || value.some((v) => typeof v !== "string" || !v.trim() || v.length > 500)) {
+    throw new AdminError("Add up to 10 valid product images.");
+  }
+  return [...new Set(value.map((v) => {
+    const url = v.trim();
+    if (!url.startsWith("/") && !/^https:\/\/\S+$/.test(url)) throw new AdminError("Images must be site paths starting with / or https URLs.");
+    return url;
+  }))];
+}
+
 function idList(body: Body, key: string): string[] {
   const value = body[key] ?? [];
   if (!Array.isArray(value) || value.length > 500) throw new AdminError(`${key} must be a list of ids.`);
@@ -158,6 +170,7 @@ export function parseProduct(productId: string, value: unknown): ProductInput {
     status: oneOf(body, "status", ["active", "draft"] as const),
     fits,
     image: image(body, "image"),
+    images: productImages(body),
     description: text(body, "description", { max: 2000 }),
     badge: text(body, "badge", { max: 30, label: "Badge" }),
     features: features.map((f: string) => f.trim()),
