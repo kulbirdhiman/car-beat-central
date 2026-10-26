@@ -14,8 +14,10 @@ import { SLIDE_SOURCES, type Slide } from "@/components/home/hero/slides";
 import { discountPercent, findDepartment, formatPrice } from "@/lib/data";
 import { getCarBrands, getFitCounts, getLiveOffers, getStoreDepartments, getTrending, listProducts } from "@/lib/server/queries";
 import type { Product, StoreDepartment } from "@/lib/types";
+import { connection } from "next/server";
 
 export default async function Home() {
+  await connection();
   const [products, departments, trending, byRating, offers, coupons, fitCounts] = await Promise.all([
     listProducts(),
     getStoreDepartments(),
