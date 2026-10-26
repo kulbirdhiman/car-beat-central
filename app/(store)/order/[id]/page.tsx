@@ -24,7 +24,10 @@ import { PayPalCheckout } from "./PayPalCheckout";
 export const metadata: Metadata = { title: "Your order · CarBeat", robots: { index: false } };
 
 export default async function OrderPage(props: PageProps<"/order/[id]">) {
-  const order = await getOrder((await props.params).id);
+  const orderId = (await props.params).id;
+  // Storefront order links are UUIDs. Imported WooCommerce IDs are admin-only and can be guessed.
+  if (!/^[0-9a-f-]{36}$/i.test(orderId)) notFound();
+  const order = await getOrder(orderId);
   if (!order) notFound();
 
   const reference = <span className="font-mono font-medium text-foreground">#{orderReference(order.id)}</span>;

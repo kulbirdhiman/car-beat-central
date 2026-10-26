@@ -11,7 +11,10 @@ const nextConfig: NextConfig = {
   // The hosted preview uses a generated subdomain for its dev-server requests.
   allowedDevOrigins: ["**.preview.c35.airoapp.ai"],
   images: {
-    remotePatterns: supabaseHost ? [{ protocol: "https", hostname: supabaseHost, pathname: "/storage/v1/object/public/**" }] : [],
+    remotePatterns: [
+      { protocol: "https", hostname: "carbeats.com.au", pathname: "/wp-content/uploads/**" },
+      ...(supabaseHost ? [{ protocol: "https" as const, hostname: supabaseHost, pathname: "/storage/v1/object/public/**" }] : []),
+    ],
   },
 };
 

@@ -23,9 +23,11 @@ type Store = AdminData & {
   /** Reorders one group of siblings: the top-level departments, or one department's sub-departments. */
   reorderDepartments: (siblings: Department[]) => void;
   saveProduct: (p: AdminProduct) => void;
+  importProducts: (products: AdminProduct[]) => Promise<{ id: string; error?: string }[]>;
   deleteProduct: (id: string) => void;
   /** `shipment`: the carrier and tracking number to save with it (null clears them). */
   setOrderStatus: (id: string, status: OrderStatus, shipment?: Shipment | null) => void;
+  deleteOrder: (id: string) => Promise<void>;
   /** Saved before it's shown, since the server numbers and prices it. Rejects with the server's error. */
   createInvoice: (input: InvoiceInput) => Promise<AdminOrder>;
   /** Money moves, so these wait for the server rather than updating first. Both reject with the server's error. */
@@ -154,6 +156,19 @@ export function AdminStoreProvider({ initial, children }: { initial: AdminData; 
           done: (saved) => setProducts((list) => upsert(list, saved)),
         });
       },
+      importProducts: async (rows) => {
+        const results: { id: string; error?: string }[] = [];
+        for (const product of rows) {
+          try {
+            const saved = await api<AdminProduct>("PUT", `/products/${product.id}`, product);
+            setProducts((list) => upsert(list, saved));
+            results.push({ id: product.id });
+          } catch (error) {
+            results.push({ id: product.id, error: error instanceof Error ? error.message : "Couldn't save this product." });
+          }
+        }
+        return results;
+      },
       deleteProduct: (id) => {
         setProducts((list) => list.filter((p) => p.id !== id).map((p) => (p.addOnIds.includes(id) ? { ...p, addOnIds: p.addOnIds.filter((a) => a !== id) } : p)));
         save(api("DELETE", `/products/${id}`), { success: "Product deleted." });
@@ -177,6 +192,12 @@ export function AdminStoreProvider({ initial, children }: { initial: AdminData; 
           // Cancelling or reinstating changes stock levels, so pick those up.
           done: () => api<AdminProduct[]>("GET", "/products").then(setProducts, () => {}),
         });
+      },
+
+      deleteOrder: async (id) => {
+        await api("DELETE", `/orders/${id}`);
+        setOrders((list) => list.filter((o) => o.id !== id));
+        toast.success("Order deleted.");
       },
 
       createInvoice: async (input) => {

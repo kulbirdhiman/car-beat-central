@@ -180,6 +180,34 @@
   display: none;
 }
 
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+  body * {
+    visibility: hidden !important;
+  }
+  .invoice-print-root,
+  .invoice-print-root * {
+    visibility: visible !important;
+  }
+  .invoice-print-root {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: white !important;
+    color: #18181b !important;
+    box-shadow: none !important;
+  }
+  .print-hidden {
+    display: none !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

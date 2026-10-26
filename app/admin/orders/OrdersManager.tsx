@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, ExternalLink, Pencil, Plus, Search, Truck } from "lucide-react";
+import { Check, Copy, Download, ExternalLink, Pencil, Plus, Search, Trash2, Truck } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -59,17 +59,34 @@ export function OrdersManager() {
       (!q || o.number.toLowerCase().includes(q) || o.customer.name.toLowerCase().includes(q) || o.customer.email.toLowerCase().includes(q)),
   );
 
+  function exportOrders() {
+    const columns = ["Order", "Placed", "Customer", "Email", "Phone", "Status", "Delivery", "Items", "Subtotal (AUD)", "Discount (AUD)", "Shipping (AUD)", "Total (AUD)"];
+    const csvCell = (value: string | number) => {
+      let text = String(value);
+      if (/^[=+@\-\t\r]/.test(text)) text = `'${text}`;
+      return `"${text.replaceAll('"', '""')}"`;
+    };
+    const csv = [columns, ...rows.map((o) => [o.number, o.createdAt, o.customer.name, o.customer.email, o.customer.phone, ORDER_STATUS_LABEL[o.status], DELIVERY_LABEL[o.delivery], o.items.map((i) => `${i.name} × ${i.qty}`).join("; "), (orderSubtotal(o) / 100).toFixed(2), (o.discount / 100).toFixed(2), (o.shipping / 100).toFixed(2), (orderTotal(o) / 100).toFixed(2)])]
+      .map((line) => line.map(csvCell).join(","))
+      .join("\r\n");
+    const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `carbeat-orders-${new Date().toISOString().slice(0, 10)}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <>
       <PageHeader
         title="Orders"
         description={`${orders.length} orders · ${orders.filter((o) => o.status === "paid").length} ready to ship · ${orders.filter(openReturn).length} open returns.`}
         actions={
-          <Button asChild>
-            <Link href="/admin/orders/new">
-              <Plus /> New invoice
-            </Link>
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={exportOrders} disabled={!rows.length}><Download /> Export CSV</Button>
+            <Button asChild><Link href="/admin/orders/new"><Plus /> New invoice</Link></Button>
+          </div>
         }
       />
 
@@ -120,6 +137,7 @@ export function OrdersManager() {
                         {o.number}
                       </button>
                       {o.source === "invoice" && <span className="ml-2 font-sans text-xs text-muted-foreground">Invoice</span>}
+                      {o.source === "legacy" && <span className="ml-2 font-sans text-xs text-muted-foreground">Imported</span>}
                     </TableCell>
                     <TableCell className="hidden text-muted-foreground md:table-cell">{fmtDateTime(o.createdAt)}</TableCell>
                     <TableCell>
@@ -153,7 +171,7 @@ export function OrdersManager() {
 }
 
 function OrderDetail({ order }: { order: AdminOrder }) {
-  const { setOrderStatus } = useAdminStore();
+  const { setOrderStatus, deleteOrder } = useAdminStore();
   const subtotal = orderSubtotal(order);
   const total = orderTotal(order);
   const pickup = order.delivery === "collect";
@@ -167,6 +185,7 @@ function OrderDetail({ order }: { order: AdminOrder }) {
           <span className="font-mono text-lg">{order.number}</span>
           <OrderStatusBadge status={order.status} />
           {order.source === "invoice" && <span className="text-xs font-normal text-muted-foreground">Invoice</span>}
+          {order.source === "legacy" && <span className="text-xs font-normal text-muted-foreground">Imported from WooCommerce</span>}
         </SheetTitle>
         <SheetDescription>
           {order.source === "invoice" ? "Raised" : "Placed"} {fmtDateTime(order.createdAt)} · {formatCents(total)}
@@ -221,7 +240,9 @@ function OrderDetail({ order }: { order: AdminOrder }) {
         </Panel>
 
         <Panel title="Payment">
-          {order.payment ? (
+          {order.source === "legacy" ? (
+            <p className="text-sm text-muted-foreground">Payment details remain in the original WooCommerce records.</p>
+          ) : order.payment ? (
             <div className="space-y-0.5 text-sm">
               <p className="font-medium">
                 Paid with {order.payment.provider} · {fmtDateTime(order.payment.paidAt)}
@@ -248,14 +269,25 @@ function OrderDetail({ order }: { order: AdminOrder }) {
           </Panel>
         )}
 
-        <Panel title="Invoice link">
-          <InvoiceLink orderId={order.id} />
-        </Panel>
+        <Panel title="Invoice"><InvoiceLink orderId={order.id} legacy={order.source === "legacy"} /></Panel>
       </div>
 
       <RefundDialog order={order} preset={refunding?.preset ?? null} open={refunding !== null} onOpenChange={(open) => !open && setRefunding(null)} />
 
       <SheetFooter className="border-t">
+        {!order.paidAt && order.status === "pending_payment" && (
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={async () => {
+              if (!confirm(`Delete unpaid order ${order.number}? This cannot be undone.`)) return;
+              try { await deleteOrder(order.id); }
+              catch (error) { toast.error(error instanceof Error ? error.message : "Couldn't delete this order."); }
+            }}
+          >
+            <Trash2 /> Delete order
+          </Button>
+        )}
         <label htmlFor="order-status" className="text-xs font-medium text-muted-foreground">
           Change status
         </label>
@@ -408,12 +440,12 @@ function Fulfilment({ order }: { order: AdminOrder }) {
 }
 
 /** The customer's order page, which doubles as the invoice they pay from. */
-export function InvoiceLink({ orderId }: { orderId: string }) {
+export function InvoiceLink({ orderId, legacy = false }: { orderId: string; legacy?: boolean }) {
   const path = `/order/${orderId}`;
   return (
     <div>
-      <p className="mb-3 text-sm text-muted-foreground">Send this to the customer. They can view the invoice and pay from it.</p>
-      <div className="flex gap-2">
+      <p className="mb-3 text-sm text-muted-foreground">{legacy ? "Print or save a copy of this imported order as a PDF." : "Send the order page to the customer, or print/save a PDF invoice."}</p>
+      {!legacy && <div className="mb-2 flex gap-2">
         <Button
           variant="outline"
           className="flex-1"
@@ -433,7 +465,10 @@ export function InvoiceLink({ orderId }: { orderId: string }) {
             <ExternalLink /> Open
           </a>
         </Button>
-      </div>
+      </div>}
+      <Button asChild variant="outline" className="w-full">
+        <Link href={`/admin/orders/${orderId}/invoice`} target="_blank"><Download /> Print / save as PDF</Link>
+      </Button>
     </div>
   );
 }
