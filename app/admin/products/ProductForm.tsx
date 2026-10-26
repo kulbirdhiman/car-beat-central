@@ -51,6 +51,7 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
     features: product?.features.join("\n") ?? "",
   });
   const [trending, setTrending] = useState(product?.trending ?? false);
+  const [images, setImages] = useState<string[]>(() => (product?.images ?? []).filter((image) => image !== (product?.image ?? "")));
   const [universal, setUniversal] = useState(product?.fits === "universal");
   const [models, setModels] = useState<Set<string>>(new Set(product && product.fits !== "universal" ? product.fits : []));
   const [specs, setSpecs] = useState<SpecRow[]>(() => product?.specs.map(([label, value]) => specRow(label, value)) ?? []);
@@ -109,6 +110,7 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
       stock,
       status: form.status as AdminProduct["status"],
       image: form.image.trim(),
+      images: [form.image.trim(), ...images.filter((image) => image.trim())],
       description: form.description.trim(),
       fits: universal ? "universal" : [...models],
       badge: form.badge.trim(),
@@ -227,12 +229,26 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
 
           <Card>
             <CardHeader>
-              <CardTitle>Image</CardTitle>
+              <CardTitle>Product images</CardTitle>
             </CardHeader>
             <CardContent>
-              <Field id="pf-image" label="Product image" error={errors.image}>
-                <ImageUpload id="pf-image" folder="products" value={form.image} onChange={(image) => setForm((f) => ({ ...f, image }))} invalid={!!errors.image} />
-              </Field>
+              <p className="mb-3 text-sm text-muted-foreground">Add up to 10 photos. The first photo is used on product cards.</p>
+              <div className="space-y-3">
+                <Field id="pf-image" label="Main product image" error={errors.image}>
+                  <ImageUpload id="pf-image" folder="products" value={form.image} onChange={(image) => setForm((f) => ({ ...f, image }))} invalid={!!errors.image} />
+                </Field>
+                {images.map((image, index) => (
+                  <div key={index} className="flex items-start gap-2">
+                    <div className="min-w-0 flex-1">
+                      <Field id={`pf-image-${index}`} label={`Additional image ${index + 1}`}>
+                        <ImageUpload id={`pf-image-${index}`} folder="products" value={image} onChange={(url) => setImages((rows) => rows.map((row, i) => i === index ? url : row))} />
+                      </Field>
+                    </div>
+                    <Button type="button" variant="ghost" size="icon" className="mt-6" aria-label={`Remove image ${index + 1}`} onClick={() => setImages((rows) => rows.filter((_, i) => i !== index))}><X /></Button>
+                  </div>
+                ))}
+                {images.length < 9 && <Button type="button" variant="outline" size="sm" onClick={() => setImages((rows) => [...rows, ""])}><Plus /> Add image</Button>}
+              </div>
             </CardContent>
           </Card>
 

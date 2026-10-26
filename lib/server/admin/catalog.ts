@@ -88,6 +88,7 @@ const productColumns = {
   status: products.status,
   fits: products.fits,
   image: products.image,
+  images: products.images,
   description: products.description,
   badge: products.badge,
   features: products.features,

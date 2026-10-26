@@ -45,7 +45,7 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
 
   const price = product.deal?.price ?? product.price;
   const off = discountPercent(price, product.rrp);
-  const images = [...new Set([product.image, ...CATEGORY_GALLERY[product.category]])].slice(0, 5);
+  const images = [...new Set([product.image, ...(product.images ?? []), ...CATEGORY_GALLERY[product.category]])].slice(0, 5);
   const fits = product.fits;
   const groups =
     fits === "universal"

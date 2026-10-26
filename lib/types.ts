@@ -31,6 +31,8 @@ export type Product = {
   stock: number;
   badge?: string;
   image: string;
+  /** Product-specific gallery photos, in display order. */
+  images?: string[];
   description: string;
   features: string[];
   /** The product's own specification rows. */
