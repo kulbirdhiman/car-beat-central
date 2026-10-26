@@ -3,8 +3,10 @@ import { ChatButton } from "@/components/layout/ChatButton";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { getCarBrands, getProductCount, getStoreDepartments } from "@/lib/server/queries";
+import { connection } from "next/server";
 
 export default async function StoreLayout({ children }: LayoutProps<"/">) {
+  await connection();
   const [departments, brands, total] = await Promise.all([getStoreDepartments(), getCarBrands(), getProductCount()]);
   return (
     <CarBrandsProvider brands={brands}>

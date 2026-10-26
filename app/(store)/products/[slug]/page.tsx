@@ -6,7 +6,7 @@ import { PageShell } from "@/components/layout/PageShell";
 import { ProductCard } from "@/components/product/ProductCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CATEGORY_GALLERY, CATEGORY_LABELS, discountPercent, findDepartment, formatPrice } from "@/lib/data";
-import { getAddOns, getCarBrands, getProductBySlug, getRelated, getStoreDepartments, listProducts } from "@/lib/server/queries";
+import { getAddOns, getCarBrands, getProductBySlug, getRelated, getStoreDepartments } from "@/lib/server/queries";
 import { listReviews } from "@/lib/server/reviews";
 import { getSpecs } from "@/lib/server/specs";
 import { cn } from "@/lib/utils";
@@ -15,10 +15,6 @@ import { CompatibleVehicles } from "./CompatibleVehicles";
 import { FitmentCheck } from "./FitmentCheck";
 import { ProductGallery } from "./ProductGallery";
 import { ReviewForm } from "./ReviewForm";
-
-export async function generateStaticParams() {
-  return (await listProducts()).map((p) => ({ slug: p.slug }));
-}
 
 export async function generateMetadata(props: PageProps<"/products/[slug]">): Promise<Metadata> {
   const product = await getProductBySlug((await props.params).slug);
