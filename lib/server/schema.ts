@@ -99,7 +99,7 @@ export const orders = pgTable(
     /** Cents refunded so far, the sum of its order_refunds. Locked with the order row so two refunds can't overdraw it. */
     refundedTotal: integer("refunded_total").notNull().default(0),
     /** "invoice" for orders an admin raised as a manual invoice. */
-    source: text("source").$type<"checkout" | "invoice">().notNull().default("checkout"),
+    source: text("source").$type<"checkout" | "invoice" | "legacy">().notNull().default("checkout"),
     /** How the customer may pay; null offers the defaults (PayPal, Afterpay and bank transfer). Set on invoices. */
     paymentMethods: jsonb("payment_methods").$type<PaymentMethod[]>(),
     /** Message to the customer, shown on the invoice. */

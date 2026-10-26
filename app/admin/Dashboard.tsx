@@ -2,21 +2,84 @@
 
 import { ArrowUpRight, TriangleAlert } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 import { useAdminStore } from "@/components/admin/AdminStore";
 import { Empty, OrderStatusBadge, PageHeader, fmtDateTime } from "@/components/admin/ui";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { LOW_STOCK, ORDER_STATUS_LABEL, orderTotal } from "@/lib/admin/model";
 import { formatCents } from "@/lib/data";
 import type { OrderStatus } from "@/lib/types";
 
+const storeDateFormatter = new Intl.DateTimeFormat("en-AU", {
+  timeZone: "Australia/Sydney",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+type DatePreset = "all" | "today" | "yesterday" | "this_week" | "last_week" | "this_month" | "last_month" | "this_year" | "last_year" | "custom";
+
+const shiftDate = (day: string, amount: number) => {
+  const date = new Date(`${day}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + amount);
+  return date.toISOString().slice(0, 10);
+};
+
+function presetRange(preset: Exclude<DatePreset, "all" | "custom">, today: string) {
+  const date = new Date(`${today}T00:00:00Z`);
+  const year = date.getUTCFullYear();
+  const month = date.getUTCMonth();
+  const weekStart = shiftDate(today, -((date.getUTCDay() + 6) % 7));
+  switch (preset) {
+    case "today": return { from: today, to: today };
+    case "yesterday": return { from: shiftDate(today, -1), to: shiftDate(today, -1) };
+    case "this_week": return { from: weekStart, to: today };
+    case "last_week": return { from: shiftDate(weekStart, -7), to: shiftDate(weekStart, -1) };
+    case "this_month": return { from: `${today.slice(0, 7)}-01`, to: today };
+    case "last_month": return {
+      from: new Date(Date.UTC(year, month - 1, 1)).toISOString().slice(0, 10),
+      to: new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10),
+    };
+    case "this_year": return { from: `${year}-01-01`, to: today };
+    case "last_year": return { from: `${year - 1}-01-01`, to: `${year - 1}-12-31` };
+    default: return { from: today, to: today };
+  }
+}
+
+function storeDate(iso: string) {
+  // Imported WooCommerce timestamps are naive UTC; app-created dates already carry a timezone.
+  const value = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(iso) ? `${iso.replace(" ", "T")}Z` : iso;
+  const parts = Object.fromEntries(storeDateFormatter.formatToParts(new Date(value)).map((part) => [part.type, part.value]));
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
 export function Dashboard() {
   const { orders, products, departments, makes } = useAdminStore();
+  const [datePreset, setDatePreset] = useState<DatePreset>("all");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
 
-  const counted = orders.filter((o) => o.status !== "cancelled" && o.status !== "refunded");
+  const today = storeDate(new Date().toISOString());
+  const selectedRange = datePreset === "all"
+    ? { from: "", to: "" }
+    : datePreset === "custom"
+      ? { from: customFrom, to: customTo }
+      : presetRange(datePreset, today);
+  const { from: dateFrom, to: dateTo } = selectedRange;
+
+  const validRange = !dateFrom || !dateTo || dateFrom <= dateTo;
+  const dateOrders = validRange ? orders.filter((o) => {
+    const date = storeDate(o.createdAt);
+    return (!dateFrom || date >= dateFrom) && (!dateTo || date <= dateTo);
+  }) : [];
+
+  const counted = dateOrders.filter((o) => o.status !== "cancelled" && o.status !== "refunded");
   // Less partial refunds; fully refunded orders are left out above.
   const revenue = counted.reduce((sum, o) => sum + orderTotal(o) - o.refunded, 0);
-  const toShip = orders.filter((o) => o.status === "paid").length;
+  const toShip = dateOrders.filter((o) => o.status === "paid").length;
   const lowStock = products.filter((p) => p.status === "active" && p.stock <= LOW_STOCK).sort((a, b) => a.stock - b.stock);
   const models = makes.reduce((n, m) => n + m.models.length, 0);
 
@@ -52,7 +115,34 @@ export function Dashboard() {
 
   return (
     <>
-      <PageHeader title="Dashboard" description="How the store is tracking." />
+      <PageHeader
+        title="Dashboard"
+        description="How the store is tracking. Order figures follow the selected date range."
+        actions={
+          <div className="flex flex-wrap items-end gap-2">
+            <Select value={datePreset} onValueChange={(value) => setDatePreset(value as DatePreset)}>
+              <SelectTrigger className="w-44" aria-label="Dashboard date range"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All time</SelectItem>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="yesterday">Yesterday</SelectItem>
+                <SelectItem value="this_week">This week</SelectItem>
+                <SelectItem value="last_week">Last week</SelectItem>
+                <SelectItem value="this_month">This month</SelectItem>
+                <SelectItem value="last_month">Last month</SelectItem>
+                <SelectItem value="this_year">This year</SelectItem>
+                <SelectItem value="last_year">Last year</SelectItem>
+                <SelectItem value="custom">Custom</SelectItem>
+              </SelectContent>
+            </Select>
+            {datePreset === "custom" && <>
+              <label className="grid gap-1 text-xs text-muted-foreground">From<Input type="date" value={customFrom} onChange={(event) => setCustomFrom(event.target.value)} aria-label="Filter dashboard from date" className="w-40" /></label>
+              <label className="grid gap-1 text-xs text-muted-foreground">To<Input type="date" value={customTo} onChange={(event) => setCustomTo(event.target.value)} aria-label="Filter dashboard to date" className="w-40" /></label>
+            </>}
+          </div>
+        }
+      />
+      {!validRange && <p role="alert" className="-mt-5 mb-5 text-sm text-destructive">Start date must be before the end date.</p>}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((s) => (
@@ -84,7 +174,7 @@ export function Dashboard() {
             </CardAction>
           </CardHeader>
           <CardContent>
-            <Table>
+            {dateOrders.length === 0 ? <Empty>No orders in this date range.</Empty> : <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Order</TableHead>
@@ -95,7 +185,7 @@ export function Dashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {orders.slice(0, 6).map((o) => (
+                {dateOrders.slice(0, 6).map((o) => (
                   <TableRow key={o.id}>
                     <TableCell className="font-mono">
                       <Link href={`/admin/orders?open=${o.id}`} className="hover:underline">
@@ -111,7 +201,7 @@ export function Dashboard() {
                   </TableRow>
                 ))}
               </TableBody>
-            </Table>
+            </Table>}
           </CardContent>
         </Card>
 
@@ -125,7 +215,7 @@ export function Dashboard() {
                 <li key={status} className="flex items-center justify-between py-2.5">
                   <OrderStatusBadge status={status} />
                   <Link href={`/admin/orders?status=${status}`} className="text-sm font-medium tabular-nums hover:underline">
-                    {orders.filter((o) => o.status === status).length}
+                    {dateOrders.filter((o) => o.status === status).length}
                   </Link>
                 </li>
               ))}
@@ -163,7 +253,7 @@ export function Dashboard() {
             <CardTitle>Top sellers</CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="divide-y">
+            {topProducts.length === 0 ? <Empty>No catalogue sales in this date range.</Empty> : <ul className="divide-y">
               {topProducts.map((p) => (
                 <li key={p.id} className="flex items-center gap-3 py-2.5">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -172,7 +262,7 @@ export function Dashboard() {
                   <span className="text-sm tabular-nums text-muted-foreground">{p.units} sold</span>
                 </li>
               ))}
-            </ul>
+            </ul>}
           </CardContent>
         </Card>
 

@@ -102,6 +102,24 @@ export async function createOrder(
   return { id, totals };
 }
 
+/** Permanently removes pending orders only; cancelled orders may have offline payment history. */
+export async function deleteUnpaidOrder(orderId: string) {
+  await transaction(async (tx) => {
+    const [order] = await tx.select({ status: orders.status, paidAt: orders.paidAt, refundedTotal: orders.refundedTotal }).from(orders).where(eq(orders.id, orderId)).for("update");
+    if (!order) throw new AdminError("Order not found.", 404);
+    if (order.paidAt || order.refundedTotal > 0 || order.status !== "pending_payment") {
+      throw new AdminError("Only unpaid pending orders can be deleted.");
+    }
+    await moveOrderStock(tx, orderId, 1);
+    const returns = await tx.select({ id: orderReturns.id }).from(orderReturns).where(eq(orderReturns.orderId, orderId));
+    if (returns.length) await tx.delete(orderRefunds).where(inArray(orderRefunds.returnId, returns.map((r) => r.id)));
+    await tx.delete(orderRefunds).where(eq(orderRefunds.orderId, orderId));
+    await tx.delete(orderReturns).where(eq(orderReturns.orderId, orderId));
+    await tx.delete(orderItems).where(eq(orderItems.orderId, orderId));
+    await tx.delete(orders).where(eq(orders.id, orderId));
+  });
+}
+
 /** A manual invoice raised by an admin: an order at the prices they set, paid through the customer's order page. Takes stock like a checkout order. */
 export async function createInvoice(input: InvoiceInput): Promise<AdminOrder> {
   const found = await db
@@ -224,7 +242,7 @@ export async function listAdminOrders({ id = null, limit = 500 }: { id?: string 
   const history = await listReturnsAndRefunds(rows.map((o) => o.id));
   return rows.map((o) => ({
     id: o.id,
-    number: `CB-${o.number}`,
+    number: o.source === "legacy" && o.id.startsWith("woo-") ? `WC-${o.id.slice(4)}` : `CB-${o.number}`,
     createdAt: o.createdAt,
     status: o.status,
     customer: { name: o.name, email: o.email, phone: o.phone },

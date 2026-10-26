@@ -1,11 +1,12 @@
 "use client";
 
-import { Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Download, Pencil, Plus, Search, Trash2, Upload } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
-import { useAdminStore } from "@/components/admin/AdminStore";
+import { newId, useAdminStore } from "@/components/admin/AdminStore";
 import { Empty, PageHeader } from "@/components/admin/ui";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,9 +15,85 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { departmentLabel, departmentTree, LOW_STOCK, type AdminProduct, type VehicleMake } from "@/lib/admin/model";
-import { formatPrice } from "@/lib/data";
+import { CATEGORY_LABELS, formatPrice } from "@/lib/data";
+import type { Category } from "@/lib/types";
 
 const ALL = "all";
+const PRODUCT_COLUMNS = ["id", "sku", "name", "brand", "departmentId", "category", "price", "rrp", "stock", "status", "fits", "image", "images", "description", "badge", "features", "specs", "addOnIds", "dealPrice", "trending"] as const;
+
+function parseCsv(source: string) {
+  const text = source.replace(/^\uFEFF/, "");
+  const rows: string[][] = [];
+  let row: string[] = [], cell = "", quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (quoted) {
+      if (c === '"' && text[i + 1] === '"') { cell += '"'; i++; }
+      else if (c === '"') quoted = false;
+      else cell += c;
+    } else if (c === '"' && cell.length === 0) quoted = true;
+    else if (c === ",") { row.push(cell); cell = ""; }
+    else if (c === "\n" || c === "\r") {
+      if (c === "\r" && text[i + 1] === "\n") i++;
+      row.push(cell); cell = "";
+      if (row.some((value) => value.trim())) rows.push(row);
+      row = [];
+    } else cell += c;
+  }
+  row.push(cell);
+  if (row.some((value) => value.trim())) rows.push(row);
+  if (quoted) throw new Error("The CSV has an unclosed quoted field.");
+  if (rows.length < 2) throw new Error("The CSV needs a header row and at least one product row.");
+  const headers = rows[0].map((value) => value.trim());
+  const missing = PRODUCT_COLUMNS.filter((column) => !headers.includes(column));
+  if (missing.length) throw new Error(`Missing columns: ${missing.join(", ")}. Export products first to get the right template.`);
+  return rows.slice(1).map((values, index) => ({
+    rowNumber: index + 2,
+    fields: Object.fromEntries(headers.map((header, column) => [header, values[column] ?? ""])),
+  }));
+}
+
+function csvList(value: string, field: string): string[] {
+  if (!value.trim()) return [];
+  if (value.trim().startsWith("[")) {
+    const parsed: unknown = JSON.parse(value);
+    if (!Array.isArray(parsed) || parsed.some((part) => typeof part !== "string")) throw new Error(`${field} must be a JSON list of text values.`);
+    return parsed;
+  }
+  return value.split("|").map((part) => part.trim()).filter(Boolean);
+}
+
+function importProduct(fields: Record<string, string>): AdminProduct {
+  const image = fields.image.trim();
+  let specs: [string, string][] = [];
+  if (fields.specs.trim()) {
+    const parsed: unknown = JSON.parse(fields.specs);
+    if (!Array.isArray(parsed) || parsed.some((spec) => !Array.isArray(spec) || spec.length !== 2 || spec.some((part) => typeof part !== "string"))) {
+      throw new Error("specs must be a JSON list of [name, value] pairs.");
+    }
+    specs = parsed as [string, string][];
+  }
+  const category = fields.category.trim() as Category;
+  if (!(category in CATEGORY_LABELS)) throw new Error(`category must be one of: ${Object.keys(CATEGORY_LABELS).join(", ")}.`);
+  const number = (key: string, fallback = "0") => {
+    const value = fields[key].trim() || fallback;
+    if (!/^\d+$/.test(value)) throw new Error(`${key} must be a whole number.`);
+    return Number(value);
+  };
+  const fitsValue = fields.fits.trim();
+  const fits: AdminProduct["fits"] = fitsValue.toLowerCase() === "universal" ? "universal" : csvList(fitsValue, "fits");
+  const images = csvList(fields.images, "images");
+  const status = fields.status.trim();
+  if (status && status !== "active" && status !== "draft") throw new Error("status must be active or draft.");
+  return {
+    id: fields.id.trim() || newId("p"), slug: "", sku: fields.sku.trim(), name: fields.name.trim(), brand: fields.brand.trim(),
+    departmentId: fields.departmentId.trim(), category, price: number("price"), rrp: number("rrp", fields.price), stock: number("stock"),
+    status: status === "active" ? "active" : "draft", fits, image, images: images.length ? images : image ? [image] : [],
+    description: fields.description, badge: fields.badge.trim(), features: csvList(fields.features, "features"), specs,
+    addOnIds: csvList(fields.addOnIds, "addOnIds"), dealPrice: fields.dealPrice.trim() ? number("dealPrice") : null,
+    trending: ["true", "yes", "1"].includes(fields.trending.trim().toLowerCase()), rating: 0, reviews: 0,
+  };
+}
 
 /** "Universal", or e.g. "BMW 3 Series, X5 · Toyota HiLux". */
 export function fitsSummary(fits: AdminProduct["fits"], makes: VehicleMake[]) {
@@ -29,8 +106,10 @@ export function fitsSummary(fits: AdminProduct["fits"], makes: VehicleMake[]) {
 }
 
 export function ProductsManager() {
-  const { products, departments, makes, deleteProduct } = useAdminStore();
+  const { products, departments, makes, deleteProduct, importProducts } = useAdminStore();
   const searchParams = useSearchParams();
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
 
   const [query, setQuery] = useState("");
   // ?department=id preselects the filter (linked from the Departments table).
@@ -55,17 +134,71 @@ export function ProductsManager() {
 
   const departmentName = (id: string) => departmentLabel(departments, id) ?? "Unassigned";
 
+  function exportCsv() {
+    const csvCell = (value: string | number | boolean | null) => {
+      let text = value === null ? "" : String(value);
+      if (/^[=+@\-\t\r]/.test(text)) text = `'${text}`;
+      return `"${text.replaceAll('"', '""')}"`;
+    };
+    const csv = [PRODUCT_COLUMNS, ...products.map((p) => [
+      p.id, p.sku, p.name, p.brand, p.departmentId, p.category, p.price, p.rrp, p.stock, p.status,
+      p.fits === "universal" ? "universal" : JSON.stringify(p.fits), p.image, JSON.stringify(p.images), p.description, p.badge,
+      JSON.stringify(p.features), JSON.stringify(p.specs), JSON.stringify(p.addOnIds), p.dealPrice, p.trending,
+    ])].map((line) => line.map(csvCell).join(",")).join("\r\n");
+    const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" }));
+    const anchor = Object.assign(document.createElement("a"), { href: url, download: `carbeat-products-${new Date().toISOString().slice(0, 10)}.csv` });
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function handleImport(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setImporting(true);
+    try {
+      const parsed = parseCsv(await file.text());
+      if (parsed.length > 500) throw new Error("Import up to 500 products at a time.");
+      const failures: string[] = [];
+      const valid: { rowNumber: number; product: AdminProduct }[] = [];
+      for (const row of parsed) {
+        try { valid.push({ rowNumber: row.rowNumber, product: importProduct(row.fields) }); }
+        catch (error) { failures.push(`Row ${row.rowNumber}: ${error instanceof Error ? error.message : "Invalid product."}`); }
+      }
+      if (valid.length === 0) {
+        toast.error(failures[0] ?? "No valid products found in the CSV.");
+        return;
+      }
+      const updates = valid.filter(({ product }) => products.some((existing) => existing.id === product.id)).length;
+      const creates = valid.length - updates;
+      if (!confirm(`Import ${creates} new product${creates === 1 ? "" : "s"} and update ${updates} existing product${updates === 1 ? "" : "s"}?`)) return;
+      const saved = await importProducts(valid.map((row) => row.product));
+      saved.forEach((result, index) => {
+        if (result.error) failures.push(`Row ${valid[index].rowNumber}: ${result.error}`);
+      });
+      const succeeded = saved.filter((result) => !result.error).length;
+      if (succeeded) toast.success(`${succeeded} product${succeeded === 1 ? "" : "s"} imported.`);
+      if (failures.length) toast.error(`${failures.length} row${failures.length === 1 ? "" : "s"} skipped. ${failures.slice(0, 2).join(" ")}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Couldn't read the products CSV.");
+    } finally {
+      setImporting(false);
+    }
+  }
+
   return (
     <>
       <PageHeader
         title="Products"
-        description={`${products.length} products across ${departments.length} departments.`}
+        description={`${products.length} products across ${departments.length} departments. Import CSV, or download the Excel demo and save it as CSV first. Blank IDs create products; matching IDs update them.`}
         actions={
-          <Button asChild>
-            <Link href="/admin/products/new">
-              <Plus /> Add product
-            </Link>
-          </Button>
+          <>
+            <input ref={fileInput} type="file" accept=".csv,text/csv" className="hidden" onChange={handleImport} aria-label="Import products CSV" />
+            <Button variant="outline" onClick={() => fileInput.current?.click()} disabled={importing}><Upload /> {importing ? "Importing…" : "Import CSV"}</Button>
+            <Button asChild variant="outline"><a href="/templates/products-import-demo.xlsx" download><Download /> Demo Excel</a></Button>
+            <Button variant="outline" onClick={exportCsv} disabled={!products.length}><Download /> Export CSV</Button>
+            <Button asChild><Link href="/admin/products/new"><Plus /> Add product</Link></Button>
+          </>
         }
       />
 

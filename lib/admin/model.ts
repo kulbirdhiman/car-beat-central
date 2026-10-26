@@ -92,7 +92,7 @@ export type AdminOrder = {
   /** Who took the payment, their transaction id and when it was paid, once paid online. Refunds are made with that provider using this id. */
   payment?: { provider: "PayPal" | "Afterpay"; transactionId: string; paidAt: string };
   /** "invoice" when an admin raised it as a manual invoice. */
-  source: "checkout" | "invoice";
+  source: "checkout" | "invoice" | "legacy";
   /** How the customer may pay. */
   paymentMethods: PaymentMethod[];
   /** Message to the customer, shown on the invoice. Empty for none. */

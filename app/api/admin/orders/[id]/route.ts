@@ -1,6 +1,6 @@
 import { adminRoute, readJson } from "@/lib/server/admin/http";
 import { AdminError, parseOrderStatus, parseShipment } from "@/lib/server/admin/validate";
-import { listAdminOrders, setOrderStatus } from "@/lib/server/orders";
+import { deleteUnpaidOrder, listAdminOrders, setOrderStatus } from "@/lib/server/orders";
 
 type Ctx = RouteContext<"/api/admin/orders/[id]">;
 
@@ -29,3 +29,6 @@ export const PATCH = adminRoute(async (request, ctx: Ctx) => {
   const body = await readJson(request);
   return setOrderStatus(await orderId(ctx), parseOrderStatus(body), parseShipment(body));
 });
+
+/** DELETE /api/admin/orders/:id: removes an unpaid pending or cancelled order. */
+export const DELETE = adminRoute(async (_request, ctx: Ctx) => deleteUnpaidOrder(await orderId(ctx)));

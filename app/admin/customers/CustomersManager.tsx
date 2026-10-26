@@ -6,36 +6,42 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
-import { Empty, PageHeader, fmtDate, fmtDateTime } from "@/components/admin/ui";
+import { Empty, OrderStatusBadge, PageHeader, fmtDate, fmtDateTime } from "@/components/admin/ui";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { orderTotal, type AdminOrder } from "@/lib/admin/model";
+import { formatCents } from "@/lib/data";
 import type { bookings as bookingsTable } from "@/lib/server/schema";
 import type { AdminReview } from "@/lib/server/reviews";
 
 type Booking = typeof bookingsTable.$inferSelect;
 type Subscriber = { email: string; createdAt: string };
 
-const TABS = ["bookings", "reviews", "subscribers"] as const;
+const TABS = ["orders", "bookings", "reviews", "subscribers"] as const;
 type Tab = (typeof TABS)[number];
 
-/** Fitting bookings, product reviews and newsletter subscribers, as submitted on the store. */
-export function CustomersManager({ bookings, subscribers, reviews }: { bookings: Booking[]; subscribers: Subscriber[]; reviews: AdminReview[] }) {
+/** Customer order history, fitting bookings, product reviews and newsletter subscribers. */
+export function CustomersManager({ orders, bookings, subscribers, reviews }: { orders: AdminOrder[]; bookings: Booking[]; subscribers: Subscriber[]; reviews: AdminReview[] }) {
   const router = useRouter();
   const pathname = usePathname();
   const param = useSearchParams().get("tab");
-  const tab: Tab = TABS.includes(param as Tab) ? (param as Tab) : "bookings";
+  const tab: Tab = TABS.includes(param as Tab) ? (param as Tab) : "orders";
 
   return (
     <>
-      <PageHeader title="Customers" description="Fitting requests, product reviews and newsletter sign-ups from the store." />
-      <Tabs value={tab} onValueChange={(v) => router.replace(v === "bookings" ? pathname : `${pathname}?tab=${v}`, { scroll: false })}>
+      <PageHeader title="Customers" description="Customer orders, fitting requests, product reviews and newsletter sign-ups from the store." />
+      <Tabs value={tab} onValueChange={(v) => router.replace(v === "orders" ? pathname : `${pathname}?tab=${v}`, { scroll: false })}>
         <TabsList className="mb-4">
+          <TabsTrigger value="orders">Orders ({orders.length})</TabsTrigger>
           <TabsTrigger value="bookings">Fitting bookings ({bookings.length})</TabsTrigger>
           <TabsTrigger value="reviews">Reviews ({reviews.length})</TabsTrigger>
           <TabsTrigger value="subscribers">Subscribers ({subscribers.length})</TabsTrigger>
         </TabsList>
+        <TabsContent value="orders">
+          <CustomerOrders rows={orders} />
+        </TabsContent>
         <TabsContent value="bookings">
           <Bookings rows={bookings} />
         </TabsContent>
@@ -47,6 +53,54 @@ export function CustomersManager({ bookings, subscribers, reviews }: { bookings:
         </TabsContent>
       </Tabs>
     </>
+  );
+}
+
+function CustomerOrders({ rows }: { rows: AdminOrder[] }) {
+  return (
+    <Card>
+      <CardContent>
+        {rows.length === 0 ? (
+          <Empty>No customer orders yet.</Empty>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Order</TableHead>
+                <TableHead>Customer</TableHead>
+                <TableHead className="hidden md:table-cell">Items</TableHead>
+                <TableHead className="hidden sm:table-cell">Placed</TableHead>
+                <TableHead className="text-right">Total</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((o) => (
+                <TableRow key={o.id}>
+                  <TableCell>
+                    <Link href={`/admin/orders?open=${encodeURIComponent(o.id)}`} className="font-mono font-medium hover:underline">
+                      {o.number}
+                    </Link>
+                    {o.source === "legacy" && <span className="ml-2 text-xs text-muted-foreground">Imported</span>}
+                  </TableCell>
+                  <TableCell>
+                    <div className="font-medium">{o.customer.name}</div>
+                    <a href={`mailto:${o.customer.email}`} className="block text-xs text-muted-foreground hover:underline">{o.customer.email}</a>
+                    <div className="text-xs text-muted-foreground">{o.shipTo.suburb}{o.shipTo.state ? `, ${o.shipTo.state}` : ""}</div>
+                  </TableCell>
+                  <TableCell className="hidden max-w-72 truncate md:table-cell">
+                    {o.items.map((item) => item.name).join(", ") || "—"}
+                  </TableCell>
+                  <TableCell className="hidden whitespace-nowrap text-muted-foreground sm:table-cell">{fmtDateTime(o.createdAt)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{formatCents(orderTotal(o))}</TableCell>
+                  <TableCell><OrderStatusBadge status={o.status} /></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
