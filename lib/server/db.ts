@@ -4,15 +4,17 @@ import postgres from "postgres";
 import * as schema from "./schema";
 
 /**
- * Supabase Postgres. DATABASE_URL is the project's session pooler connection string (port 5432), which is reachable
- * over IPv4 (unlike the direct db.*.supabase.co host, so it works from Vercel). The transaction pooler (6543) is avoided:
- * it hangs when queries run concurrently, as Promise.all in the store layout does. Prepared statements stay off.
+ * Supabase Postgres. Use the session pooler (port 5432), which is reachable over IPv4 from Vercel.
+ * Supabase connection strings are sometimes configured with the transaction pooler (6543); that mode can hang
+ * when storefront requests issue concurrent queries, so normalize it here. Prepared statements stay off.
  * Migrations aren't run here: apply them with `npm run db:migrate`.
  */
 function open() {
-  const url = process.env.DATABASE_URL;
-  if (!url) throw new Error("DATABASE_URL is not set. Add your Supabase connection string to .env.");
-  const client = postgres(url, { prepare: false, max: process.env.VERCEL ? 1 : 10 });
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) throw new Error("DATABASE_URL is not set. Add your Supabase connection string to .env.");
+  const url = new URL(connectionString);
+  if (url.hostname.endsWith(".pooler.supabase.com") && url.port === "6543") url.port = "5432";
+  const client = postgres(url.toString(), { prepare: false, max: process.env.VERCEL ? 1 : 10, connect_timeout: 8 });
   return drizzle(client, { schema });
 }
 
