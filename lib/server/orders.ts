@@ -7,6 +7,7 @@ import { priceCart, unitPriceCents, type Delivery, type Totals } from "../pricin
 import type { Shipment } from "../shipping";
 import type { Refund, ReturnRequest } from "../returns";
 import type { CartLine, OrderStatus } from "../types";
+import { selectedOptionSummary, selectedProductPrice } from "../product-options";
 import { getCouponByCode } from "./admin/promos";
 import { AdminError } from "./admin/validate";
 import { db, transaction, type Tx } from "./db";
@@ -28,10 +29,21 @@ async function isFirstOrder(email: string | undefined) {
 /** Prices a cart from database prices. Unknown product ids are dropped. */
 export async function quoteCart(lines: CartLine[], opts: { coupon?: string; delivery: Delivery; email?: string }) {
   const found = await listProducts({ ids: lines.map((l) => l.productId) });
+  let invalidSelection = false;
   const priced = lines.flatMap((l) => {
     const product = found.find((p) => p.id === l.productId);
-    return product ? [{ product, qty: l.qty }] : [];
+    if (!product) {
+      invalidSelection = true;
+      return [];
+    }
+    const selectedPrice = selectedProductPrice(product, l.variantValues);
+    if (selectedPrice === null) {
+      invalidSelection = true;
+      return [];
+    }
+    return [{ product, qty: l.qty, selectedPrice, variantValues: l.variantValues }];
   });
+  if (invalidSelection || priced.length !== lines.length) return { lines: [], totals: priceCart([], { delivery: opts.delivery }), error: "Some product options have changed. Please review your cart and choose again." };
   const coupon = opts.coupon?.trim() ? await getCouponByCode(opts.coupon) : null;
   const totals = priceCart(priced, { couponCode: opts.coupon, coupon, delivery: opts.delivery, isFirstOrder: await isFirstOrder(opts.email) });
   return { lines: priced, totals };
@@ -43,7 +55,9 @@ export async function createOrder(
   cart: CartLine[],
   userId: string | null = null,
 ): Promise<{ id: string; totals: Totals } | { error: string; field?: "coupon" }> {
-  const { lines, totals } = await quoteCart(cart, { coupon: input.coupon, delivery: input.delivery, email: input.email });
+  const quote = await quoteCart(cart, { coupon: input.coupon, delivery: input.delivery, email: input.email });
+  if ("error" in quote && quote.error) return { error: quote.error };
+  const { lines, totals } = quote;
   if (lines.length === 0) return { error: "Your cart is empty." };
   if (lines.length !== cart.length) return { error: "Some items in your cart are no longer available. Please review your cart." };
   if (input.coupon && totals.couponError) return { error: totals.couponError, field: "coupon" };
@@ -93,7 +107,10 @@ export async function createOrder(
         });
       await tx
         .insert(orderItems)
-        .values(lines.map((l) => ({ orderId: id, productId: l.product.id, name: l.product.name, unitPrice: unitPriceCents(l.product), qty: l.qty })));
+        .values(lines.map((l) => {
+          const options = selectedOptionSummary(l.product, l.variantValues);
+          return { orderId: id, productId: l.product.id, name: options ? `${l.product.name} (${options})` : l.product.name, unitPrice: unitPriceCents(l.product, l.selectedPrice), qty: l.qty };
+        }));
     });
   } catch (error) {
     if (error instanceof AdminError) return { error: error.message };

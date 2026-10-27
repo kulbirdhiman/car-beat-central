@@ -2,6 +2,7 @@ import "server-only";
 import { and, count, desc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
 import type { AdminProduct, Department } from "@/lib/admin/model";
+import { normalizeProductOptionGroups } from "@/lib/product-options";
 import { db, transaction } from "../db";
 import { deals, departments, productReviews, products, vehicleModels } from "../schema";
 import { AdminError, type ProductInput } from "./validate";
@@ -24,6 +25,7 @@ const departmentColumns = {
   name: departments.name,
   slug: departments.slug,
   description: departments.description,
+  keywords: departments.keywords,
   image: departments.image,
   active: departments.active,
   createdAt: departments.createdAt,
@@ -92,6 +94,9 @@ const productColumns = {
   description: products.description,
   badge: products.badge,
   features: products.features,
+  keywords: products.keywords,
+  optionGroups: products.optionGroups,
+  variants: products.variants,
   specs: products.specs,
   addOnIds: products.addOnIds,
   trendingRank: products.trendingRank,
@@ -100,11 +105,12 @@ const productColumns = {
   dealPrice: deals.dealPrice,
 };
 
-type ProductRow = Omit<AdminProduct, "departmentId" | "badge" | "trending"> & { departmentId: string | null; badge: string | null; trendingRank: number | null };
+type ProductRow = Omit<AdminProduct, "departmentId" | "badge" | "trending"> & { departmentId: string | null; badge: string | null; trendingRank: number | null; variants: { values: string[]; price: number }[] };
 
 // Empty departmentId means unassigned (its department was deleted).
-const toAdminProduct = ({ trendingRank, ...p }: ProductRow): AdminProduct => ({
+const toAdminProduct = ({ trendingRank, variants, ...p }: ProductRow): AdminProduct => ({
   ...p,
+  optionGroups: normalizeProductOptionGroups(p.optionGroups, p.price, variants),
   departmentId: p.departmentId ?? "",
   badge: p.badge ?? "",
   trending: trendingRank !== null,

@@ -40,6 +40,7 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
     getAddOns(product),
   ]);
 
+  const hasOptions = !!product.optionGroups?.length;
   const price = product.deal?.price ?? product.price;
   const off = discountPercent(price, product.rrp);
   const images = [...new Set([product.image, ...(product.images ?? []), ...CATEGORY_GALLERY[product.category]])].slice(0, 25);
@@ -109,7 +110,7 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
 
           <div className="mt-6 rounded-2xl border bg-card p-5 sm:p-6">
             <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
-              <p className={cn("font-display text-5xl font-bold leading-none tabular-nums", off > 0 && "text-primary")}>{formatPrice(price)}</p>
+              <p className={cn("font-display text-5xl font-bold leading-none tabular-nums", off > 0 && "text-primary")}>{hasOptions ? "From " : ""}{formatPrice(price)}</p>
               {off > 0 && (
                 <>
                   <p className="pb-1 text-muted-foreground">
@@ -142,8 +143,9 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
               image={product.image}
               price={price}
               stock={product.stock}
+              optionGroups={product.optionGroups ?? []}
               // Sold-out add-ons can't be bought, so they're left out.
-              addOns={addOns.filter((a) => a.stock > 0).map((a) => ({ id: a.id, slug: a.slug, name: a.name, image: a.image, price: a.deal?.price ?? a.price }))}
+              addOns={addOns.filter((a) => a.stock > 0 && !a.optionGroups?.length).map((a) => ({ id: a.id, slug: a.slug, name: a.name, image: a.image, price: a.deal?.price ?? a.price }))}
             />
           </div>
 

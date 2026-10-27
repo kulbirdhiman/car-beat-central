@@ -20,7 +20,7 @@ import { CATEGORY_LABELS } from "@/lib/data";
 import { productDescriptionText } from "@/lib/product-description";
 import type { Category } from "@/lib/types";
 
-type Errors = Partial<Record<"name" | "sku" | "brand" | "departmentId" | "category" | "price" | "rrp" | "stock" | "image" | "fits" | "dealPrice" | "description" | "features" | "specs" | "addOns", string>>;
+type Errors = Partial<Record<"name" | "sku" | "brand" | "departmentId" | "category" | "price" | "rrp" | "stock" | "image" | "fits" | "dealPrice" | "description" | "features" | "keywords" | "options" | "specs" | "addOns", string>>;
 
 const LIST = "/admin/products";
 
@@ -28,6 +28,7 @@ const LIST = "/admin/products";
 type SpecRow = { key: number; label: string; value: string };
 let specKey = 0;
 const specRow = (label = "", value = ""): SpecRow => ({ key: specKey++, label, value });
+type OptionDraft = { name: string; required: boolean; values: { name: string; price: string }[] };
 
 /**
  * Full-page product editor. `product` is null when creating. When `onAddAnother` is given,
@@ -51,6 +52,7 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
     badge: product?.badge ?? "",
     dealPrice: product?.dealPrice ? String(product.dealPrice) : "",
     features: product?.features.join("\n") ?? "",
+    keywords: product?.keywords.join(", ") ?? "",
   });
   const [trending, setTrending] = useState(product?.trending ?? false);
   const [images, setImages] = useState<string[]>(() => (product?.images ?? []).filter((image) => image !== (product?.image ?? "")));
@@ -58,6 +60,7 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
   const [models, setModels] = useState<Set<string>>(new Set(product && product.fits !== "universal" ? product.fits : []));
   const [specs, setSpecs] = useState<SpecRow[]>(() => product?.specs.map(([label, value]) => specRow(label, value)) ?? []);
   const [addOns, setAddOns] = useState<Set<string>>(new Set(product?.addOnIds ?? []));
+  const [optionGroups, setOptionGroups] = useState<OptionDraft[]>(() => product?.optionGroups.map((group) => ({ name: group.name, required: group.required, values: group.values.map((choice) => ({ name: choice.name, price: String(choice.price) })) })) ?? []);
   const [errors, setErrors] = useState<Errors>({});
   // Which submit button was pressed.
   const addAnother = useRef(false);
@@ -73,6 +76,12 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
     const stock = Number(form.stock);
     const dealPrice = form.dealPrice.trim() ? Number(form.dealPrice) : null;
     const features = form.features.split("\n").map((f) => f.trim()).filter(Boolean);
+    const keywords = [...new Set(form.keywords.split(/[\n,]/).map((keyword) => keyword.trim()).filter(Boolean))];
+    const cleanOptionGroups = optionGroups.map((group) => ({
+      name: group.name.trim(),
+      required: group.required,
+      values: group.values.filter((choice) => choice.name.trim()).map((choice) => ({ name: choice.name.trim(), price: Number(choice.price) })),
+    }));
     // Fully blank rows are dropped; half-filled ones are an error.
     const specRows = specs.map((r) => ({ label: r.label.trim(), value: r.value.trim() })).filter((r) => r.label || r.value);
     const next: Errors = {};
@@ -87,6 +96,12 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
     if (dealPrice !== null && (!Number.isInteger(dealPrice) || dealPrice <= 0 || dealPrice >= price)) next.dealPrice = "Whole dollars, below the price.";
     if (form.description.length > 12000) next.description = "Keep the description under 12,000 characters.";
     if (features.length > 12 || features.some((f) => f.length > 200)) next.features = "Up to 12 lines of 200 characters.";
+    if (keywords.length > 30 || keywords.some((keyword) => keyword.length > 60)) next.keywords = "Up to 30 keywords, each no longer than 60 characters.";
+    if (
+      optionGroups.length > 3 ||
+      cleanOptionGroups.some((group) => !group.name || group.name.length > 40 || group.values.length === 0 || group.values.length > 20 || group.values.some((choice) => !choice.name || choice.name.length > 60 || !Number.isInteger(choice.price) || choice.price < 0 || choice.price > 1_000_000) || new Set(group.values.map((choice) => choice.name.toLowerCase())).size !== group.values.length) ||
+      new Set(cleanOptionGroups.map((group) => group.name.toLowerCase())).size !== cleanOptionGroups.length
+    ) next.options = "Add up to 3 uniquely named option groups. Each group needs choices with a whole-dollar price add-on of $0 or more.";
     if (specRows.some((r) => !r.label || !r.value)) next.specs = "Give every row both a name and a value.";
     else if (specRows.length > 30 || specRows.some((r) => r.label.length > 60 || r.value.length > 200)) next.specs = "Up to 30 rows; names up to 60 characters, values up to 200.";
     if (addOns.size > 12) next.addOns = "Pick at most 12 add-ons.";
@@ -118,6 +133,8 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
       fits: universal ? "universal" : [...models],
       badge: form.badge.trim(),
       features,
+      keywords,
+      optionGroups: cleanOptionGroups,
       specs: specRows.map((r): [string, string] => [r.label, r.value]),
       addOnIds: [...addOns],
       dealPrice,
@@ -168,6 +185,61 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
               <Field id="pf-features" label="Features (one per line)" error={errors.features} className="sm:col-span-2">
                 <Textarea id="pf-features" value={form.features} onChange={set("features")} rows={5} aria-invalid={!!errors.features} />
               </Field>
+              <Field id="pf-keywords" label="Keywords (comma or line separated)" error={errors.keywords} className="sm:col-span-2">
+                <Textarea id="pf-keywords" value={form.keywords} onChange={set("keywords")} rows={3} placeholder="e.g. carplay stereo, wireless head unit" aria-invalid={!!errors.keywords} />
+              </Field>
+              <div className="space-y-3 sm:col-span-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h3 className="text-sm font-medium">Options and prices</h3>
+                    <p className="text-xs text-muted-foreground">Groups are independent. Add each choice&apos;s extra price, such as 10 for +$10.</p>
+                  </div>
+                  {optionGroups.length < 3 && (
+                    <Button type="button" variant="outline" size="sm" onClick={() => setOptionGroups((groups) => [...groups, { name: "", required: true, values: [{ name: "", price: "0" }] }])}>
+                      <Plus /> Add option
+                    </Button>
+                  )}
+                </div>
+                {optionGroups.map((group, index) => (
+                  <div key={index} className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[1fr_2fr_auto] sm:items-start">
+                    <div className="grid gap-3">
+                      <Field id={`pf-option-name-${index}`} label="Option name">
+                        <Input id={`pf-option-name-${index}`} value={group.name} onChange={(event) => setOptionGroups((groups) => groups.map((item, i) => i === index ? { ...item, name: event.target.value } : item))} placeholder="Color" />
+                      </Field>
+                      <label className="flex items-center gap-2 text-sm">
+                        <Checkbox checked={group.required} onCheckedChange={(checked) => setOptionGroups((groups) => groups.map((item, i) => i === index ? { ...item, required: checked === true } : item))} />
+                        Required
+                      </label>
+                    </div>
+                    <div className="grid gap-2">
+                      <div className="grid grid-cols-[1fr_9rem_2.5rem] gap-2 text-xs font-medium text-muted-foreground">
+                        <span>Choice</span><span>Add to price (AUD)</span><span />
+                      </div>
+                      {group.values.map((choice, valueIndex) => (
+                        <div key={valueIndex} className="grid grid-cols-[1fr_9rem_2.5rem] items-center gap-2">
+                          <Input value={choice.name} onChange={(event) => setOptionGroups((groups) => groups.map((item, i) => i === index ? { ...item, values: item.values.map((value, j) => j === valueIndex ? { ...value, name: event.target.value } : value) } : item))} placeholder={valueIndex === 0 ? "Red" : "Black"} aria-label={`${group.name || "Option"} choice ${valueIndex + 1}`} />
+                          <div className="relative">
+                            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">+$</span>
+                            <Input type="number" min="0" step="1" className="pl-9" value={choice.price} onChange={(event) => setOptionGroups((groups) => groups.map((item, i) => i === index ? { ...item, values: item.values.map((value, j) => j === valueIndex ? { ...value, price: event.target.value } : value) } : item))} aria-label={`${choice.name || "Choice"} price add-on`} />
+                          </div>
+                          <Button type="button" variant="ghost" size="icon" aria-label={`Remove choice ${choice.name || valueIndex + 1}`} onClick={() => setOptionGroups((groups) => groups.map((item, i) => i === index ? { ...item, values: item.values.filter((_, j) => j !== valueIndex) } : item))}>
+                            <X />
+                          </Button>
+                        </div>
+                      ))}
+                      {group.values.length < 20 && (
+                        <Button type="button" variant="outline" size="sm" className="w-fit" onClick={() => setOptionGroups((groups) => groups.map((item, i) => i === index ? { ...item, values: [...item.values, { name: "", price: "0" }] } : item))}>
+                          <Plus /> Add choice
+                        </Button>
+                      )}
+                    </div>
+                    <Button type="button" variant="ghost" size="icon" className="sm:mt-7" aria-label={`Remove option ${group.name || index + 1}`} onClick={() => setOptionGroups((groups) => groups.filter((_, i) => i !== index))}>
+                      <X />
+                    </Button>
+                  </div>
+                ))}
+                {errors.options && <p className="text-xs text-destructive">{errors.options}</p>}
+              </div>
             </CardContent>
           </Card>
 

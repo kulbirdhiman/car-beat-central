@@ -10,26 +10,32 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { addToCart } from "@/lib/cart";
 import { formatPrice } from "@/lib/data";
+import { selectedOptionPriceAdjustment } from "@/lib/product-options";
+import type { ProductOptionGroup } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export type AddOn = { id: string; slug: string; name: string; image: string; price: number };
 
-type Props = { productId: string; name: string; image: string; price: number; stock: number; addOns: AddOn[] };
+type Props = { productId: string; name: string; image: string; price: number; stock: number; optionGroups: ProductOptionGroup[]; addOns: AddOn[] };
 
 /**
  * Add-ons, quantity, Add to cart and Buy now. Ticked add-ons go in the cart alongside the product, one of each.
  * Once the buttons scroll out of view, a bar with the same actions sticks to the bottom of the screen,
  * so buying is always one tap away.
  */
-export function BuyBox({ productId, name, image, price, stock, addOns }: Props) {
+export function BuyBox({ productId, name, image, price, stock, optionGroups, addOns }: Props) {
   const router = useRouter();
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
   const [showBar, setShowBar] = useState(false);
   const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [selectedValues, setSelectedValues] = useState<string[]>(() => optionGroups.map(() => ""));
   const anchor = useRef<HTMLDivElement>(null);
   const extras = addOns.filter((a) => picked.has(a.id));
-  const total = price * qty + extras.reduce((n, a) => n + a.price, 0);
+  const adjustment = selectedOptionPriceAdjustment(optionGroups, optionGroups.length ? selectedValues : undefined);
+  const unitPrice = adjustment === null ? null : price + adjustment;
+  const total = unitPrice === null ? null : unitPrice * qty + extras.reduce((n, a) => n + a.price, 0);
+  const optionsReady = adjustment !== null;
 
   useEffect(() => {
     const el = anchor.current;
@@ -41,14 +47,15 @@ export function BuyBox({ productId, name, image, price, stock, addOns }: Props) 
   }, []);
 
   const addAll = () => {
-    addToCart(productId, qty);
+    addToCart(productId, qty, optionGroups.length ? selectedValues : undefined);
     for (const a of extras) addToCart(a.id, 1);
   };
   const add = () => {
     addAll();
     setAdded(true);
     setTimeout(() => setAdded(false), 1800);
-    const description = extras.length ? `${name} + ${extras.length} add-on${extras.length > 1 ? "s" : ""}` : name;
+    const selected = optionGroups.map((group, index) => `${group.name}: ${selectedValues[index]}`).join(" · ");
+    const description = [selected || name, extras.length ? `${extras.length} add-on${extras.length > 1 ? "s" : ""}` : ""].filter(Boolean).join(" + ");
     toast.success(`Added ${qty + extras.length} to cart`, { description, action: { label: "Checkout", onClick: () => router.push("/checkout") } });
   };
   const buyNow = () => {
@@ -77,6 +84,24 @@ export function BuyBox({ productId, name, image, price, stock, addOns }: Props) 
 
   return (
     <>
+      {optionGroups.length > 0 && (
+        <div className="mt-5 grid gap-3">
+          {optionGroups.map((group, index) => (
+            <label key={`${group.name}-${index}`} className="grid gap-1.5 text-sm font-medium">
+              <span>{group.name} <span className="font-normal text-muted-foreground">({group.required ? "Required" : "Optional"})</span></span>
+              <select
+                value={selectedValues[index] ?? ""}
+                onChange={(event) => setSelectedValues((values) => values.map((value, i) => i === index ? event.target.value : value))}
+                className="h-11 rounded-lg border bg-background px-3 font-normal"
+              >
+                <option value="">{group.required ? `Choose ${group.name.toLowerCase()}` : `No ${group.name.toLowerCase()}`}</option>
+                {group.values.map((choice) => <option key={choice.name} value={choice.name}>{choice.name}{choice.price > 0 ? ` (+${formatPrice(choice.price)})` : ""}</option>)}
+              </select>
+            </label>
+          ))}
+          <p className="text-sm text-muted-foreground">{unitPrice === null ? "Choose your options to see the price." : `Selected price: ${formatPrice(unitPrice)}`}</p>
+        </div>
+      )}
       {addOns.length > 0 && (
         <fieldset className="mt-5">
           <legend className="flex items-center gap-2 text-sm font-semibold">
@@ -125,12 +150,12 @@ export function BuyBox({ productId, name, image, price, stock, addOns }: Props) 
               <Plus />
             </Button>
           </div>
-          <Button size="xl" className={cn("h-14 flex-1 rounded-xl text-base", added && "bg-success hover:bg-success")} onClick={add}>
+          <Button size="xl" className={cn("h-14 flex-1 rounded-xl text-base", added && "bg-success hover:bg-success")} onClick={add} disabled={!optionsReady}>
             {added ? <Check /> : <ShoppingBag />} {added ? "Added to cart" : "Add to cart"}
           </Button>
         </div>
-        <Button size="xl" variant="ink" className="h-14 w-full rounded-xl text-base" onClick={buyNow}>
-          <Zap className="fill-current" /> Buy now · {formatPrice(total)}
+        <Button size="xl" variant="ink" className="h-14 w-full rounded-xl text-base" onClick={buyNow} disabled={!optionsReady}>
+          <Zap className="fill-current" /> {total === null ? "Choose options" : `Buy now · ${formatPrice(total)}`}
         </Button>
       </div>
 
@@ -147,18 +172,18 @@ export function BuyBox({ productId, name, image, price, stock, addOns }: Props) 
           </span>
           <div className="min-w-0 flex-1">
             <p className="hidden truncate text-sm font-semibold sm:block">{name}</p>
-            <p className="font-display text-lg font-bold leading-tight">{formatPrice(total)}</p>
+            <p className="font-display text-lg font-bold leading-tight">{total === null ? "Choose options" : formatPrice(total)}</p>
             {extras.length > 0 && (
               <p className="text-xs text-muted-foreground">
                 Incl. {extras.length} add-on{extras.length > 1 ? "s" : ""}
               </p>
             )}
           </div>
-          <Button size="xl" variant="outline" className="h-12 rounded-xl bg-background px-4" onClick={add} tabIndex={showBar ? 0 : -1}>
+          <Button size="xl" variant="outline" className="h-12 rounded-xl bg-background px-4" onClick={add} tabIndex={showBar ? 0 : -1} disabled={!optionsReady}>
             {added ? <Check /> : <ShoppingBag />}
             <span className="hidden sm:inline">{added ? "Added" : "Add to cart"}</span>
           </Button>
-          <Button size="xl" className="h-12 rounded-xl px-5" onClick={buyNow} tabIndex={showBar ? 0 : -1}>
+          <Button size="xl" className="h-12 rounded-xl px-5" onClick={buyNow} tabIndex={showBar ? 0 : -1} disabled={!optionsReady}>
             <Zap className="fill-current" /> Buy now
           </Button>
         </div>

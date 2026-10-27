@@ -79,7 +79,7 @@ export function Dashboard() {
   const counted = dateOrders.filter((o) => o.status !== "cancelled" && o.status !== "refunded");
   // Less partial refunds; fully refunded orders are left out above.
   const revenue = counted.reduce((sum, o) => sum + orderTotal(o) - o.refunded, 0);
-  const toShip = dateOrders.filter((o) => o.status === "paid").length;
+  const toShip = dateOrders.filter((o) => o.status === "processing" || o.status === "paid").length;
   const lowStock = products.filter((p) => p.status === "active" && p.stock <= LOW_STOCK).sort((a, b) => a.stock - b.stock);
   const models = makes.reduce((n, m) => n + m.models.length, 0);
 

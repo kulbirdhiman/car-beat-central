@@ -9,8 +9,9 @@ import { OrderSummary } from "@/components/cart/OrderSummary";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { removeFromCart, setQty, useCart } from "@/lib/cart";
+import { cartLineKey, removeFromCart, setQty, useCart } from "@/lib/cart";
 import { CATEGORY_LABELS, formatPrice } from "@/lib/data";
+import { selectedOptionSummary, selectedProductPrice } from "@/lib/product-options";
 
 const noop = () => () => {};
 
@@ -50,7 +51,7 @@ export function CartView() {
           const p = products[line.productId];
           if (!p) {
             return loading ? (
-              <li key={line.productId} className="flex gap-4 p-4">
+              <li key={cartLineKey(line)} className="flex gap-4 p-4">
                 <Skeleton className="size-24 rounded-xl" />
                 <div className="flex-1 space-y-2">
                   <Skeleton className="h-5 w-2/3" />
@@ -59,9 +60,10 @@ export function CartView() {
               </li>
             ) : null;
           }
-          const unit = p.deal?.price ?? p.price;
+          const unit = selectedProductPrice(p, line.variantValues);
+          const optionSummary = selectedOptionSummary(p, line.variantValues);
           return (
-            <li key={line.productId} className="flex gap-4 p-4 animate-in fade-in sm:p-5">
+            <li key={cartLineKey(line)} className="flex gap-4 p-4 animate-in fade-in sm:p-5">
               <Link href={`/products/${p.slug}`} className="relative size-24 shrink-0 overflow-hidden rounded-lg bg-muted">
                 <Image src={p.image} alt={p.name} fill sizes="96px" className="object-cover" />
               </Link>
@@ -72,21 +74,23 @@ export function CartView() {
                     <Link href={`/products/${p.slug}`} className="font-medium hover:underline">
                       {p.name}
                     </Link>
+                    {optionSummary && <p className="mt-1 text-xs text-muted-foreground">{optionSummary}</p>}
+                    {unit === null && <p className="mt-1 text-xs text-destructive">Options changed. Re-select them on the product page.</p>}
                     {p.deal && <p className="text-xs font-medium text-destructive">Today&apos;s deal price</p>}
                   </div>
-                  <p className="font-display text-lg font-bold tabular-nums">{formatPrice(unit * line.qty)}</p>
+                  <p className="font-display text-lg font-bold tabular-nums">{unit === null ? "—" : formatPrice(unit * line.qty)}</p>
                 </div>
                 <div className="mt-auto flex items-center justify-between pt-3">
                   <div className="flex items-center rounded-md border bg-background">
-                    <Button variant="ghost" size="icon" aria-label="Decrease quantity" onClick={() => setQty(p.id, line.qty - 1)}>
+                    <Button variant="ghost" size="icon" aria-label="Decrease quantity" onClick={() => setQty(p.id, line.qty - 1, line.variantValues)}>
                       <Minus />
                     </Button>
                     <span className="w-7 text-center text-sm tabular-nums">{line.qty}</span>
-                    <Button variant="ghost" size="icon" aria-label="Increase quantity" disabled={line.qty >= 20} onClick={() => setQty(p.id, line.qty + 1)}>
+                    <Button variant="ghost" size="icon" aria-label="Increase quantity" disabled={line.qty >= 20} onClick={() => setQty(p.id, line.qty + 1, line.variantValues)}>
                       <Plus />
                     </Button>
                   </div>
-                  <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => removeFromCart(p.id)}>
+                  <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => removeFromCart(p.id, line.variantValues)}>
                     <Trash2 /> Remove
                   </Button>
                 </div>

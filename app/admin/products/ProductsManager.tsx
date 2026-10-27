@@ -19,7 +19,7 @@ import { CATEGORY_LABELS, formatPrice } from "@/lib/data";
 import type { Category } from "@/lib/types";
 
 const ALL = "all";
-const PRODUCT_COLUMNS = ["id", "sku", "name", "brand", "departmentId", "category", "price", "rrp", "stock", "status", "fits", "image", "images", "description", "badge", "features", "specs", "addOnIds", "dealPrice", "trending"] as const;
+const PRODUCT_COLUMNS = ["id", "sku", "name", "brand", "departmentId", "category", "price", "rrp", "stock", "status", "fits", "image", "images", "description", "badge", "features", "specs", "addOnIds", "dealPrice", "trending", "keywords", "optionGroups"] as const;
 
 function parseCsv(source: string) {
   const text = source.replace(/^\uFEFF/, "");
@@ -45,7 +45,7 @@ function parseCsv(source: string) {
   if (quoted) throw new Error("The CSV has an unclosed quoted field.");
   if (rows.length < 2) throw new Error("The CSV needs a header row and at least one product row.");
   const headers = rows[0].map((value) => value.trim());
-  const missing = PRODUCT_COLUMNS.filter((column) => !headers.includes(column));
+  const missing = PRODUCT_COLUMNS.filter((column) => !["keywords", "optionGroups"].includes(column) && !headers.includes(column));
   if (missing.length) throw new Error(`Missing columns: ${missing.join(", ")}. Export products first to get the right template.`);
   return rows.slice(1).map((values, index) => ({
     rowNumber: index + 2,
@@ -85,11 +85,18 @@ function importProduct(fields: Record<string, string>): AdminProduct {
   const images = csvList(fields.images, "images");
   const status = fields.status.trim();
   if (status && status !== "active" && status !== "draft") throw new Error("status must be active or draft.");
+  const parseJson = (key: string) => {
+    if (!fields[key]?.trim()) return [];
+    const parsed: unknown = JSON.parse(fields[key]);
+    if (!Array.isArray(parsed)) throw new Error(`${key} must be a JSON list.`);
+    return parsed;
+  };
   return {
     id: fields.id.trim() || newId("p"), slug: "", sku: fields.sku.trim(), name: fields.name.trim(), brand: fields.brand.trim(),
     departmentId: fields.departmentId.trim(), category, price: number("price"), rrp: number("rrp", fields.price), stock: number("stock"),
     status: status === "active" ? "active" : "draft", fits, image, images: images.length ? images : image ? [image] : [],
-    description: fields.description, badge: fields.badge.trim(), features: csvList(fields.features, "features"), specs,
+    description: fields.description, badge: fields.badge.trim(), features: csvList(fields.features, "features"), keywords: csvList(fields.keywords ?? "", "keywords"), specs,
+    optionGroups: parseJson("optionGroups") as AdminProduct["optionGroups"],
     addOnIds: csvList(fields.addOnIds, "addOnIds"), dealPrice: fields.dealPrice.trim() ? number("dealPrice") : null,
     trending: ["true", "yes", "1"].includes(fields.trending.trim().toLowerCase()), rating: 0, reviews: 0,
   };
@@ -125,7 +132,7 @@ export function ProductsManager() {
   const q = query.trim().toLowerCase();
   const rows = products.filter(
     (p) =>
-      (!q || p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q) || p.brand.toLowerCase().includes(q)) &&
+      (!q || p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q) || p.brand.toLowerCase().includes(q) || p.keywords.some((keyword) => keyword.toLowerCase().includes(q))) &&
       // Filtering by a department includes its sub-departments.
       (department === ALL || p.departmentId === department || departments.some((d) => d.id === p.departmentId && d.parentId === department)) &&
       (status === ALL || p.status === status) &&
@@ -143,7 +150,7 @@ export function ProductsManager() {
     const csv = [PRODUCT_COLUMNS, ...products.map((p) => [
       p.id, p.sku, p.name, p.brand, p.departmentId, p.category, p.price, p.rrp, p.stock, p.status,
       p.fits === "universal" ? "universal" : JSON.stringify(p.fits), p.image, JSON.stringify(p.images), p.description, p.badge,
-      JSON.stringify(p.features), JSON.stringify(p.specs), JSON.stringify(p.addOnIds), p.dealPrice, p.trending,
+      JSON.stringify(p.features), JSON.stringify(p.specs), JSON.stringify(p.addOnIds), p.dealPrice, p.trending, JSON.stringify(p.keywords), JSON.stringify(p.optionGroups),
     ])].map((line) => line.map(csvCell).join(",")).join("\r\n");
     const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" }));
     const anchor = Object.assign(document.createElement("a"), { href: url, download: `carbeat-products-${new Date().toISOString().slice(0, 10)}.csv` });

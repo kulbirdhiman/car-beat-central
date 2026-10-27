@@ -109,12 +109,17 @@ export function parseDepartment(departmentId: string, value: unknown): Omit<Depa
   const body = asBody(value);
   const slug = text(body, "slug", { min: 1, max: 80, label: "URL slug" });
   if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) throw new AdminError("URL slug can only use lowercase letters, numbers and dashes.");
+  const rawKeywords = body.keywords ?? [];
+  if (!Array.isArray(rawKeywords) || rawKeywords.length > 30 || rawKeywords.some((keyword) => typeof keyword !== "string" || keyword.trim().length > 60)) {
+    throw new AdminError("Keywords must be up to 30 terms, each no longer than 60 characters.");
+  }
   return {
     id: departmentId,
     parentId: body.parentId == null || body.parentId === "" ? null : id(body.parentId, "parent department"),
     name: text(body, "name", { min: 2, max: 80, label: "Name" }),
     slug,
     description: text(body, "description", { max: 500 }),
+    keywords: [...new Set(rawKeywords.map((keyword: string) => keyword.trim()).filter(Boolean))],
     image: image(body, "image"),
     active: bool(body, "active"),
   };
@@ -133,6 +138,31 @@ export function parseProduct(productId: string, value: unknown): ProductInput {
   if (!Array.isArray(features) || features.length > 12 || features.some((f) => typeof f !== "string" || f.trim().length === 0 || f.length > 200)) {
     throw new AdminError("Features must be up to 12 lines of at most 200 characters.");
   }
+  const keywords = body.keywords ?? [];
+  if (!Array.isArray(keywords) || keywords.length > 30 || keywords.some((keyword) => typeof keyword !== "string" || keyword.trim().length === 0 || keyword.length > 60)) {
+    throw new AdminError("Keywords must be up to 30 terms, each no longer than 60 characters.");
+  }
+  const rawGroups = body.optionGroups ?? [];
+  if (!Array.isArray(rawGroups) || rawGroups.length > 3) throw new AdminError("Add up to 3 option groups.");
+  const optionGroups = rawGroups.map((raw) => {
+    const group = asBody(raw);
+    const name = text(group, "name", { min: 1, max: 40, label: "Option name" });
+    const required = group.required === undefined ? true : bool(group, "required");
+    const values = group.values;
+    if (!Array.isArray(values) || values.length === 0 || values.length > 20) {
+      throw new AdminError(`Add 1 to 20 choices for ${name}.`);
+    }
+    const cleaned = values.map((rawChoice) => {
+      const choice = asBody(rawChoice);
+      return {
+        name: text(choice, "name", { min: 1, max: 60, label: "Choice" }),
+        price: int(choice, "price", { min: 0, max: 1_000_000, label: "Price add-on" }),
+      };
+    });
+    if (new Set(cleaned.map((choice) => choice.name.toLowerCase())).size !== cleaned.length) throw new AdminError(`${name} has duplicate choices.`);
+    return { name, required, values: cleaned };
+  });
+  if (new Set(optionGroups.map((g) => g.name.toLowerCase())).size !== optionGroups.length) throw new AdminError("Option group names must be unique.");
   const specs = body.specs ?? [];
   if (
     !Array.isArray(specs) ||
@@ -175,6 +205,8 @@ export function parseProduct(productId: string, value: unknown): ProductInput {
     description: sanitizeProductDescription(text(body, "description", { max: 12000 })),
     badge: text(body, "badge", { max: 30, label: "Badge" }),
     features: features.map((f: string) => f.trim()),
+    keywords: [...new Set(keywords.map((keyword: string) => keyword.trim()))],
+    optionGroups,
     specs: specs.map(([label, value]: Spec) => [label.trim(), value.trim()] as Spec),
     addOnIds,
     dealPrice,
@@ -205,7 +237,7 @@ export function parseVehicle(level: VehicleLevel, vehicleId: string, value: unkn
 }
 
 // "refunded" isn't here: an order gets it by being refunded in full.
-const ORDER_STATUSES: readonly OrderStatus[] = ["pending_payment", "paid", "fulfilled", "cancelled"];
+const ORDER_STATUSES: readonly OrderStatus[] = ["pending_payment", "processing", "paid", "fulfilled", "cancelled"];
 
 export function parseOrderStatus(value: unknown): OrderStatus {
   return oneOf(asBody(value), "status", ORDER_STATUSES);

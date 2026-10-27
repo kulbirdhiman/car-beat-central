@@ -1,7 +1,7 @@
 import type { PaymentMethod } from "@/lib/payment";
 import type { Shipment } from "@/lib/shipping";
 import type { Refund, ReturnRequest } from "@/lib/returns";
-import type { Category, OrderStatus, Spec } from "@/lib/types";
+import type { Category, OrderStatus, ProductOptionGroup, Spec } from "@/lib/types";
 
 /** Admin entity types and display helpers, shared by the admin UI and the server. */
 
@@ -12,6 +12,8 @@ export type Department = {
   name: string;
   slug: string;
   description: string;
+  /** Search terms admins can use to identify this department. */
+  keywords: string[];
   image: string;
   active: boolean;
   createdAt: string;
@@ -62,6 +64,9 @@ export type AdminProduct = {
   badge: string;
   /** Bullet points on the product page. */
   features: string[];
+  /** Search terms to help admins find this product in the catalogue. */
+  keywords: string[];
+  optionGroups: ProductOptionGroup[];
   /** Rows of the product page's Specifications tab. */
   specs: Spec[];
   /** Other products offered as optional extras on the product page. */
@@ -128,6 +133,7 @@ export type InvoiceInput = {
 
 export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   pending_payment: "Awaiting payment",
+  processing: "Processing",
   paid: "Paid",
   fulfilled: "Shipped",
   cancelled: "Cancelled",
@@ -150,7 +156,7 @@ export function orderTotal(order: AdminOrder) {
 
 /** Whether money was taken for it, so it can be refunded (mirrors the server's check). */
 export function orderWasPaid(order: AdminOrder) {
-  return !!order.paidAt || order.status === "paid" || order.status === "fulfilled" || order.status === "refunded";
+  return !!order.paidAt || order.status === "processing" || order.status === "paid" || order.status === "fulfilled" || order.status === "refunded";
 }
 
 /** A refund as the admin form sends it. Amount in cents. */
