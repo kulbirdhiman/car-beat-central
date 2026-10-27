@@ -13,7 +13,7 @@ export function ProductGallery({ images, name, flags }: { images: string[]; name
   return (
     <div>
       <div
-        className="group relative aspect-square overflow-hidden rounded-2xl border bg-card sm:aspect-[4/3]"
+        className="group relative aspect-square overflow-hidden rounded-2xl border bg-muted/20 sm:aspect-[4/3]"
         tabIndex={0}
         aria-roledescription="carousel"
         aria-label={`${name} photos`}
@@ -23,16 +23,19 @@ export function ProductGallery({ images, name, flags }: { images: string[]; name
         }}
       >
         {images.map((src, i) => (
-          <Image
-            key={src}
-            src={src}
-            alt={i === 0 ? name : `${name}, photo ${i + 1}`}
-            fill
-            preload={i === 0}
-            sizes="(min-width: 1024px) 50vw, 100vw"
-            className={cn("object-cover transition-[opacity,transform] duration-500 group-hover:scale-[1.03]", i === index ? "opacity-100" : "opacity-0")}
-            aria-hidden={i !== index}
-          />
+          <div key={src} className={cn("absolute inset-0 transition-opacity duration-300", i === index ? "opacity-100" : "pointer-events-none opacity-0")}>
+            <div className="absolute inset-4 sm:inset-8">
+              <Image
+                src={src}
+                alt={i === 0 ? name : `${name}, photo ${i + 1}`}
+                fill
+                preload={i === 0}
+                sizes="(min-width: 1024px) 50vw, 100vw"
+                className="object-contain"
+                aria-hidden={i !== index}
+              />
+            </div>
+          </div>
         ))}
 
         <div className="absolute left-4 top-4 flex gap-2">
@@ -76,11 +79,11 @@ export function ProductGallery({ images, name, flags }: { images: string[]; name
                 aria-label={`Show photo ${i + 1}`}
                 aria-current={i === index}
                 className={cn(
-                  "relative block size-16 overflow-hidden rounded-xl border-2 sm:size-[72px] bg-card transition-[border-color,opacity]",
+                  "relative block size-16 overflow-hidden rounded-xl border-2 bg-muted/20 sm:size-[72px] transition-[border-color,opacity]",
                   i === index ? "border-primary" : "border-transparent opacity-70 hover:opacity-100",
                 )}
               >
-                <Image src={src} alt="" fill sizes="100px" className="object-cover" />
+                <Image src={src} alt="" fill sizes="100px" className="object-contain p-1" />
               </button>
             </li>
           ))}

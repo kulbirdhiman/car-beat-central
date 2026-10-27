@@ -1,0 +1,1 @@
+ALTER TABLE "departments" ADD COLUMN "keywords" jsonb DEFAULT '[]'::jsonb NOT NULL;

@@ -81,7 +81,7 @@ export function OrdersManager() {
     <>
       <PageHeader
         title="Orders"
-        description={`${orders.length} orders · ${orders.filter((o) => o.status === "paid").length} ready to ship · ${orders.filter(openReturn).length} open returns.`}
+        description={`${orders.length} orders · ${orders.filter((o) => o.status === "processing" || o.status === "paid").length} ready to ship · ${orders.filter(openReturn).length} open returns.`}
         actions={
           <div className="flex gap-2">
             <Button variant="outline" onClick={exportOrders} disabled={!rows.length}><Download /> Export CSV</Button>
@@ -195,7 +195,7 @@ function OrderDetail({ order }: { order: AdminOrder }) {
       <div className="space-y-4 p-4">
         <ReturnRequests order={order} onRefund={(preset) => setRefunding({ preset })} />
 
-        {(order.status === "paid" || order.status === "fulfilled") && <Fulfilment order={order} />}
+        {(order.status === "processing" || order.status === "paid" || order.status === "fulfilled") && <Fulfilment order={order} />}
 
         <Panel title="Customer">
           <div className="grid gap-4 text-sm sm:grid-cols-2">

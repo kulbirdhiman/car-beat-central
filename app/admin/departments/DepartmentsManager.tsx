@@ -168,6 +168,7 @@ function DepartmentDialog({ department, defaultParentId, onClose }: { department
   const [slug, setSlug] = useState(department?.slug ?? "");
   const [slugTouched, setSlugTouched] = useState(!!department);
   const [description, setDescription] = useState(department?.description ?? "");
+  const [keywords, setKeywords] = useState(department?.keywords.join(", ") ?? "");
   const [image, setImage] = useState(department?.image ?? "/images/trunk-audio.jpg");
   const [active, setActive] = useState(department?.active ?? true);
   const [errors, setErrors] = useState<{ name?: string; slug?: string }>({});
@@ -187,6 +188,7 @@ function DepartmentDialog({ department, defaultParentId, onClose }: { department
       name: name.trim(),
       slug,
       description: description.trim(),
+      keywords: [...new Set(keywords.split(/[\n,]/).map((keyword) => keyword.trim()).filter(Boolean))],
       image: image.trim(),
       active,
       createdAt: department?.createdAt ?? new Date().toISOString(),
@@ -244,6 +246,10 @@ function DepartmentDialog({ department, defaultParentId, onClose }: { department
           </Field>
           <Field id="df-description" label="Description">
             <Textarea id="df-description" value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
+          </Field>
+          <Field id="df-keywords" label="Keywords">
+            <Textarea id="df-keywords" value={keywords} onChange={(e) => setKeywords(e.target.value)} rows={2} placeholder="e.g. car audio, speakers, stereo" />
+            <p className="text-xs text-muted-foreground">Separate keywords with commas or new lines.</p>
           </Field>
           <Field id="df-image" label="Banner image">
             <ImageUpload id="df-image" folder="departments" value={image} onChange={setImage} />

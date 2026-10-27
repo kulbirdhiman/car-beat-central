@@ -7,18 +7,18 @@ import type { Product } from "./types";
  * client figures are only a preview. All amounts are in cents, GST inclusive.
  */
 
-export type PricedLine = { product: Pick<Product, "id" | "name" | "category" | "price" | "deal" | "departmentId" | "departmentParentId" | "fits">; qty: number };
+export type PricedLine = { product: Pick<Product, "id" | "name" | "category" | "price" | "deal" | "departmentId" | "departmentParentId" | "fits" | "optionGroups">; qty: number; selectedPrice?: number; variantValues?: string[] };
 
 export const DELIVERY_OPTIONS = {
-  standard: { label: "Standard (3-6 business days)", fee: 995, freeOver: 9900 },
-  express: { label: "Express (1-2 business days)", fee: 1495, freeOver: null },
+  standard: { label: "Standard (3-6 business days)", fee: 3100, freeOver: 9900 },
+  express: { label: "Express (1-2 business days)", fee: 4500, freeOver: null },
   collect: { label: "Local pickup (we'll let you know when it's ready)", fee: 0, freeOver: null },
 } as const;
 
 export type Delivery = keyof typeof DELIVERY_OPTIONS;
 
-export function unitPriceCents(product: PricedLine["product"]) {
-  return (product.deal?.price ?? product.price) * 100;
+export function unitPriceCents(product: PricedLine["product"], selectedPrice?: number) {
+  return (selectedPrice ?? product.deal?.price ?? product.price) * 100;
 }
 
 export type Totals = {
@@ -43,7 +43,7 @@ export function priceCart(
     isFirstOrder?: boolean;
   },
 ): Totals {
-  const subtotal = lines.reduce((sum, l) => sum + unitPriceCents(l.product) * l.qty, 0);
+  const subtotal = lines.reduce((sum, l) => sum + unitPriceCents(l.product, l.selectedPrice) * l.qty, 0);
 
   let coupon: string | null = null;
   let couponError: string | null = null;
@@ -55,7 +55,7 @@ export function priceCart(
       couponError = "That code isn't valid.";
     } else {
       // Coupons see the price actually charged, so deals and codes stack the way the cart shows them.
-      const couponLines = lines.map((l) => ({ product: { ...l.product, price: unitPriceCents(l.product) / 100 }, qty: l.qty }));
+      const couponLines = lines.map((l) => ({ product: { ...l.product, price: unitPriceCents(l.product, l.selectedPrice) / 100 }, qty: l.qty }));
       const result = evaluateCoupon(opts.coupon, couponLines, { isFirstOrder: opts.isFirstOrder ?? true });
       if (!result.ok) couponError = result.reason;
       else {

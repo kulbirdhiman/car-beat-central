@@ -39,9 +39,16 @@ export type Product = {
   specs: Spec[];
   /** Products offered as optional extras on this product's page. */
   addOnIds: string[];
+  /** Shopper-selectable option groups, such as Color and Material. */
+  optionGroups?: ProductOptionGroup[];
   /** Present when the product is in today's deals. */
   deal?: { price: number; claimed: number };
 };
+
+export type ProductOptionChoice = { name: string; price: number };
+export type ProductOptionGroup = { name: string; required: boolean; values: ProductOptionChoice[] };
+/** Legacy full-price variants kept only to read the existing database column during migration. */
+export type ProductVariant = { values: string[]; price: number };
 
 /** A specification row, e.g. ["Screen", '9" HD touchscreen']. */
 export type Spec = [label: string, value: string];
@@ -76,10 +83,10 @@ export type Offer = {
   href: string;
 };
 
-export type CartLine = { productId: string; qty: number };
+export type CartLine = { productId: string; qty: number; variantValues?: string[] };
 
 /** "refunded": paid, then refunded in full. Partly refunded orders keep their status. */
-export type OrderStatus = "pending_payment" | "paid" | "fulfilled" | "cancelled" | "refunded";
+export type OrderStatus = "pending_payment" | "processing" | "paid" | "fulfilled" | "cancelled" | "refunded";
 
 /** An Australian suburb with its state and postcode. */
 export type Locality = { suburb: string; state: string; postcode: string };

@@ -45,10 +45,10 @@ export function OrderCard({ order }: { order: CustomerOrder }) {
             </a>
           </Button>
         )}
-        {(order.status === "paid" || order.status === "fulfilled") && (
+        {(order.status === "processing" || order.status === "paid" || order.status === "fulfilled") && (
           <Button asChild size="sm" variant="outline">
             <Link href={`/order/${order.id}#help`}>
-              <RotateCcw /> {order.status === "paid" ? "Cancel" : "Return items"}
+              <RotateCcw /> {order.status === "fulfilled" ? "Return items" : "Cancel"}
             </Link>
           </Button>
         )}

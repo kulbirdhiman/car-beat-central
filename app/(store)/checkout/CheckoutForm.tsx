@@ -15,8 +15,9 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useCart } from "@/lib/cart";
+import { cartLineKey, useCart } from "@/lib/cart";
 import { AU_STATES, formatCents, formatPrice } from "@/lib/data";
+import { selectedOptionSummary, selectedProductPrice } from "@/lib/product-options";
 import type { PaymentMethod } from "@/lib/payment";
 import { DELIVERY_OPTIONS, type Delivery } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
@@ -371,17 +372,22 @@ export function CheckoutForm({
           <ul className="space-y-3">
             {lines.map((l) => {
               const p = products[l.productId];
+              const unit = p ? selectedProductPrice(p, l.variantValues) : null;
+              const optionSummary = p ? selectedOptionSummary(p, l.variantValues) : "";
               return p ? (
-                <li key={l.productId} className="flex items-center gap-3 text-sm">
+                <li key={cartLineKey(l)} className="flex items-center gap-3 text-sm">
                   <span className="relative size-12 shrink-0 overflow-hidden rounded-lg bg-muted">
                     <Image src={p.image} alt="" fill sizes="48px" className="object-cover" />
                     <span className="absolute right-0 top-0 grid size-5 place-items-center rounded-bl-lg bg-foreground text-[10px] font-bold text-background">{l.qty}</span>
                   </span>
-                  <span className="min-w-0 flex-1 truncate">{p.name}</span>
-                  <span className="tabular-nums">{formatPrice((p.deal?.price ?? p.price) * l.qty)}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate">{p.name}</span>
+                    {optionSummary && <span className="block truncate text-xs text-muted-foreground">{optionSummary}</span>}
+                  </span>
+                  <span className="tabular-nums">{unit === null ? "—" : formatPrice(unit * l.qty)}</span>
                 </li>
               ) : (
-                <Skeleton key={l.productId} className="h-12 w-full" />
+                <Skeleton key={cartLineKey(l)} className="h-12 w-full" />
               );
             })}
           </ul>

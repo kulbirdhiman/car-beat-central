@@ -32,7 +32,7 @@ export default async function OrderPage(props: PageProps<"/order/[id]">) {
 
   const reference = <span className="font-mono font-medium text-foreground">#{orderReference(order.id)}</span>;
   const firstName = order.name.split(" ")[0];
-  const paid = order.status === "paid" || order.status === "fulfilled";
+  const paid = order.status === "processing" || order.status === "paid" || order.status === "fulfilled";
   const shipped = order.status === "fulfilled";
   const tracking = shipped && order.shippingCarrier && order.trackingNumber ? { carrier: CARRIERS[order.shippingCarrier].name, number: order.trackingNumber, url: trackingUrl(order.shippingCarrier, order.trackingNumber) } : null;
   const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
@@ -273,7 +273,7 @@ async function helpFor(order: NonNullable<Awaited<ReturnType<typeof getOrder>>>)
     viewer,
     email: order.email,
     canCancel: order.status === "pending_payment",
-    canRequestCancel: order.status === "paid" && !open,
+    canRequestCancel: (order.status === "processing" || order.status === "paid") && !open,
     returnable,
     returnBy: deadline?.toISOString() ?? null,
     windowClosed: order.status === "fulfilled" && !!deadline && !windowOpen,

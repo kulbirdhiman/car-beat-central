@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/components/layout/PageShell";
 import { ProductCard } from "@/components/product/ProductCard";
+import { ProductDescription, productDescriptionText } from "@/components/product/ProductDescription";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CATEGORY_GALLERY, CATEGORY_LABELS, discountPercent, findDepartment, formatPrice } from "@/lib/data";
 import { getAddOns, getCarBrands, getProductBySlug, getRelated, getStoreDepartments } from "@/lib/server/queries";
@@ -18,7 +19,7 @@ import { ReviewForm } from "./ReviewForm";
 
 export async function generateMetadata(props: PageProps<"/products/[slug]">): Promise<Metadata> {
   const product = await getProductBySlug((await props.params).slug);
-  return product ? { title: `${product.name} · CarBeat`, description: product.description } : {};
+  return product ? { title: `${product.name} · CarBeat`, description: productDescriptionText(product.description).slice(0, 160) } : {};
 }
 
 const PERKS = [
@@ -39,9 +40,10 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
     getAddOns(product),
   ]);
 
+  const hasOptions = !!product.optionGroups?.length;
   const price = product.deal?.price ?? product.price;
   const off = discountPercent(price, product.rrp);
-  const images = [...new Set([product.image, ...(product.images ?? []), ...CATEGORY_GALLERY[product.category]])].slice(0, 5);
+  const images = [...new Set([product.image, ...(product.images ?? []), ...CATEGORY_GALLERY[product.category]])].slice(0, 25);
   const fits = product.fits;
   const groups =
     fits === "universal"
@@ -97,10 +99,10 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
 
           {product.description && (
             <p className="mt-4 line-clamp-3 whitespace-pre-line leading-relaxed text-muted-foreground">
-              {product.description}
+              {productDescriptionText(product.description)}
             </p>
           )}
-          {(product.description.length > 220 || product.description.includes("\n")) && (
+          {(productDescriptionText(product.description).length > 220 || product.description.includes("\n")) && (
             <a href="#details" className="mt-1 inline-block text-sm font-semibold text-primary underline-offset-4 hover:underline">
               Read more
             </a>
@@ -108,7 +110,7 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
 
           <div className="mt-6 rounded-2xl border bg-card p-5 sm:p-6">
             <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
-              <p className={cn("font-display text-5xl font-bold leading-none tabular-nums", off > 0 && "text-primary")}>{formatPrice(price)}</p>
+              <p className={cn("font-display text-5xl font-bold leading-none tabular-nums", off > 0 && "text-primary")}>{hasOptions ? "From " : ""}{formatPrice(price)}</p>
               {off > 0 && (
                 <>
                   <p className="pb-1 text-muted-foreground">
@@ -141,8 +143,9 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
               image={product.image}
               price={price}
               stock={product.stock}
+              optionGroups={product.optionGroups ?? []}
               // Sold-out add-ons can't be bought, so they're left out.
-              addOns={addOns.filter((a) => a.stock > 0).map((a) => ({ id: a.id, slug: a.slug, name: a.name, image: a.image, price: a.deal?.price ?? a.price }))}
+              addOns={addOns.filter((a) => a.stock > 0 && !a.optionGroups?.length).map((a) => ({ id: a.id, slug: a.slug, name: a.name, image: a.image, price: a.deal?.price ?? a.price }))}
             />
           </div>
 
@@ -170,7 +173,7 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
               {product.description && (
                 <div>
                   <h2 className="font-semibold">Description</h2>
-                  <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">{product.description}</p>
+                  <ProductDescription description={product.description} className="mt-2 text-sm leading-relaxed text-muted-foreground" />
                 </div>
               )}
               {product.features.length > 0 && (

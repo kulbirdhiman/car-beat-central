@@ -43,7 +43,8 @@ export function parseCart(raw: unknown): CartLine[] | null {
   const lines: CartLine[] = [];
   for (const item of raw) {
     if (typeof item?.productId !== "string" || !Number.isInteger(item?.qty) || item.qty < 1 || item.qty > 20) return null;
-    lines.push({ productId: item.productId, qty: item.qty });
+    if (item.variantValues !== undefined && (!Array.isArray(item.variantValues) || item.variantValues.length > 3 || item.variantValues.some((value: unknown) => typeof value !== "string" || value.length > 60))) return null;
+    lines.push({ productId: item.productId, qty: item.qty, ...(item.variantValues ? { variantValues: item.variantValues as string[] } : {}) });
   }
   return lines;
 }

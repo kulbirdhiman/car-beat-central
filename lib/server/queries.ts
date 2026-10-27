@@ -3,6 +3,7 @@ import { and, asc, count, desc, eq, ilike, inArray, isNotNull, lte, ne, or, sql,
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { productFitsModel } from "../data";
 import type { CarBrand, Category, Offer, Product, StoreDepartment } from "../types";
+import { normalizeProductOptionGroups } from "../product-options";
 import { db } from "./db";
 import { coupons, deals, departments, offers, products, vehicleMakes, vehicleModels } from "./schema";
 
@@ -33,6 +34,7 @@ type ProductRow = {
 };
 
 function toProduct({ product: p, dealPrice, claimed, departmentName, departmentParentId }: ProductRow): Product {
+  const optionGroups = normalizeProductOptionGroups(p.optionGroups, p.price, p.variants);
   return {
     id: p.id,
     slug: p.slug,
@@ -49,6 +51,7 @@ function toProduct({ product: p, dealPrice, claimed, departmentName, departmentP
     images: p.images ?? [],
     description: p.description,
     features: p.features,
+    optionGroups,
     specs: p.specs,
     addOnIds: p.addOnIds,
     departmentId: p.departmentId,

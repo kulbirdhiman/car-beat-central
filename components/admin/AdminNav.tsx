@@ -23,7 +23,7 @@ const LINKS = [
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const { orders } = useAdminStore();
-  const toShip = orders.filter((o) => o.status === "paid").length;
+  const toShip = orders.filter((o) => o.status === "processing" || o.status === "paid").length;
   // The most specific matching link is the active one, so New invoice doesn't also light up Orders.
   const activeHref = LINKS.filter(({ href }) => (href === "/admin" ? pathname === href : pathname.startsWith(href)))
     .map(({ href }) => href)

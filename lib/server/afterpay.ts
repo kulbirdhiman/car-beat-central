@@ -131,11 +131,11 @@ export async function captureAfterpayPayment(orderId: string, token: string) {
   const [saved] = await db
     .update(orders)
     .set({
-      status: sql`CASE WHEN ${orders.status} = 'pending_payment' THEN 'paid' ELSE ${orders.status} END`,
+      status: sql`CASE WHEN ${orders.status} = 'pending_payment' THEN 'processing' ELSE ${orders.status} END`,
       afterpayOrderId: res.body.id,
       paidAt: new Date().toISOString(),
     })
     .where(eq(orders.id, order.id))
     .returning({ status: orders.status });
-  if (saved?.status !== "paid") console.error("Afterpay payment captured for an order that is no longer awaiting payment; refund it in Afterpay", orderId, res.body.id);
+  if (saved?.status !== "processing") console.error("Afterpay payment captured for an order that is no longer awaiting payment; refund it in Afterpay", orderId, res.body.id);
 }
