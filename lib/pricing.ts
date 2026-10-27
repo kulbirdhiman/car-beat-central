@@ -10,8 +10,8 @@ import type { Product } from "./types";
 export type PricedLine = { product: Pick<Product, "id" | "name" | "category" | "price" | "deal" | "departmentId" | "departmentParentId" | "fits">; qty: number };
 
 export const DELIVERY_OPTIONS = {
-  standard: { label: "Standard (3-6 business days)", fee: 995, freeOver: 9900 },
-  express: { label: "Express (1-2 business days)", fee: 1495, freeOver: null },
+  standard: { label: "Standard (3-6 business days)", fee: 3100, freeOver: 9900 },
+  express: { label: "Express (1-2 business days)", fee: 4500, freeOver: null },
   collect: { label: "Local pickup (we'll let you know when it's ready)", fee: 0, freeOver: null },
 } as const;
 

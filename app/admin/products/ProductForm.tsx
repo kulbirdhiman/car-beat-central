@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { newId, useAdminStore } from "@/components/admin/AdminStore";
 import { ImageUpload } from "@/components/admin/ImageUpload";
+import { RichDescriptionEditor } from "@/components/admin/RichDescriptionEditor";
 import { ModelPicker, ProductPicker } from "@/components/admin/Pickers";
 import { Field, PageHeader } from "@/components/admin/ui";
 import { Button } from "@/components/ui/button";
@@ -16,9 +17,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { departmentTree, type AdminProduct } from "@/lib/admin/model";
 import { CATEGORY_LABELS } from "@/lib/data";
+import { productDescriptionText } from "@/lib/product-description";
 import type { Category } from "@/lib/types";
 
-type Errors = Partial<Record<"name" | "sku" | "brand" | "departmentId" | "category" | "price" | "rrp" | "stock" | "image" | "fits" | "dealPrice" | "features" | "specs" | "addOns", string>>;
+type Errors = Partial<Record<"name" | "sku" | "brand" | "departmentId" | "category" | "price" | "rrp" | "stock" | "image" | "fits" | "dealPrice" | "description" | "features" | "specs" | "addOns", string>>;
 
 const LIST = "/admin/products";
 
@@ -83,6 +85,7 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
     if (!Number.isInteger(rrp) || rrp < price) next.rrp = "RRP can't be below the price.";
     if (!Number.isInteger(stock) || stock < 0) next.stock = "0 or more.";
     if (dealPrice !== null && (!Number.isInteger(dealPrice) || dealPrice <= 0 || dealPrice >= price)) next.dealPrice = "Whole dollars, below the price.";
+    if (form.description.length > 12000) next.description = "Keep the description under 12,000 characters.";
     if (features.length > 12 || features.some((f) => f.length > 200)) next.features = "Up to 12 lines of 200 characters.";
     if (specRows.some((r) => !r.label || !r.value)) next.specs = "Give every row both a name and a value.";
     else if (specRows.length > 30 || specRows.some((r) => r.label.length > 60 || r.value.length > 200)) next.specs = "Up to 30 rows; names up to 60 characters, values up to 200.";
@@ -158,14 +161,9 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
                 <Input id="pf-brand" value={form.brand} onChange={set("brand")} aria-invalid={!!errors.brand} />
               </Field>
               <Field id="pf-description" label="Description" className="sm:col-span-2">
-                <Textarea
-                  id="pf-description"
-                  value={form.description}
-                  onChange={set("description")}
-                  rows={6}
-                  maxLength={2000}
-                  placeholder="What it is, what it does and why it's worth it. Blank lines start new paragraphs."
-                />
+                <RichDescriptionEditor id="pf-description" value={form.description} onChange={(description) => setForm((f) => ({ ...f, description }))} />
+                <p className="mt-1 text-xs text-muted-foreground">Format the text, add links, and upload images. {productDescriptionText(form.description).length.toLocaleString()} characters.</p>
+                {errors.description && <p data-error className="mt-1 text-xs text-destructive">{errors.description}</p>}
               </Field>
               <Field id="pf-features" label="Features (one per line)" error={errors.features} className="sm:col-span-2">
                 <Textarea id="pf-features" value={form.features} onChange={set("features")} rows={5} aria-invalid={!!errors.features} />
@@ -232,7 +230,7 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
               <CardTitle>Product images</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="mb-3 text-sm text-muted-foreground">Add up to 10 photos. The first photo is used on product cards.</p>
+              <p className="mb-3 text-sm text-muted-foreground">Add up to 25 photos. The first photo is used on product cards.</p>
               <div className="space-y-3">
                 <Field id="pf-image" label="Main product image" error={errors.image}>
                   <ImageUpload id="pf-image" folder="products" value={form.image} onChange={(image) => setForm((f) => ({ ...f, image }))} invalid={!!errors.image} />
@@ -247,7 +245,7 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
                     <Button type="button" variant="ghost" size="icon" className="mt-6" aria-label={`Remove image ${index + 1}`} onClick={() => setImages((rows) => rows.filter((_, i) => i !== index))}><X /></Button>
                   </div>
                 ))}
-                {images.length < 9 && <Button type="button" variant="outline" size="sm" onClick={() => setImages((rows) => [...rows, ""])}><Plus /> Add image</Button>}
+                {images.length < 24 && <Button type="button" variant="outline" size="sm" onClick={() => setImages((rows) => [...rows, ""])}><Plus /> Add image</Button>}
               </div>
             </CardContent>
           </Card>

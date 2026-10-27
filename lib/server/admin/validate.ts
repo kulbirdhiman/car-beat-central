@@ -3,6 +3,7 @@ import type { AdminProduct, Coupon, CouponScope, CouponType, Department, Invoice
 import { AU_STATES, CATEGORY_LABELS } from "@/lib/data";
 import { PAYMENT_METHODS, type PaymentMethod } from "@/lib/payment";
 import { CARRIER_KEYS, type Shipment } from "@/lib/shipping";
+import { sanitizeProductDescription } from "@/lib/product-description";
 import type { Category, OrderStatus, Spec } from "@/lib/types";
 import { EMAIL_RE } from "../validate";
 
@@ -81,8 +82,8 @@ function image(body: Body, key: string): string {
 
 function productImages(body: Body): string[] {
   const value = body.images ?? [];
-  if (!Array.isArray(value) || value.length > 10 || value.some((v) => typeof v !== "string" || !v.trim() || v.length > 500)) {
-    throw new AdminError("Add up to 10 valid product images.");
+  if (!Array.isArray(value) || value.length > 25 || value.some((v) => typeof v !== "string" || !v.trim() || v.length > 500)) {
+    throw new AdminError("Add up to 25 valid product images.");
   }
   return [...new Set(value.map((v) => {
     const url = v.trim();
@@ -171,7 +172,7 @@ export function parseProduct(productId: string, value: unknown): ProductInput {
     fits,
     image: image(body, "image"),
     images: productImages(body),
-    description: text(body, "description", { max: 2000 }),
+    description: sanitizeProductDescription(text(body, "description", { max: 12000 })),
     badge: text(body, "badge", { max: 30, label: "Badge" }),
     features: features.map((f: string) => f.trim()),
     specs: specs.map(([label, value]: Spec) => [label.trim(), value.trim()] as Spec),
