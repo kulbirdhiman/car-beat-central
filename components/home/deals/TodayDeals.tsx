@@ -3,12 +3,11 @@ import Link from "next/link";
 import { ProductCard } from "@/components/product/ProductCard";
 import { Reveal } from "@/components/ui/Reveal";
 import { discountPercent, formatPrice } from "@/lib/data";
-import { getDeals } from "@/lib/server/queries";
 import { cn } from "@/lib/utils";
+import type { Product } from "@/lib/types";
 import { Countdown } from "./Countdown";
 
-export async function TodayDeals() {
-  const deals = await getDeals();
+export function TodayDeals({ deals }: { deals: Product[] }) {
   if (deals.length === 0) return null;
 
   const maxOff = Math.max(...deals.map((p) => discountPercent(p.deal!.price, p.rrp)));

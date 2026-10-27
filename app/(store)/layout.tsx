@@ -2,12 +2,12 @@ import { CarBrandsProvider } from "@/components/layout/CarBrandsProvider";
 import { ChatButton } from "@/components/layout/ChatButton";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SiteHeader } from "@/components/layout/SiteHeader";
-import { getCarBrands, getProductCount, getStoreDepartments } from "@/lib/server/queries";
+import { getStoreChromeData } from "@/lib/server/home-data";
 import { connection } from "next/server";
 
 export default async function StoreLayout({ children }: LayoutProps<"/">) {
   await connection();
-  const [departments, brands, total] = await Promise.all([getStoreDepartments(), getCarBrands(), getProductCount()]);
+  const { departments, brands, total } = await getStoreChromeData();
   return (
     <CarBrandsProvider brands={brands}>
       <SiteHeader departments={departments} total={total} />

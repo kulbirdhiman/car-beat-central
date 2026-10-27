@@ -9,24 +9,15 @@ import { InstallGallery } from "@/components/home/InstallGallery";
 import { Offers } from "@/components/home/offers/Offers";
 import { TrustBar } from "@/components/home/TrustBar";
 import { UpgradeSpotlight } from "@/components/home/UpgradeSpotlight";
-import { listCoupons } from "@/lib/server/admin/promos";
 import { SLIDE_SOURCES, type Slide } from "@/components/home/hero/slides";
-import { discountPercent, findDepartment, formatPrice } from "@/lib/data";
-import { getCarBrands, getFitCounts, getLiveOffers, getStoreDepartments, getTrending, listProducts } from "@/lib/server/queries";
+import { discountPercent, findDepartment, formatPrice, productFitsModel } from "@/lib/data";
+import { getHomeData, productPrice } from "@/lib/server/home-data";
 import type { Product, StoreDepartment } from "@/lib/types";
 import { connection } from "next/server";
 
 export default async function Home() {
   await connection();
-  const [products, departments, trending, byRating, offers, coupons, fitCounts] = await Promise.all([
-    listProducts(),
-    getStoreDepartments(),
-    getTrending(),
-    listProducts({ sort: "rating" }),
-    getLiveOffers(),
-    listCoupons(),
-    getFitCounts(),
-  ]);
+  const { products, departments, trending, byRating, offers, coupons, brands, fitCounts, deals } = await getHomeData();
   const reviews = products.reduce((n, p) => n + p.reviews, 0);
   const stats = {
     // Review-weighted, so a 5-star product with 3 reviews doesn't skew it.
@@ -50,9 +41,9 @@ export default async function Home() {
   return (
     <>
       {/* Deals lead: banners and today's price drops, then browsing by category, product and car. */}
-      <Hero slides={await buildSlides(departments)} promo={offers[0]} fitCounts={fitCounts} />
+      <Hero slides={buildSlides(departments, brands, products)} promo={offers[0]} fitCounts={fitCounts} />
       <TrustBar />
-      <TodayDeals />
+      <TodayDeals deals={deals} />
       <CategoryGrid departments={departments} />
       {spotlight && <UpgradeSpotlight product={spotlight} />}
       <CategoryRail groups={groups} />
@@ -65,25 +56,23 @@ export default async function Home() {
   );
 }
 
-const priceOf = (p: Product) => p.deal?.price ?? p.price;
-
 /** Banners whose department or vehicle has products, priced from those products. Always at least one. */
-async function buildSlides(departments: StoreDepartment[]): Promise<Slide[]> {
-  const models = (await getCarBrands()).flatMap((b) => b.models);
-  const built = await Promise.all(SLIDE_SOURCES.map(async ({ target, ...copy }): Promise<Slide[]> => {
+function buildSlides(departments: StoreDepartment[], brands: Awaited<ReturnType<typeof getHomeData>>["brands"], allProducts: Product[]): Slide[] {
+  const models = brands.flatMap((brand) => brand.models);
+  const built = SLIDE_SOURCES.map(({ target, ...copy }): Slide[] => {
     if ("dept" in target) {
       const dept = findDepartment(departments, (d) => d.slug === target.dept)?.department;
-      const products = dept ? await listProducts({ dept: dept.slug }) : [];
+      const products = dept ? allProducts.filter((product) => product.departmentId === dept.id || product.departmentParentId === dept.id) : [];
       if (!dept || products.length === 0) return [];
-      const from = Math.min(...products.map(priceOf));
+      const from = Math.min(...products.map(productPrice));
       return [{ ...copy, price: `From ${formatPrice(from)}`, cta: { label: `Shop ${dept.name.toLowerCase()}`, href: `/shop?dept=${dept.slug}` } }];
     }
     if (!models.some((m) => m.id === target.model)) return [];
-    const products = await listProducts({ model: target.model });
+    const products = allProducts.filter((product) => productFitsModel(product, target.model));
     if (products.length === 0) return [];
-    const best = Math.max(...products.map((p) => discountPercent(priceOf(p), p.rrp)));
+    const best = Math.max(...products.map((p) => discountPercent(productPrice(p), p.rrp)));
     return [{ ...copy, price: best > 0 ? `Save up to ${best}%` : `${products.length} parts that fit`, cta: { label: target.label, href: `/shop?model=${target.model}` } }];
-  }));
+  });
   const slides = built.flat();
   if (slides.length > 0) return slides;
   const { image, alt, eyebrow, title, body } = SLIDE_SOURCES[0];

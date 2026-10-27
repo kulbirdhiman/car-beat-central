@@ -1,5 +1,5 @@
 import "server-only";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { adminAccess } from "../admin-auth";
 import { AdminError } from "./validate";
 
@@ -14,7 +14,10 @@ export function adminRoute<Ctx>(handler: (request: Request, ctx: Ctx) => unknown
     if (access === "forbidden") return Response.json({ error: "Admin access required." }, { status: 403 });
     try {
       const result = await handler(request, ctx);
-      if (writes) revalidatePath("/", "layout");
+      if (writes) {
+        revalidateTag("store-home-data", "max");
+        revalidatePath("/", "layout");
+      }
       return Response.json(result ?? { ok: true }, { headers: { "Cache-Control": "no-store" } });
     } catch (error) {
       if (error instanceof AdminError) return Response.json({ error: error.message }, { status: error.status });

@@ -32,20 +32,16 @@ export function Hero({ slides, promo, fitCounts }: { slides: Slide[]; promo?: Of
         onPointerEnter={() => setPaused(true)}
         onPointerLeave={() => setPaused(false)}
       >
-        {/* All photos mounted, only the active one visible, so switching is a crossfade. */}
-        {slides.map((s, i) => (
-          <div key={s.alt} className={cn("absolute inset-0 -z-10 transition-opacity duration-1000", i === index ? "opacity-100" : "opacity-0")} aria-hidden={i !== index}>
-            <Image
-              src={s.image}
-              alt={s.alt}
-              fill
-              sizes="(min-width: 1024px) 66vw, 100vw"
-              placeholder="blur"
-              preload={i === 0}
-              className={cn("object-cover", i === index && "animate-kenburns")}
-            />
-          </div>
-        ))}
+        <Image
+          key={slide.alt}
+          src={slide.image}
+          alt={slide.alt}
+          fill
+          sizes="(min-width: 1024px) 66vw, 100vw"
+          placeholder="blur"
+          preload={index === 0}
+          className="-z-10 object-cover animate-kenburns"
+        />
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-ink/95 via-ink/60 to-transparent" />
         <div className="absolute inset-x-0 bottom-0 -z-10 h-40 bg-gradient-to-t from-ink/80 to-transparent" />
 
