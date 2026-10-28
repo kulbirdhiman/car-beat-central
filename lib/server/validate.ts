@@ -32,6 +32,7 @@ export async function parseFilters(params: URLSearchParams): Promise<ProductFilt
     category: category && category in CATEGORY_LABELS ? (category as Category) : undefined,
     dept: dept && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(dept) ? dept.slice(0, 80) : undefined,
     model: selectedModel?.id,
+    year: selectedModel && /^\d{4}$/.test(params.get("year") ?? "") ? Number(params.get("year")) : undefined,
     subModel: subModel && selectedModel?.subModels?.some((s) => s.id === subModel) ? subModel : undefined,
     maxPrice: maxPrice > 0 ? maxPrice : undefined,
     onSale: params.get("sale") === "1" || undefined,

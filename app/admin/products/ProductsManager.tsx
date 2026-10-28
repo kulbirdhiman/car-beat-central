@@ -1,5 +1,6 @@
 "use client";
 
+import { fitmentLabel } from "@/lib/fitment-years";
 import { Copy, Download, Pencil, Plus, Search, Trash2, Upload } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -19,7 +20,7 @@ import { CATEGORY_LABELS, formatPrice } from "@/lib/data";
 import type { Category } from "@/lib/types";
 
 const ALL = "all";
-const PRODUCT_COLUMNS = ["id", "sku", "name", "brand", "departmentId", "category", "price", "rrp", "stock", "status", "fits", "image", "images", "description", "badge", "features", "specs", "addOnIds", "dealPrice", "trending", "keywords", "optionGroups"] as const;
+const PRODUCT_COLUMNS = ["id", "sku", "name", "brand", "departmentId", "category", "price", "rrp", "stock", "status", "fits", "image", "images", "description", "badge", "features", "specs", "addOnIds", "dealPrice", "trending", "keywords", "optionGroups", "fitmentYears"] as const;
 
 function parseCsv(source: string) {
   const text = source.replace(/^\uFEFF/, "");
@@ -94,7 +95,7 @@ function importProduct(fields: Record<string, string>): AdminProduct {
   return {
     id: fields.id.trim() || newId("p"), slug: "", sku: fields.sku.trim(), name: fields.name.trim(), brand: fields.brand.trim(),
     departmentId: fields.departmentId.trim(), category, price: number("price"), rrp: number("rrp", fields.price), stock: number("stock"),
-    status: status === "active" ? "active" : "draft", fits, image, images: images.length ? images : image ? [image] : [],
+    status: status === "active" ? "active" : "draft", fits, fitmentYears: fields.fitmentYears?.trim() ? JSON.parse(fields.fitmentYears) : {}, image, images: images.length ? images : image ? [image] : [],
     description: fields.description, badge: fields.badge.trim(), features: csvList(fields.features, "features"), keywords: csvList(fields.keywords ?? "", "keywords"), specs,
     optionGroups: parseJson("optionGroups") as AdminProduct["optionGroups"],
     addOnIds: csvList(fields.addOnIds, "addOnIds"), dealPrice: fields.dealPrice.trim() ? number("dealPrice") : null,
@@ -103,12 +104,14 @@ function importProduct(fields: Record<string, string>): AdminProduct {
 }
 
 /** "Universal", or e.g. "BMW 3 Series, X5 · Toyota HiLux". */
-export function fitsSummary(fits: AdminProduct["fits"], makes: VehicleMake[]) {
+export function fitsSummary(fits: AdminProduct["fits"], makes: VehicleMake[], fitmentYears?: AdminProduct["fitmentYears"]) {
   if (fits === "universal") return "Universal";
   const parts = makes.flatMap((make) => {
     const names = make.models.flatMap((m) => {
-      if (fits.includes(m.id)) return [m.name];
-      return m.subModels.filter((s) => fits.includes(s.id)).map((s) => `${m.name} ${s.name}`);
+      return [
+        ...(fits.includes(m.id) ? [fitmentLabel({ fitmentYears }, m.id, m.name)] : []),
+        ...m.subModels.filter((s) => fits.includes(s.id)).map((s) => fitmentLabel({ fitmentYears }, s.id, `${m.name} ${s.name}`)),
+      ];
     });
     return names.length ? [`${make.name} ${names.join(", ")}`] : [];
   });
@@ -197,7 +200,7 @@ export function ProductsManager() {
     const csv = [PRODUCT_COLUMNS, ...products.map((p) => [
       p.id, p.sku, p.name, p.brand, p.departmentId, p.category, p.price, p.rrp, p.stock, p.status,
       p.fits === "universal" ? "universal" : JSON.stringify(p.fits), p.image, JSON.stringify(p.images), p.description, p.badge,
-      JSON.stringify(p.features), JSON.stringify(p.specs), JSON.stringify(p.addOnIds), p.dealPrice, p.trending, JSON.stringify(p.keywords), JSON.stringify(p.optionGroups),
+      JSON.stringify(p.features), JSON.stringify(p.specs), JSON.stringify(p.addOnIds), p.dealPrice, p.trending, JSON.stringify(p.keywords), JSON.stringify(p.optionGroups), JSON.stringify(p.fitmentYears ?? {}),
     ])].map((line) => line.map(csvCell).join(",")).join("\r\n");
     const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" }));
     const anchor = Object.assign(document.createElement("a"), { href: url, download: `carbeat-products-${new Date().toISOString().slice(0, 10)}.csv` });
@@ -334,8 +337,8 @@ export function ProductsManager() {
                       </div>
                     </TableCell>
                     <TableCell className="hidden md:table-cell">{departmentName(p.departmentId)}</TableCell>
-                    <TableCell className="hidden max-w-64 truncate text-muted-foreground lg:table-cell" title={fitsSummary(p.fits, makes)}>
-                      {fitsSummary(p.fits, makes)}
+                    <TableCell className="hidden max-w-64 truncate text-muted-foreground lg:table-cell" title={fitsSummary(p.fits, makes, p.fitmentYears)}>
+                      {fitsSummary(p.fits, makes, p.fitmentYears)}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       <div>{formatPrice(p.price)}</div>

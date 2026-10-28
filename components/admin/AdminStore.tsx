@@ -22,7 +22,7 @@ type Store = AdminData & {
   deleteDepartment: (id: string) => void;
   /** Reorders one group of siblings: the top-level departments, or one department's sub-departments. */
   reorderDepartments: (siblings: Department[]) => void;
-  saveProduct: (p: AdminProduct) => void;
+  saveProduct: (p: AdminProduct) => Promise<void>;
   importProducts: (products: AdminProduct[]) => Promise<{ id: string; error?: string }[]>;
   deleteProduct: (id: string) => void;
   /** `shipment`: the carrier and tracking number to save with it (null clears them). */
@@ -149,13 +149,10 @@ export function AdminStoreProvider({ initial, children }: { initial: AdminData; 
         save(api("PATCH", "/departments", ids(siblings)));
       },
 
-      saveProduct: (p) => {
-        setProducts((list) => upsert(list, p));
-        save(api<AdminProduct>("PUT", `/products/${p.id}`, p), {
-          success: `Saved ${p.name}.`,
-          // The server sets the store URL slug on new products.
-          done: (saved) => setProducts((list) => upsert(list, saved)),
-        });
+      saveProduct: async (p) => {
+        const saved = await api<AdminProduct>("PUT", `/products/${p.id}`, p);
+        setProducts((list) => upsert(list, saved));
+        toast.success(`Saved ${saved.name}.`);
       },
       importProducts: async (rows) => {
         const results: { id: string; error?: string }[] = [];

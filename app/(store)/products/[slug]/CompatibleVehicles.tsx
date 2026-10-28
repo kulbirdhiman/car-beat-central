@@ -1,5 +1,7 @@
 "use client";
 
+import { productFitsModel } from "@/lib/data";
+import type { Product } from "@/lib/types";
 import { CarFront, CircleCheck, Globe } from "lucide-react";
 import { useGarage } from "@/lib/garage";
 import { cn } from "@/lib/utils";
@@ -7,10 +9,10 @@ import { cn } from "@/lib/utils";
 type Group = { brand: string; models: { id: string; name: string; subModels?: { id: string; name: string; years: string }[] }[] };
 
 /** Every vehicle this part fits, grouped by make, with the shopper's saved car highlighted. */
-export function CompatibleVehicles({ groups }: { groups: Group[] | null }) {
+export function CompatibleVehicles({ groups, product }: { groups: Group[] | null; product: Pick<Product, "fits" | "fitmentYears"> }) {
   const { car } = useGarage();
   const count = groups?.reduce((n, g) => n + g.models.reduce((total, m) => total + Math.max(1, m.subModels?.length ?? 0), 0), 0) ?? 0;
-  const fitsMine = car && (groups === null || groups.some((g) => g.models.some((m) => m.id === car.model.id && (!m.subModels?.length || m.subModels.some((s) => s.id === car.subModel?.id)))));
+  const fitsMine = car && productFitsModel(product, car.model.id, car.subModel?.id, car.year);
 
   return (
     <section aria-labelledby="compat-title" className="rounded-2xl border bg-card p-5">
@@ -34,8 +36,8 @@ export function CompatibleVehicles({ groups }: { groups: Group[] | null }) {
               <dd className="flex flex-wrap gap-1.5">
                 {g.models.flatMap((m) => {
                   const matches = m.subModels?.length
-                    ? m.subModels.map((s) => ({ id: s.id, label: `${m.name} · ${s.name}`, mine: car?.model.id === m.id && car.subModel?.id === s.id }))
-                    : [{ id: m.id, label: m.name, mine: car?.model.id === m.id }];
+                    ? m.subModels.map((s) => ({ id: s.id, label: `${m.name} · ${s.name}`, mine: !!fitsMine && car?.model.id === m.id && car.subModel?.id === s.id }))
+                    : [{ id: m.id, label: m.name, mine: !!fitsMine && car?.model.id === m.id }];
                   return matches.map((item) => (
                     <span key={item.id} className={cn("inline-flex h-7 items-center gap-1 rounded-full border px-2.5 text-xs font-medium", item.mine ? "border-success bg-success/10 text-success" : "bg-background")}>
                       {item.mine && <CircleCheck className="size-3.5" />}

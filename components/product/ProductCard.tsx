@@ -1,3 +1,4 @@
+import { fitmentYearLabel } from "@/lib/fitment-years";
 import { CarFront, CheckCircle2, Star } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -23,6 +24,7 @@ export function ProductCard({ product, footer, sizes = "(min-width: 1024px) 25vw
   const price = product.deal?.price ?? product.price;
   const off = discountPercent(price, product.rrp);
   const flag = product.deal ? "Today's deal" : product.badge;
+  const yearRanges = product.fits === "universal" ? [] : [...new Set(product.fits.map((id) => fitmentYearLabel(product, id)).filter(Boolean))];
   const fitsCount = product.fits === "universal" ? null : product.fits.length;
 
   return (
@@ -83,6 +85,8 @@ export function ProductCard({ product, footer, sizes = "(min-width: 1024px) 25vw
             )}
           </span>
         </div>
+
+        {yearRanges.length > 0 && <p className="mt-1 text-xs text-muted-foreground">Model years: {yearRanges.join(", ")}. See vehicle compatibility.</p>}
 
         <div className="mt-auto pt-3">
           <div className="flex flex-wrap items-baseline gap-x-2">

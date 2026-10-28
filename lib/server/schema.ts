@@ -33,6 +33,7 @@ export const products = pgTable(
     reviews: integer("reviews").notNull(),
     /** Car model ids, or "universal". */
     fits: jsonb("fits").$type<string[] | "universal">().notNull(),
+    fitmentYears: jsonb("fitment_years").$type<Record<string, { from: number | null; to: number | null }>>().notNull().default({}),
     badge: text("badge"),
     image: text("image").notNull(),
     images: jsonb("images").$type<string[]>().notNull().default([]),

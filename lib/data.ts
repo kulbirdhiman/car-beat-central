@@ -11,8 +11,13 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   interior: "Interior",
 };
 
-export function productFitsModel(product: Pick<Product, "fits">, modelId: string, subModelId?: string) {
-  return product.fits === "universal" || product.fits.includes(modelId) || (!!subModelId && product.fits.includes(subModelId));
+export function productFitsModel(product: Pick<Product, "fits" | "fitmentYears">, modelId: string, subModelId?: string, year?: number) {
+  if (product.fits === "universal") return true;
+  return [modelId, ...(subModelId ? [subModelId] : [])].some((id) => {
+    if (product.fits === "universal" || !product.fits.includes(id)) return false;
+    const range = product.fitmentYears?.[id];
+    return !year || !range || ((range.from == null || year >= range.from) && (range.to == null || year <= range.to));
+  });
 }
 
 /** Finds a store department, or one of its sub-departments, with its parent. */

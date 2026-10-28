@@ -1,5 +1,7 @@
 "use client";
 
+import { vehicleOptionLabel } from "@/lib/fitment-years";
+
 import { CarFront, ShieldCheck } from "lucide-react";
 import Image from "next/image";
 import { VehicleForm } from "@/components/layout/VehicleForm";
@@ -23,13 +25,13 @@ export function VehicleSearchCard({ fitCounts }: { fitCounts: Record<string, num
         <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-wider text-white/60">{car ? "Welcome back" : "Shop by vehicle"}</p>
           <p className="truncate font-display text-2xl font-extrabold leading-tight">
-            {car ? `Parts for your ${car.subModel?.name ?? car.model.name}` : "Find parts that fit"}
+            {car ? `Parts for your ${vehicleOptionLabel(car.subModel ?? car.model)}` : "Find parts that fit"}
           </p>
         </div>
       </div>
 
       {/* Keyed on the saved car: the garage only loads after hydration, so the form starts on it then. */}
-      <VehicleForm key={`${car?.model.id ?? "none"}:${car?.subModel?.id ?? "none"}`} fitCounts={fitCounts} tone="dark" className="mt-4 grid-cols-2" />
+      <VehicleForm key={`${car?.model.id ?? "none"}:${car?.subModel?.id ?? "none"}:${car?.year ?? "all"}`} fitCounts={fitCounts} tone="dark" className="mt-4 grid-cols-2" />
 
       <p className="mt-3 flex items-center gap-1.5 text-xs text-white/60">
         <ShieldCheck className="size-3.5 text-primary" /> Fitment guaranteed, or we pay return postage

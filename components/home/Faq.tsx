@@ -16,7 +16,7 @@ const BASE_FAQS = [
   },
   {
     q: "How much is delivery?",
-    a: "Standard delivery is free on orders over $99, otherwise $9.95 Australia-wide. Express (1-2 business days) is $14.95, and local pickup is free.",
+    a: "Standard delivery is $29 Australia-wide. Express (1-2 business days) is $45, and local pickup is free.",
   },
   {
     q: "Can I return something?",

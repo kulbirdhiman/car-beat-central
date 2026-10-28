@@ -1,3 +1,4 @@
+import { fitmentLabel } from "@/lib/fitment-years";
 import { ArrowRight, CarFront, Check, Star } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -18,7 +19,7 @@ export async function UpgradeSpotlight({ product }: { product: Product }) {
     [m.id, `${b.name} ${m.name}`] as const,
     ...(m.subModels ?? []).map((s) => [s.id, `${b.name} ${m.name} ${s.name}`] as const),
   ])));
-  const fits = product.fits === "universal" ? [] : product.fits.map((id) => modelNames[id]).filter(Boolean);
+  const fits = product.fits === "universal" ? [] : product.fits.map((id) => modelNames[id] ? fitmentLabel(product, id, modelNames[id]) : "").filter(Boolean);
   // The product's own spec rows, or its feature list when it has none.
   const specs = getProductSpecs(product).slice(0, 4);
   const highlights = specs.length > 0 ? specs : product.features.slice(0, 4).map((f): [string, string] => ["Feature", f]);

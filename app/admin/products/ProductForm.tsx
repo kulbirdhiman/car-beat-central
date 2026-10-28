@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { departmentTree, type AdminProduct } from "@/lib/admin/model";
-import { CATEGORY_LABELS, formatPrice } from "@/lib/data";
+import { CATEGORY_LABELS } from "@/lib/data";
 import { productDescriptionText } from "@/lib/product-description";
 import type { Category } from "@/lib/types";
 
@@ -62,6 +62,11 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
   const [specs, setSpecs] = useState<SpecRow[]>(() => product?.specs.map(([label, value]) => specRow(label, value)) ?? []);
   const [addOns, setAddOns] = useState<Set<string>>(new Set(product?.addOnIds ?? []));
   const [optionGroups, setOptionGroups] = useState<OptionDraft[]>(() => product?.optionGroups.map((group) => ({ name: group.name, required: group.required, values: group.values.map((choice) => ({ name: choice.name, price: String(choice.price) })) })) ?? []);
+  const [fitmentYears, setFitmentYears] = useState<Record<string, { from: string; to: string }>>(() => Object.fromEntries(Object.entries(product?.fitmentYears ?? {}).map(([id, range]) => [id, { from: range.from == null ? "" : String(range.from), to: range.to == null ? "" : String(range.to) }])));
+  const [draftYears, setDraftYears] = useState({ from: "", to: "" });
+  const selectedVehicles = makes.flatMap((make) => make.models.flatMap((model) => [{ id: model.id, name: `${make.name} ${model.name}` }, ...model.subModels.map((sub) => ({ id: sub.id, name: `${make.name} ${model.name} · ${sub.name}` }))])).filter((vehicle) => models.has(vehicle.id));
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [errors, setErrors] = useState<Errors>({});
   // Which submit button was pressed.
   const addAnother = useRef(false);
@@ -70,8 +75,22 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }));
 
-  function submit(e: React.FormEvent) {
+  function selectModels(next: Set<string>) {
+    setFitmentYears((current) => {
+      const updated = { ...current };
+      for (const id of next) {
+        if (!models.has(id) && !updated[id]) updated[id] = { ...draftYears };
+      }
+      return updated;
+    });
+    setModels(next);
+    if (next.size) setUniversal(false);
+  }
+
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (saving) return;
+    setSaveError(null);
     const price = Number(form.price);
     const rrp = Number(form.rrp || form.price);
     const stock = Number(form.stock);
@@ -108,6 +127,14 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
     if (addOns.size > 12) next.addOns = "Pick at most 12 add-ons.";
     if (!form.image.trim()) next.image = "Upload an image or add its path or URL.";
     if (!universal && models.size === 0) next.fits = "Pick at least one model, or mark it universal.";
+    const cleanFitmentYears: NonNullable<AdminProduct["fitmentYears"]> = {};
+    if (!universal) for (const id of models) {
+      const range = fitmentYears[id];
+      if (!range || (!range.from && !range.to)) continue;
+      const from = range.from ? Number(range.from) : null;
+      const to = range.to ? Number(range.to) : null;
+      cleanFitmentYears[id] = from !== null && to !== null && from > to ? { from: to, to: from } : { from, to };
+    }
     setErrors(next);
     if (Object.keys(next).length) {
       // The form is long, so bring the first problem into view.
@@ -115,41 +142,49 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
       return;
     }
 
-    saveProduct({
-      id: product?.id ?? newId("p"),
-      // New products get their store URL from the server.
-      slug: product?.slug ?? "",
-      name: form.name.trim(),
-      sku: form.sku.trim().toUpperCase(),
-      brand: form.brand.trim(),
-      departmentId: form.departmentId,
-      category: form.category as Category,
-      price,
-      rrp,
-      stock,
-      status: form.status as AdminProduct["status"],
-      image: form.image.trim(),
-      images: [form.image.trim(), ...images.filter((image) => image.trim())],
-      description: form.description.trim(),
-      fits: universal ? "universal" : [...models],
-      badge: form.badge.trim(),
-      features,
-      keywords,
-      optionGroups: cleanOptionGroups,
-      specs: specRows.map((r): [string, string] => [r.label, r.value]),
-      addOnIds: [...addOns],
-      dealPrice,
-      trending,
-      // Ratings come from customer reviews; the server ignores these.
-      rating: product?.rating ?? 0,
-      reviews: product?.reviews ?? 0,
-    });
+    setSaving(true);
+    try {
+      await saveProduct({
+        id: product?.id ?? newId("p"),
+        // New products get their store URL from the server.
+        slug: product?.slug ?? "",
+        name: form.name.trim(),
+        sku: form.sku.trim().toUpperCase(),
+        brand: form.brand.trim(),
+        departmentId: form.departmentId,
+        category: form.category as Category,
+        price,
+        rrp,
+        stock,
+        status: form.status as AdminProduct["status"],
+        image: form.image.trim(),
+        images: [form.image.trim(), ...images.filter((image) => image.trim())],
+        description: form.description.trim(),
+        fits: universal ? "universal" : [...models],
+        fitmentYears: cleanFitmentYears,
+        badge: form.badge.trim(),
+        features,
+        keywords,
+        optionGroups: cleanOptionGroups,
+        specs: specRows.map((r): [string, string] => [r.label, r.value]),
+        addOnIds: [...addOns],
+        dealPrice,
+        trending,
+        // Ratings come from customer reviews; the server ignores these.
+        rating: product?.rating ?? 0,
+        reviews: product?.reviews ?? 0,
+      });
 
-    if (addAnother.current && onAddAnother) {
-      onAddAnother();
-      window.scrollTo({ top: 0 });
-    } else {
-      router.push(LIST);
+      if (addAnother.current && onAddAnother) {
+        onAddAnother();
+        window.scrollTo({ top: 0 });
+      } else {
+        router.push(LIST);
+      }
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Couldn't save the product. Please try again.");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -353,14 +388,34 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
           <Card id="pf-fitment" className="scroll-mt-36">
             <CardHeader>
               <CardTitle>Vehicle fitment</CardTitle>
-              <CardDescription>Which vehicles this product fits.</CardDescription>
+              <CardDescription>Enter or change the year range and select compatible models and submodels.</CardDescription>
             </CardHeader>
             <CardContent>
               <label className="mb-3 flex items-center gap-2 text-sm">
                 <Checkbox checked={universal} onCheckedChange={(v) => setUniversal(v === true)} />
                 Universal: fits every vehicle
               </label>
-              {!universal && <ModelPicker makes={makes} value={models} onChange={setModels} includeSubModels />}
+              <div className="mb-4 space-y-3 rounded-lg bg-muted/30 p-3">
+                <h3 className="text-sm font-semibold">From / To year</h3>
+                <p className="text-sm text-muted-foreground">Enter a range before selecting vehicles, or apply it to the vehicles already selected. You can also change each vehicle’s years below.</p>
+                <YearRangeFields id="pf-default-years" value={draftYears} onChange={setDraftYears} />
+                <Button type="button" variant="outline" disabled={universal || !selectedVehicles.length} onClick={() => setFitmentYears((current) => ({ ...current, ...Object.fromEntries([...models].map((id) => [id, { ...draftYears }])) }))}>
+                  Apply to selected vehicles
+                </Button>
+                {universal && <p className="text-xs text-muted-foreground">Universal products fit all years. Select a model or submodel below to use a specific range.</p>}
+              </div>
+              <ModelPicker makes={makes} value={universal ? new Set<string>() : models} onChange={selectModels} includeSubModels />
+              {!universal && selectedVehicles.length > 0 && (
+                <div className="mt-4 space-y-3">
+                  <p className="text-sm text-muted-foreground">Years for each selected vehicle. Either year is optional. Leave both blank for all years.</p>
+                  {selectedVehicles.map((vehicle) => (
+                    <fieldset key={vehicle.id} className="rounded-lg border p-3">
+                      <legend className="px-1 text-sm font-medium">{vehicle.name}</legend>
+                      <YearRangeFields id={`pf-year-${vehicle.id}`} value={fitmentYears[vehicle.id] ?? { from: "", to: "" }} onChange={(range) => setFitmentYears((current) => ({ ...current, [vehicle.id]: range }))} />
+                    </fieldset>
+                  ))}
+                </div>
+              )}
               {errors.fits && (
                 <p data-error className="mt-2 text-xs text-destructive">
                   {errors.fits}
@@ -388,18 +443,6 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
         </div>
 
         <div className="space-y-6">
-          <ProductPreview
-            name={form.name}
-            brand={form.brand}
-            image={form.image}
-            galleryCount={images.length + (form.image ? 1 : 0)}
-            price={form.price}
-            rrp={form.rrp}
-            dealPrice={form.dealPrice}
-            category={form.category}
-            status={form.status}
-          />
-
           <Card id="pf-publish" className="scroll-mt-36">
             <CardHeader>
               <CardTitle>Status</CardTitle>
@@ -476,17 +519,18 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
 
         {/* Kept in view so the form can be saved from anywhere on the page. */}
         <div className="fixed inset-x-0 bottom-0 z-20 border-t bg-background/95 backdrop-blur lg:left-60">
+          {saveError && <p role="alert" className="px-4 pt-3 text-sm text-destructive sm:px-6 lg:px-10">{saveError}</p>}
           <div className="flex justify-end gap-2 px-4 py-3 sm:px-6 lg:px-10">
             <Button variant="outline" asChild>
               <Link href={LIST}>Cancel</Link>
             </Button>
             {onAddAnother && (
-              <Button type="submit" variant="secondary" onClick={() => (addAnother.current = true)}>
+              <Button type="submit" disabled={saving} variant="secondary" onClick={() => (addAnother.current = true)}>
                 Save &amp; add another
               </Button>
             )}
-            <Button type="submit" onClick={() => (addAnother.current = false)}>
-              {product ? "Save changes" : "Add product"}
+            <Button type="submit" disabled={saving} onClick={() => (addAnother.current = false)}>
+              {saving ? "Saving…" : product ? "Save changes" : "Add product"}
             </Button>
           </div>
         </div>
@@ -495,67 +539,17 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
   );
 }
 
-function ProductPreview({
-  name,
-  brand,
-  image,
-  galleryCount,
-  price,
-  rrp,
-  dealPrice,
-  category,
-  status,
-}: {
-  name: string;
-  brand: string;
-  image: string;
-  galleryCount: number;
-  price: string;
-  rrp: string;
-  dealPrice: string;
-  category: string;
-  status: string;
-}) {
-  const validPrice = Number.isInteger(Number(price)) && Number(price) > 0;
-  const validRrp = Number.isInteger(Number(rrp)) && Number(rrp) >= Number(price);
-  const validDeal = Number.isInteger(Number(dealPrice)) && Number(dealPrice) > 0 && Number(dealPrice) < Number(price);
-
+function YearRangeFields({ id, value, onChange }: { id: string; value: { from: string; to: string }; onChange: (range: { from: string; to: string }) => void }) {
   return (
-    <Card className="overflow-hidden xl:sticky xl:top-24">
-      <CardHeader>
-        <CardTitle>Live preview</CardTitle>
-        <CardDescription>Updates as you edit the product.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="overflow-hidden rounded-xl border bg-background">
-          <div className="relative aspect-square bg-muted">
-            {image ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={image} alt={name ? `${name} preview` : "Product photo preview"} className="size-full object-cover" />
-            ) : (
-              <div className="grid size-full place-items-center text-sm text-muted-foreground">Add a main photo</div>
-            )}
-            <span className="absolute left-2 top-2 rounded-full bg-background/95 px-2.5 py-1 text-xs font-semibold">
-              {status === "active" ? "Active" : "Draft"}
-            </span>
-            {validDeal && <span className="absolute right-2 top-2 rounded-full bg-destructive px-2.5 py-1 text-xs font-bold text-white">Deal</span>}
-          </div>
-          <div className="space-y-2 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{brand || "Brand"}</p>
-            <h3 className="line-clamp-2 min-h-10 font-semibold">{name || "Product name will appear here"}</h3>
-            <p className="text-xs text-muted-foreground">{category in CATEGORY_LABELS ? CATEGORY_LABELS[category as Category] : "Choose a category"}</p>
-            <div className="flex flex-wrap items-baseline gap-2">
-              {validPrice ? (
-                <span className="font-display text-2xl font-bold">{formatPrice(validDeal ? Number(dealPrice) : Number(price))}</span>
-              ) : (
-                <span className="text-sm text-muted-foreground">Add a price</span>
-              )}
-              {validRrp && Number(rrp) > Number(price) && <span className="text-sm text-muted-foreground line-through">{formatPrice(Number(rrp))}</span>}
-            </div>
-            <p className="border-t pt-2 text-xs text-muted-foreground">{galleryCount} product photo{galleryCount === 1 ? "" : "s"}</p>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="grid grid-cols-2 gap-3">
+      {(["from", "to"] as const).map((bound) => (
+        <Field key={bound} id={`${id}-${bound}`} label={bound === "from" ? "From year" : "To year"}>
+          <Input id={`${id}-${bound}`} type="text" inputMode="numeric" maxLength={4} placeholder={bound === "from" ? "2004" : "2009"} value={value[bound]} onChange={(event) => {
+            const next = event.target.value;
+            if (/^\d{0,4}$/.test(next)) onChange({ ...value, [bound]: next });
+          }} />
+        </Field>
+      ))}
+    </div>
   );
 }
