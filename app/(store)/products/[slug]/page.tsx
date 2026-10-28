@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { ArrowRight, Check, MessageSquareText, RotateCcw, ShieldCheck, Star, Truck, Wrench } from "lucide-react";
+import { ArrowRight, MessageSquareText, RotateCcw, ShieldCheck, Star, Truck, Wrench } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/components/layout/PageShell";
 import { ProductCard } from "@/components/product/ProductCard";
-import { ProductDescription, productDescriptionText } from "@/components/product/ProductDescription";
+import { productDescriptionText } from "@/components/product/ProductDescription";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CATEGORY_LABELS, discountPercent, findDepartment, formatPrice } from "@/lib/data";
 import { getAddOns, getCarBrands, getProductBySlug, getRelated, getStoreDepartments } from "@/lib/server/queries";
@@ -29,18 +29,9 @@ const PERKS = [
   { icon: Wrench, title: "Pro fitting", body: "In every capital city" },
 ];
 
-function descriptionPreview(text: string, limit = 180) {
-  if (text.length <= limit) return text;
-  const excerpt = text.slice(0, limit);
-  const lastSpace = excerpt.lastIndexOf(" ");
-  return `${excerpt.slice(0, lastSpace > limit * 0.6 ? lastSpace : limit).trimEnd()}…`;
-}
-
 export default async function ProductPage(props: PageProps<"/products/[slug]">) {
   const product = await getProductBySlug((await props.params).slug);
   if (!product) notFound();
-  const descriptionText = productDescriptionText(product.description);
-  const shortDescription = descriptionPreview(descriptionText);
   const [brands, reviews, departments, related, addOns] = await Promise.all([
     getCarBrands(),
     listReviews(product.id),
@@ -106,17 +97,6 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
             <span className="text-muted-foreground underline decoration-foreground/20 underline-offset-4">{product.reviews.toLocaleString("en-AU")} ratings</span>
           </a>
 
-          {product.description && (
-            <p className="mt-4 line-clamp-3 whitespace-pre-line leading-relaxed text-muted-foreground">
-              {shortDescription}
-            </p>
-          )}
-          {descriptionText.length > shortDescription.length && (
-            <a href="#details" className="mt-1 inline-block text-sm font-semibold text-primary underline-offset-4 hover:underline">
-              Read more
-            </a>
-          )}
-
           <div className="mt-6 rounded-2xl border bg-card p-5 sm:p-6">
             <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
               <p className={cn("font-display text-5xl font-bold leading-none tabular-nums", off > 0 && "text-primary")}>{hasOptions ? "From " : ""}{formatPrice(price)}</p>
@@ -172,35 +152,11 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
             ))}
           </ul>
 
-          <Tabs id="details" defaultValue="overview" className="mt-8 scroll-mt-28">
+          <Tabs id="details" defaultValue="specs" className="mt-8 scroll-mt-28">
             <TabsList className="w-full">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="specs">Specifications</TabsTrigger>
               <TabsTrigger value="delivery">Delivery</TabsTrigger>
             </TabsList>
-            <TabsContent value="overview" className="space-y-6 pt-4">
-              {product.description && (
-                <div>
-                  <h2 className="font-semibold">Description</h2>
-                  <ProductDescription description={product.description} className="mt-2 text-sm leading-relaxed text-muted-foreground" />
-                </div>
-              )}
-              {product.features.length > 0 && (
-                <div>
-                  <h2 className="font-semibold">Key features</h2>
-                  <ul className="mt-3 grid gap-2.5 sm:grid-cols-2">
-                    {product.features.map((f) => (
-                      <li key={f} className="flex items-start gap-2.5 rounded-xl bg-card p-3 text-sm ring-1 ring-border">
-                        <span className="grid size-5 shrink-0 place-items-center rounded-full bg-success/15">
-                          <Check className="size-3 text-success" />
-                        </span>
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </TabsContent>
             <TabsContent value="specs" className="pt-4">
               <dl className="overflow-hidden rounded-xl border bg-card text-sm">
                 {getSpecs(product).map(([label, value], i) => (

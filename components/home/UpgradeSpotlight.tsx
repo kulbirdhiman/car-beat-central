@@ -47,7 +47,7 @@ export async function UpgradeSpotlight({ product }: { product: Product }) {
             <span className="h-0.5 w-5 rounded-full bg-primary" /> Featured upgrade · {product.brand}
           </p>
           <h2 className="mt-3 font-display text-3xl font-bold leading-[1.05] sm:text-4xl">{product.name}</h2>
-          <p className="mt-4 text-muted-foreground">{productDescriptionText(product.description)}</p>
+          <p className="mt-4 text-muted-foreground line-clamp-3">{productDescriptionText(product.description)}</p>
 
           <ul className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
             {highlights.map(([label, value]) => (

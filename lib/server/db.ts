@@ -14,7 +14,9 @@ function open() {
   if (!connectionString) throw new Error("DATABASE_URL is not set. Add your Supabase connection string to .env.");
   const url = new URL(connectionString);
   if (url.hostname.endsWith(".pooler.supabase.com") && url.port === "6543") url.port = "5432";
-  const client = postgres(url.toString(), { prepare: false, max: process.env.VERCEL ? 1 : 10, connect_timeout: 8 });
+  // Supabase's session pooler has a small project-wide connection limit (often 15).
+  // Keep local/dev instances small too, so one app process cannot consume most of it.
+  const client = postgres(url.toString(), { prepare: false, max: process.env.VERCEL ? 1 : 2, connect_timeout: 8 });
   return drizzle(client, { schema });
 }
 
