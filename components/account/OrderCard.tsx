@@ -13,7 +13,7 @@ export const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("en-AU"
 export function OrderCard({ order }: { order: CustomerOrder }) {
   const units = order.items.reduce((n, i) => n + i.qty, 0);
   const names = order.items.map((i) => i.name);
-  const track = order.status === "fulfilled" && order.shippingCarrier && order.trackingNumber ? trackingUrl(order.shippingCarrier, order.trackingNumber) : null;
+  const track = (order.status === "fulfilled" || order.status === "completed") && order.shippingCarrier && order.trackingNumber ? trackingUrl(order.shippingCarrier, order.trackingNumber) : null;
   const summary = names.length > 2 ? `${names.slice(0, 2).join(", ")} and ${names.length - 2} more` : names.join(" and ");
 
   return (
@@ -45,10 +45,10 @@ export function OrderCard({ order }: { order: CustomerOrder }) {
             </a>
           </Button>
         )}
-        {(order.status === "processing" || order.status === "paid" || order.status === "fulfilled") && (
+        {(["processing", "paid", "confirmed", "preparing", "fulfilled", "completed"].includes(order.status)) && (
           <Button asChild size="sm" variant="outline">
             <Link href={`/order/${order.id}#help`}>
-              <RotateCcw /> {order.status === "fulfilled" ? "Return items" : "Cancel"}
+              <RotateCcw /> {order.status === "fulfilled" || order.status === "completed" ? "Return items" : "Cancel"}
             </Link>
           </Button>
         )}

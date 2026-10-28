@@ -14,7 +14,10 @@ import { productDescriptionText } from "@/lib/product-description";
 export async function UpgradeSpotlight({ product }: { product: Product }) {
   const price = product.deal?.price ?? product.price;
   const off = discountPercent(price, product.rrp);
-  const modelNames = Object.fromEntries((await getCarBrands()).flatMap((b) => b.models.map((m) => [m.id, m.name])));
+  const modelNames = Object.fromEntries((await getCarBrands()).flatMap((b) => b.models.flatMap((m) => [
+    [m.id, `${b.name} ${m.name}`] as const,
+    ...(m.subModels ?? []).map((s) => [s.id, `${b.name} ${m.name} ${s.name}`] as const),
+  ])));
   const fits = product.fits === "universal" ? [] : product.fits.map((id) => modelNames[id]).filter(Boolean);
   // The product's own spec rows, or its feature list when it has none.
   const specs = getProductSpecs(product).slice(0, 4);
@@ -22,8 +25,8 @@ export async function UpgradeSpotlight({ product }: { product: Product }) {
 
   return (
     <section className="mx-auto max-w-[1440px] px-4 pt-16 sm:px-6 sm:pt-24 lg:px-8">
-      <Reveal className="grid overflow-clip rounded-3xl border bg-card lg:grid-cols-2">
-        <div className="relative min-h-[320px] bg-muted lg:min-h-full">
+      <Reveal className="grid overflow-clip rounded-3xl border bg-card xl:grid-cols-2">
+        <div className="relative min-h-[320px] bg-muted xl:min-h-full">
           <Image src={product.image} alt={product.name} fill sizes="(min-width: 1024px) 50vw, 100vw" className="object-cover" />
           <div className="absolute left-4 top-4 flex flex-wrap gap-2">
             {product.departmentName && <span className="rounded-md bg-card/95 px-2.5 py-1.5 text-xs font-semibold backdrop-blur">{product.departmentName}</span>}
@@ -42,7 +45,7 @@ export async function UpgradeSpotlight({ product }: { product: Product }) {
           </div>
         </div>
 
-        <div className="p-6 sm:p-10 lg:p-12">
+        <div className="p-6 sm:p-10 xl:p-12">
           <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
             <span className="h-0.5 w-5 rounded-full bg-primary" /> Featured upgrade · {product.brand}
           </p>

@@ -122,7 +122,10 @@ export function SearchBox({ departments, className }: { departments: StoreDepart
   const categories = q ? departments.flatMap((d) => [d, ...d.children]).filter((d) => d.name.toLowerCase().includes(lower)).slice(0, 3) : [];
   // Every typed word must start a word of the vehicle name: "toy hi" finds Toyota HiLux, "sub" finds nothing.
   const vehicles = q
-    ? brands.flatMap((b) => b.models.map((m) => ({ id: m.id, label: `${b.name} ${m.name}` }))).filter((v) => {
+    ? brands.flatMap((b) => b.models.flatMap((m) => [
+        { id: m.id, modelId: m.id, label: `${b.name} ${m.name}` },
+        ...(m.subModels ?? []).map((s) => ({ id: s.id, modelId: m.id, label: `${b.name} ${m.name} ${s.name}`, subModelId: s.id })),
+      ])).filter((v) => {
         const words = v.label.toLowerCase().split(/[\s-]+/);
         return lower.split(/\s+/).every((t) => words.some((w) => w.startsWith(t) || w.replace(/[^a-z0-9]/g, "").startsWith(t)));
       }).slice(0, 3)
@@ -135,7 +138,7 @@ export function SearchBox({ departments, className }: { departments: StoreDepart
           title: "Vehicles",
           options: vehicles.map((v) => ({
             key: `v-${v.id}`,
-            href: `/shop?model=${v.id}`,
+            href: `/shop?model=${v.modelId}${"subModelId" in v ? `&submodel=${v.subModelId}` : ""}`,
             term: v.label,
             render: () => (
               <>

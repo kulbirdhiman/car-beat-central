@@ -62,8 +62,8 @@ export function BookingForm() {
           name="vehicle"
           placeholder="e.g. 2021 Toyota HiLux"
           // Prefill from the shopper's garage when we know their car.
-          key={car?.model.id ?? "none"}
-          defaultValue={v.vehicle || (car ? `${car.brand.name} ${car.model.name}` : "")}
+          key={`${car?.model.id ?? "none"}:${car?.subModel?.id ?? "none"}`}
+          defaultValue={v.vehicle || (car ? `${car.brand.name} ${car.subModel?.name ?? car.model.name}` : "")}
           aria-invalid={!!errors.vehicle}
         />
       </Field>

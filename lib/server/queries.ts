@@ -5,7 +5,7 @@ import { productFitsModel } from "../data";
 import type { CarBrand, Category, Offer, Product, StoreDepartment } from "../types";
 import { normalizeProductOptionGroups } from "../product-options";
 import { db } from "./db";
-import { coupons, deals, departments, offers, products, vehicleMakes, vehicleModels } from "./schema";
+import { coupons, deals, departments, offers, products, vehicleMakes, vehicleModels, vehicleSubmodels } from "./schema";
 
 const price = sql<number>`COALESCE(${deals.dealPrice}, ${products.price})`;
 // Draft products are hidden from the store everywhere.
@@ -85,6 +85,7 @@ export type ProductFilters = {
   /** Department slug; a top-level department includes its sub-departments' products. */
   dept?: string;
   model?: string;
+  subModel?: string;
   maxPrice?: number;
   onSale?: boolean;
   sort?: SortKey;
@@ -107,7 +108,7 @@ export async function listProducts(filters: ProductFilters = {}): Promise<Produc
     const pattern = `%${word}%`;
     where.push(
       models.length > 0
-        ? fitsAny(models.map((m) => m.id))
+        ? fitsAny(models.flatMap((m) => [m.id, ...(m.subModels ?? []).map((s) => s.id)]))
         : or(ilike(products.name, pattern), ilike(products.brand, pattern), ilike(products.category, pattern), ilike(departments.name, pattern)),
     );
   }
@@ -121,7 +122,7 @@ export async function listProducts(filters: ProductFilters = {}): Promise<Produc
       ),
     );
   }
-  if (filters.model) where.push(fitsAny([filters.model]));
+  if (filters.model) where.push(fitsAny(filters.subModel ? [filters.model, filters.subModel] : [filters.model]));
   if (filters.maxPrice) where.push(lte(price, filters.maxPrice));
   if (filters.onSale) where.push(isNotNull(deals.dealPrice));
   if (filters.ids) {
@@ -218,22 +219,35 @@ export async function getStoreDepartments(): Promise<StoreDepartment[]> {
 /** Products that fit each model id, for the vehicle pickers' "Show N matching parts". */
 export async function getFitCounts(): Promise<Record<string, number>> {
   const [all, brands] = await Promise.all([listProducts(), getCarBrands()]);
-  return Object.fromEntries(brands.flatMap((b) => b.models).map((m) => [m.id, all.filter((p) => productFitsModel(p, m.id)).length]));
+  return Object.fromEntries(
+    brands.flatMap((b) => b.models.flatMap((m) => [
+      [m.id, all.filter((p) => productFitsModel(p, m.id)).length] as const,
+      ...(m.subModels ?? []).map((s) => [s.id, all.filter((p) => productFitsModel(p, m.id, s.id)).length] as const),
+    ])),
+  );
 }
 
 /** Makes and their models in admin order, for the store's vehicle pickers. Makes with no models are left out. */
 export async function getCarBrands(): Promise<CarBrand[]> {
-  const rows = await db
-    .select({ makeId: vehicleMakes.id, makeName: vehicleMakes.name, id: vehicleModels.id, name: vehicleModels.name })
-    .from(vehicleMakes)
-    .innerJoin(vehicleModels, eq(vehicleModels.makeId, vehicleMakes.id))
-    .orderBy(vehicleMakes.position, vehicleModels.position);
+  const [makes, models, subs] = await Promise.all([
+    db.select({ id: vehicleMakes.id, name: vehicleMakes.name }).from(vehicleMakes).orderBy(vehicleMakes.position),
+    db.select({ id: vehicleModels.id, makeId: vehicleModels.makeId, name: vehicleModels.name, position: vehicleModels.position }).from(vehicleModels).orderBy(vehicleModels.position),
+    db.select({ id: vehicleSubmodels.id, modelId: vehicleSubmodels.modelId, name: vehicleSubmodels.name, years: vehicleSubmodels.years, position: vehicleSubmodels.position }).from(vehicleSubmodels).orderBy(vehicleSubmodels.position),
+  ]);
+  const subsByModel = Map.groupBy(subs, (s) => s.modelId);
   const brands: CarBrand[] = [];
-  for (const r of rows) {
-    if (brands.at(-1)?.id !== r.makeId) brands.push({ id: r.makeId, name: r.makeName, models: [] });
-    brands.at(-1)!.models.push({ id: r.id, name: r.name });
+  for (const make of makes) {
+    brands.push({
+      id: make.id,
+      name: make.name,
+      models: models.filter((model) => model.makeId === make.id).map((model) => ({
+        id: model.id,
+        name: model.name,
+        subModels: (subsByModel.get(model.id) ?? []).map((sub) => ({ id: sub.id, name: sub.name, years: sub.years })),
+      })),
+    });
   }
-  return brands;
+  return brands.filter((brand) => brand.models.length > 0);
 }
 
 /** Offers that are switched on and within their dates, with their coupon code if that code is usable too. */

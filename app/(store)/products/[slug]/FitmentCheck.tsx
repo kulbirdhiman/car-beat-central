@@ -26,7 +26,7 @@ export function FitmentCheck({ fits }: { fits: Product["fits"] }) {
     );
   }
 
-  const ok = productFitsModel({ fits }, car.model.id);
+  const ok = productFitsModel({ fits }, car.model.id, car.subModel?.id);
   const Icon = ok ? CircleCheck : CircleAlert;
   return (
     <div
@@ -39,11 +39,11 @@ export function FitmentCheck({ fits }: { fits: Product["fits"] }) {
       <span className="text-foreground">
         {ok ? (
           <>
-            <strong>Fits your {car.brand.name} {car.model.name}.</strong> Guaranteed, or we pay return postage.
+            <strong>Fits your {car.brand.name} {car.subModel?.name ?? car.model.name}.</strong> Guaranteed, or we pay return postage.
           </>
         ) : (
           <>
-            <strong>Doesn&apos;t fit your {car.brand.name} {car.model.name}.</strong>{" "}
+            <strong>Doesn&apos;t fit your {car.brand.name} {car.subModel?.name ?? car.model.name}.</strong>{" "}
             <Link href={`/shop?model=${car.model.id}`} className="underline underline-offset-4">
               See parts that do
             </Link>

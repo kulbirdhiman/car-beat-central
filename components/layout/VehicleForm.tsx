@@ -38,8 +38,10 @@ export function VehicleForm({
   const brands = useCarBrands();
   const [brandId, setBrandId] = useState(garage.car?.brand.id ?? "");
   const [modelId, setModelId] = useState(garage.car?.model.id ?? "");
+  const [subModelId, setSubModelId] = useState(garage.car?.subModel?.id ?? "");
   const brand = brands.find((b) => b.id === brandId);
-  const count = modelId ? (fitCounts[modelId] ?? 0) : null;
+  const model = brand?.models.find((m) => m.id === modelId);
+  const count = modelId ? (fitCounts[subModelId || modelId] ?? 0) : null;
   const t = tones[tone];
   const selectClass = cn(selectBase, t.select);
   const style = { backgroundImage: chevron(t.stroke), backgroundPosition: "right 12px center", backgroundSize: 16, backgroundRepeat: "no-repeat" };
@@ -50,9 +52,9 @@ export function VehicleForm({
       onSubmit={(e) => {
         e.preventDefault();
         if (!modelId) return;
-        garage.save(modelId);
+        garage.save(modelId, subModelId || undefined);
         onDone?.();
-        router.push(`/shop?model=${modelId}`);
+        router.push(`/shop?model=${modelId}${subModelId ? `&submodel=${subModelId}` : ""}`);
       }}
     >
       <select
@@ -61,6 +63,7 @@ export function VehicleForm({
         onChange={(e) => {
           setBrandId(e.target.value);
           setModelId("");
+          setSubModelId("");
         }}
         className={selectClass}
         style={style}
@@ -72,7 +75,7 @@ export function VehicleForm({
           </option>
         ))}
       </select>
-      <select aria-label="Model" value={modelId} onChange={(e) => setModelId(e.target.value)} disabled={!brand} className={selectClass} style={style}>
+      <select aria-label="Model" value={modelId} onChange={(e) => { setModelId(e.target.value); setSubModelId(""); }} disabled={!brand} className={selectClass} style={style}>
         <option value="">{brand ? "Select model" : "Choose a make first"}</option>
         {brand?.models.map((m) => (
           <option key={m.id} value={m.id}>
@@ -80,6 +83,12 @@ export function VehicleForm({
           </option>
         ))}
       </select>
+      {model && model.subModels && model.subModels.length > 0 && (
+        <select aria-label="Sub-model (optional)" value={subModelId} onChange={(e) => setSubModelId(e.target.value)} className={selectClass} style={style}>
+          <option value="">Any {model.name} version</option>
+          {model.subModels.map((sub) => <option key={sub.id} value={sub.id}>{sub.name}{sub.years ? ` · ${sub.years}` : ""}</option>)}
+        </select>
+      )}
       <Button type="submit" size="xl" className="col-span-full mt-1 w-full" disabled={!modelId}>
         {count === null ? "Show matching parts" : `Show ${count} matching parts`}
         <ArrowRight />

@@ -186,7 +186,7 @@ export function parseProduct(productId: string, value: unknown): ProductInput {
   if (body.fits === "universal") fits = "universal";
   else {
     fits = idList(body, "fits");
-    if (fits.length === 0) throw new AdminError("Pick at least one vehicle model, or mark the product universal.");
+    if (fits.length === 0) throw new AdminError("Pick at least one vehicle model or sub-model, or mark the product universal.");
   }
   return {
     id: productId,
@@ -237,7 +237,7 @@ export function parseVehicle(level: VehicleLevel, vehicleId: string, value: unkn
 }
 
 // "refunded" isn't here: an order gets it by being refunded in full.
-const ORDER_STATUSES: readonly OrderStatus[] = ["pending_payment", "processing", "paid", "fulfilled", "cancelled"];
+const ORDER_STATUSES: readonly OrderStatus[] = ["pending_payment", "processing", "paid", "confirmed", "preparing", "fulfilled", "completed", "cancelled"];
 
 export function parseOrderStatus(value: unknown): OrderStatus {
   return oneOf(asBody(value), "status", ORDER_STATUSES);

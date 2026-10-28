@@ -79,7 +79,7 @@ export function Dashboard() {
   const counted = dateOrders.filter((o) => o.status !== "cancelled" && o.status !== "refunded");
   // Less partial refunds; fully refunded orders are left out above.
   const revenue = counted.reduce((sum, o) => sum + orderTotal(o) - o.refunded, 0);
-  const toShip = dateOrders.filter((o) => o.status === "processing" || o.status === "paid").length;
+  const toShip = dateOrders.filter((o) => ["processing", "paid", "confirmed", "preparing"].includes(o.status)).length;
   const lowStock = products.filter((p) => p.status === "active" && p.stock <= LOW_STOCK).sort((a, b) => a.stock - b.stock);
   const models = makes.reduce((n, m) => n + m.models.length, 0);
 
@@ -109,7 +109,7 @@ export function Dashboard() {
   const stats = [
     { label: "Revenue (incl. GST)", value: formatCents(revenue), hint: `${counted.length} orders` },
     { label: "Average order", value: formatCents(counted.length ? Math.round(revenue / counted.length) : 0), hint: "Excludes cancelled and refunded" },
-    { label: "Ready to ship", value: toShip.toLocaleString("en-AU"), hint: "Paid, not yet shipped", href: "/admin/orders?status=paid" },
+    { label: "In dispatch", value: toShip.toLocaleString("en-AU"), hint: "Paid orders to confirm, process or ship", href: "/admin/orders?status=dispatch" },
     { label: "Catalogue", value: products.length.toLocaleString("en-AU"), hint: `${departments.length} departments · ${makes.length} makes · ${models} models` },
   ];
 
@@ -188,7 +188,7 @@ export function Dashboard() {
                 {dateOrders.slice(0, 6).map((o) => (
                   <TableRow key={o.id}>
                     <TableCell className="font-mono">
-                      <Link href={`/admin/orders?open=${o.id}`} className="hover:underline">
+                      <Link href={`/admin/orders/${encodeURIComponent(o.id)}`} className="hover:underline">
                         {o.number}
                       </Link>
                     </TableCell>

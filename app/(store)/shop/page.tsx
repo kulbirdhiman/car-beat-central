@@ -38,7 +38,8 @@ export default async function ShopPage(props: PageProps<"/shop">) {
     getLiveOffers(),
     getDeals(),
   ]);
-  const car = brands.flatMap((b) => b.models.map((m) => ({ brand: b, model: m }))).find((c) => c.model.id === filters.model);
+  const carBase = brands.flatMap((b) => b.models.map((m) => ({ brand: b, model: m }))).find((c) => c.model.id === filters.model);
+  const car = carBase && { ...carBase, subModel: carBase.model.subModels?.find((s) => s.id === filters.subModel) };
   const dept = filters.dept ? findDepartment(departments, (d) => d.slug === filters.dept) : null;
   // The top-level department whose sub-departments are shown in the sidebar.
   const openDept = dept?.parent ?? dept?.department;
@@ -50,6 +51,7 @@ export default async function ShopPage(props: PageProps<"/shop">) {
       if (v === null) next.delete(k);
       else next.set(k, v);
     }
+    if (changes.model === null) next.delete("submodel");
     const qs = next.toString();
     return qs ? `/shop?${qs}` : "/shop";
   };
@@ -61,21 +63,21 @@ export default async function ShopPage(props: PageProps<"/shop">) {
       : filters.category
       ? CATEGORY_LABELS[filters.category]
       : car
-        ? `Parts for your ${car.model.name}`
+        ? `Parts for your ${car.subModel?.name ?? car.model.name}`
         : "All parts";
 
   const active = [
     filters.q && { label: `“${filters.q}”`, key: "q" },
     filters.category && { label: CATEGORY_LABELS[filters.category], key: "category" },
     filters.dept && { label: dept?.department.name ?? filters.dept, key: "dept" },
-    car && { label: `${car.brand.name} ${car.model.name}`, key: "model" },
+    car && { label: `${car.brand.name} ${car.subModel?.name ?? car.model.name}`, key: "model" },
     filters.maxPrice && { label: `Under $${filters.maxPrice}`, key: "maxPrice" },
     filters.onSale && { label: "On sale", key: "sale" },
   ].filter(Boolean) as { label: string; key: string }[];
 
   const filterPanel = (
     <div className="space-y-4">
-      <VehicleFilter key={filters.model ?? "none"} modelId={filters.model} fitCounts={fitCounts} />
+      <VehicleFilter key={`${filters.model ?? "none"}:${filters.subModel ?? "none"}`} modelId={filters.model} subModelId={filters.subModel} fitCounts={fitCounts} />
 
       <FilterCard title="Categories">
         <CategoryLink href={hrefWith({ dept: null, category: null })} active={!filters.dept && !filters.category} label="All categories" count={total}>
@@ -126,8 +128,8 @@ export default async function ShopPage(props: PageProps<"/shop">) {
 
   return (
     <PageShell crumbs={[{ label: "Home", href: "/" }, { label: "Shop" }]} className="pt-6">
-      <div className="grid gap-8 lg:grid-cols-[280px_1fr]">
-        <aside className="no-scrollbar hidden lg:sticky lg:top-28 lg:block lg:max-h-[calc(100vh-8rem)] lg:self-start lg:overflow-y-auto lg:pb-4">{filterPanel}</aside>
+      <div className="grid gap-6 xl:grid-cols-[260px_1fr] 2xl:gap-8">
+        <aside className="no-scrollbar hidden xl:sticky xl:top-28 xl:block xl:max-h-[calc(100vh-8rem)] xl:self-start xl:overflow-y-auto xl:pb-4">{filterPanel}</aside>
 
         <div className="min-w-0">
           <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
@@ -140,7 +142,7 @@ export default async function ShopPage(props: PageProps<"/shop">) {
             <div className="flex items-center gap-2">
               <Sheet>
                 <SheetTrigger asChild>
-                  <Button variant="outline" className="h-10 bg-card lg:hidden">
+                  <Button variant="outline" className="h-10 bg-card xl:hidden">
                     <SlidersHorizontal /> Filters {active.length > 0 && <Badge className="ml-1">{active.length}</Badge>}
                   </Button>
                 </SheetTrigger>

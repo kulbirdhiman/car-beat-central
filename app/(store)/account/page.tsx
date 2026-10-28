@@ -13,7 +13,7 @@ export default async function AccountDashboard() {
   const [orders, address] = await Promise.all([listCustomerOrders(customer), getDefaultAddress(customer.id)]);
   const live = orders.filter((o) => o.status !== "cancelled");
   const unpaid = orders.filter((o) => o.status === "pending_payment");
-  const spent = orders.filter((o) => o.status === "processing" || o.status === "paid" || o.status === "fulfilled").reduce((sum, o) => sum + o.total, 0);
+  const spent = orders.filter((o) => ["processing", "paid", "confirmed", "preparing", "fulfilled", "completed"].includes(o.status)).reduce((sum, o) => sum + o.total, 0);
 
   const stats = [
     { icon: Package, label: "Orders", value: String(live.length) },

@@ -106,7 +106,10 @@ function importProduct(fields: Record<string, string>): AdminProduct {
 export function fitsSummary(fits: AdminProduct["fits"], makes: VehicleMake[]) {
   if (fits === "universal") return "Universal";
   const parts = makes.flatMap((make) => {
-    const names = make.models.filter((m) => fits.includes(m.id)).map((m) => m.name);
+    const names = make.models.flatMap((m) => {
+      if (fits.includes(m.id)) return [m.name];
+      return m.subModels.filter((s) => fits.includes(s.id)).map((s) => `${m.name} ${s.name}`);
+    });
     return names.length ? [`${make.name} ${names.join(", ")}`] : [];
   });
   return parts.length ? parts.join(" · ") : "No vehicles";
@@ -128,7 +131,7 @@ export function ProductsManager() {
   const [status, setStatus] = useState(ALL);
   const [deleting, setDeleting] = useState<AdminProduct | null>(null);
 
-  const makeModels = new Set(makes.find((m) => m.id === make)?.models.map((m) => m.id));
+  const makeModels = new Set(makes.find((m) => m.id === make)?.models.flatMap((m) => [m.id, ...m.subModels.map((s) => s.id)]));
   const q = query.trim().toLowerCase();
   const rows = products.filter(
     (p) =>

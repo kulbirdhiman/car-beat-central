@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import type { VehicleMake } from "@/lib/admin/model";
 import { db, transaction, type Tx } from "../db";
 import { products, vehicleMakes, vehicleModels, vehicleSubmodels } from "../schema";
@@ -83,10 +83,17 @@ export async function deleteVehicle(level: VehicleLevel, id: string) {
         : level === "models"
           ? [id]
           : [];
+    const subModelIds =
+      level === "submodels"
+        ? [id]
+        : modelIds.length
+          ? (await tx.select({ id: vehicleSubmodels.id }).from(vehicleSubmodels).where(inArray(vehicleSubmodels.modelId, modelIds))).map((s) => s.id)
+          : [];
     const table = TABLE[level];
     const deleted = await tx.delete(table).where(eq(table.id, id)).returning({ id: table.id });
     if (deleted.length === 0) throw new AdminError("Vehicle not found.", 404);
-    if (modelIds.length) await removeFitment(tx, modelIds);
+    const fitmentIds = [...modelIds, ...subModelIds];
+    if (fitmentIds.length) await removeFitment(tx, fitmentIds);
   });
 }
 

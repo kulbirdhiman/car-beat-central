@@ -8,7 +8,7 @@ export class PaymentError extends Error {}
 export async function payableOrder(orderId: string) {
   const order = await getOrder(orderId);
   if (!order) throw new PaymentError("We couldn't find that order.");
-  if (order.status === "processing" || order.status === "paid" || order.status === "fulfilled") throw new PaymentError("This order has already been paid.");
+  if (["processing", "paid", "confirmed", "preparing", "fulfilled", "completed"].includes(order.status)) throw new PaymentError("This order has already been paid.");
   if (order.status === "cancelled") throw new PaymentError("This order was cancelled, so it can't be paid.");
   return order;
 }

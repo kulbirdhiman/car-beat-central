@@ -16,7 +16,7 @@ const POINTS = [
 export function InstallerSection() {
   return (
     <section className="mx-auto max-w-[1440px] px-4 pt-16 sm:px-6 sm:pt-24 lg:px-8">
-      <Reveal className="grain relative grid overflow-clip rounded-3xl bg-ink text-ink-foreground lg:grid-cols-[1fr_1.1fr]">
+      <Reveal className="grain relative grid overflow-clip rounded-3xl bg-ink text-ink-foreground xl:grid-cols-[1fr_1.1fr]">
         <div className="relative min-h-72 lg:min-h-full">
           <Image src="/images/trunk-audio.jpg" alt="Custom audio install in a car boot" fill sizes="(min-width: 1024px) 45vw, 100vw" className="object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/10 to-transparent lg:bg-gradient-to-l" />

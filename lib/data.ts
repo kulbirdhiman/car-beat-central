@@ -11,8 +11,8 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   interior: "Interior",
 };
 
-export function productFitsModel(product: Pick<Product, "fits">, modelId: string) {
-  return product.fits === "universal" || product.fits.includes(modelId);
+export function productFitsModel(product: Pick<Product, "fits">, modelId: string, subModelId?: string) {
+  return product.fits === "universal" || product.fits.includes(modelId) || (!!subModelId && product.fits.includes(subModelId));
 }
 
 /** Finds a store department, or one of its sub-departments, with its parent. */

@@ -157,7 +157,7 @@ export function CheckoutForm({
         next();
       }}
       onInput={(e) => markEdited((e.target as HTMLInputElement).name)}
-      className="grid gap-8 lg:grid-cols-[1fr_400px]"
+      className="grid gap-6 xl:grid-cols-[1fr_360px] 2xl:gap-8 2xl:grid-cols-[1fr_400px]"
     >
       <input type="hidden" name="cart" value={JSON.stringify(lines)} />
       <input type="hidden" name="coupon" value={coupon} />
@@ -364,7 +364,7 @@ export function CheckoutForm({
         </Section>
       </div>
 
-      <Card className="h-fit lg:sticky lg:top-32">
+      <Card className="h-fit xl:sticky xl:top-32">
         <CardHeader>
           <CardTitle className="font-display text-2xl font-bold">Your order</CardTitle>
         </CardHeader>

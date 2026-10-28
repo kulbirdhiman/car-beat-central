@@ -19,7 +19,7 @@ export default async function AdminOrderInvoicePage(props: PageProps<"/admin/ord
   return (
     <div className="mx-auto max-w-4xl">
       <div className="print-hidden mb-5 flex flex-wrap gap-2">
-        <Button variant="outline" asChild><Link href={`/admin/orders?open=${encodeURIComponent(id)}`}>Back to order</Link></Button>
+        <Button variant="outline" asChild><Link href={`/admin/orders/${encodeURIComponent(id)}`}>Back to order</Link></Button>
         <PrintInvoiceButton />
       </div>
 

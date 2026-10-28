@@ -320,12 +320,24 @@ export async function moveOrderStock(tx: Tx, orderId: string, sign: 1 | -1) {
 export async function setOrderStatus(id: string, status: OrderStatus, shipment?: Shipment | null, from?: OrderStatus[]) {
   await transaction(async (tx) => {
     // Locks the order, so two status changes at once can't both restock it.
-    const [order] = await tx.select({ status: orders.status }).from(orders).where(eq(orders.id, id)).for("update");
+    const [order] = await tx.select({ status: orders.status, shippedAt: orders.shippedAt }).from(orders).where(eq(orders.id, id)).for("update");
     if (!order) throw new AdminError("Order not found.", 404);
     if (from && !from.includes(order.status)) throw new AdminError("This order has changed. Refresh the page and try again.", 409);
     if (order.status === status && shipment === undefined) return;
     // Refunded is set by refunding the order in full, and is final.
     if (order.status === "refunded" || status === "refunded") throw new AdminError("Refunded orders are changed by refunding them, not by changing their status.");
+    const next: Partial<Record<OrderStatus, OrderStatus[]>> = {
+      pending_payment: ["paid", "cancelled"],
+      processing: ["confirmed", "cancelled"],
+      paid: ["confirmed", "cancelled"],
+      confirmed: ["preparing", "cancelled"],
+      preparing: ["fulfilled", "cancelled"],
+      fulfilled: ["completed"],
+      cancelled: ["pending_payment", "processing", "paid"],
+    };
+    if (status !== order.status && !next[order.status]?.includes(status)) {
+      throw new AdminError("Move this order through the dispatch steps in order.");
+    }
     const sign = status === "cancelled" ? 1 : order.status === "cancelled" ? -1 : 0;
     if (sign) await moveOrderStock(tx, id, sign);
     await tx
@@ -333,7 +345,7 @@ export async function setOrderStatus(id: string, status: OrderStatus, shipment?:
       .set({
         status,
         ...(shipment !== undefined && { shippingCarrier: shipment?.carrier ?? null, trackingNumber: shipment?.trackingNumber ?? null }),
-        ...(status === "fulfilled" && order.status !== "fulfilled" && { shippedAt: new Date().toISOString() }),
+        ...((status === "fulfilled" || status === "completed") && !order.shippedAt && { shippedAt: new Date().toISOString() }),
       })
       .where(eq(orders.id, id));
   });

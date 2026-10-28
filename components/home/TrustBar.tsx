@@ -11,7 +11,7 @@ const ITEMS = [
 export function TrustBar() {
   return (
     <section aria-label="Why shop with CarBeat" className="mx-auto max-w-[1440px] px-4 pt-3 sm:px-6 lg:px-8">
-      <ul className="no-scrollbar flex gap-px overflow-x-auto rounded-2xl border bg-border lg:grid lg:grid-cols-5">
+      <ul className="no-scrollbar flex gap-px overflow-x-auto rounded-2xl border bg-border xl:grid xl:grid-cols-5">
         {ITEMS.map(({ icon: Icon, title, body }) => (
           <li
             key={title}
