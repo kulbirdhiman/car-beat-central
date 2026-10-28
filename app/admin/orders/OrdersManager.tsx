@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, Download, ExternalLink, Pencil, Plus, Search, Trash2, Truck } from "lucide-react";
+import { Check, Copy, Download, ExternalLink, Mail, Pencil, Plus, Search, Trash2, Truck } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -29,7 +29,9 @@ const ALL = "all";
 const RETURNS = "returns";
 /** Paid orders which still need dispatch work. */
 const DISPATCH = "dispatch";
-const STATUSES = Object.keys(ORDER_STATUS_LABEL) as OrderStatus[];
+const STATUSES = (Object.keys(ORDER_STATUS_LABEL) as OrderStatus[]).filter((status) => status !== "paid");
+const matchesStatus = (order: AdminOrder, status: OrderStatus) =>
+  status === "processing" ? order.status === "processing" || order.status === "paid" : order.status === status;
 
 const openReturn = (o: AdminOrder) => o.returns.find(isOpenReturn);
 
@@ -42,7 +44,7 @@ export function OrdersManager() {
 
   // Status filter and open order live in the URL so the dashboard can link straight to them.
   const statusParam = searchParams.get("status");
-  const status = statusParam === RETURNS || statusParam === DISPATCH ? statusParam : statusParam && (STATUSES as string[]).includes(statusParam) ? (statusParam as OrderStatus) : ALL;
+  const status = statusParam === RETURNS || statusParam === DISPATCH ? statusParam : statusParam === "paid" ? "processing" : statusParam && (STATUSES as string[]).includes(statusParam) ? (statusParam as OrderStatus) : ALL;
 
   function setParam(key: string, value: string | null) {
     const next = new URLSearchParams(searchParams);
@@ -55,7 +57,7 @@ export function OrdersManager() {
   const q = query.trim().toLowerCase();
   const rows = orders.filter(
     (o) =>
-      (status === ALL || o.status === status || (status === RETURNS && !!openReturn(o)) || (status === DISPATCH && ["processing", "paid", "confirmed", "preparing"].includes(o.status))) &&
+      (status === ALL || (status !== RETURNS && status !== DISPATCH && matchesStatus(o, status)) || (status === RETURNS && !!openReturn(o)) || (status === DISPATCH && ["processing", "paid", "confirmed", "preparing"].includes(o.status))) &&
       (!q || o.number.toLowerCase().includes(q) || o.customer.name.toLowerCase().includes(q) || o.customer.email.toLowerCase().includes(q)),
   );
 
@@ -99,7 +101,7 @@ export function OrdersManager() {
                 <TabsTrigger value={DISPATCH}>Dispatch ({orders.filter((o) => ["processing", "paid", "confirmed", "preparing"].includes(o.status)).length})</TabsTrigger>
                 {STATUSES.map((s) => (
                   <TabsTrigger key={s} value={s}>
-                    {ORDER_STATUS_LABEL[s]} ({orders.filter((o) => o.status === s).length})
+                    {ORDER_STATUS_LABEL[s]} ({orders.filter((o) => matchesStatus(o, s)).length})
                   </TabsTrigger>
                 ))}
                 <TabsTrigger value={RETURNS}>Returns ({orders.filter(openReturn).length})</TabsTrigger>
@@ -202,84 +204,75 @@ export function OrderDetail({ order: initialOrder, standalone = false }: { order
         </SheetHeader>
       )}
 
-      <div className={cn("space-y-4", standalone ? "p-5 sm:p-6" : "p-4")}>
+      <div className={cn("space-y-4", standalone ? "p-4 sm:p-6" : "p-4")}>
         <ReturnRequests order={order} onRefund={(preset) => setRefunding({ preset })} />
 
         {(["processing", "paid", "confirmed", "preparing", "fulfilled", "completed"].includes(order.status)) && <Fulfilment order={order} />}
 
-        <Panel title="Customer">
-          <div className="grid gap-4 text-sm sm:grid-cols-2">
-            <div className="space-y-0.5">
-              <p className="font-medium">{order.customer.name}</p>
-              <a href={`mailto:${order.customer.email}`} className="block truncate text-muted-foreground hover:text-foreground hover:underline">
-                {order.customer.email}
-              </a>
-              <a href={`tel:${order.customer.phone}`} className="block text-muted-foreground hover:text-foreground hover:underline">
-                {order.customer.phone}
-              </a>
-            </div>
-            <div className="space-y-0.5">
-              <p className="font-medium">{pickup ? "Local pickup" : `${DELIVERY_LABEL[order.delivery]} delivery`}</p>
-              <p className="text-muted-foreground">{order.shipTo.address}</p>
-              <p className="text-muted-foreground">
-                {order.shipTo.suburb} {order.shipTo.state} {order.shipTo.postcode}
-              </p>
-            </div>
+        <div className={cn("grid gap-4", standalone && "xl:grid-cols-[minmax(0,1.45fr)_minmax(18rem,1fr)] xl:items-start")}>
+          <div className="space-y-4">
+            <Panel title={`Items (${units})`}>
+              <ul className="space-y-3 text-sm">
+                {order.items.map((i) => (
+                  <li key={i.productId} className="flex justify-between gap-3 border-b pb-3 last:border-0 last:pb-0">
+                    <span className="min-w-0">
+                      <span className="block font-medium">{i.name}</span>
+                      <span className="text-muted-foreground">Qty {i.qty} · {formatCents(i.unitPrice)} each</span>
+                    </span>
+                    <span className="shrink-0 font-medium tabular-nums">{formatCents(i.unitPrice * i.qty)}</span>
+                  </li>
+                ))}
+              </ul>
+              <dl className="mt-3 space-y-1 border-t pt-3 text-sm">
+                <Line label="Subtotal" value={formatCents(subtotal)} muted />
+                {order.discount > 0 && <Line label={`Discount${order.coupon ? ` (${order.coupon})` : ""}`} value={`−${formatCents(order.discount)}`} muted />}
+                <Line label="Shipping" value={order.shipping ? formatCents(order.shipping) : "Free"} muted />
+                <Line label="Total (incl. GST)" value={formatCents(total)} strong />
+                <Line label="GST" value={formatCents(Math.round(total / 11))} muted />
+                {order.refunded > 0 && <Line label="Refunded" value={`−${formatCents(order.refunded)}`} muted />}
+              </dl>
+            </Panel>
+            <Refunds order={order} onRefund={() => setRefunding({ preset: null })} />
+            {order.note && <Panel title="Note to customer"><p className="whitespace-pre-line text-sm">{order.note}</p></Panel>}
           </div>
-        </Panel>
 
-        <Panel title={`Items (${units})`}>
-          <ul className="space-y-2 text-sm">
-            {order.items.map((i) => (
-              <li key={i.productId} className="flex justify-between gap-3">
-                <span className="min-w-0">
-                  {i.name} <span className="text-muted-foreground">× {i.qty}</span>
-                </span>
-                <span className="shrink-0 tabular-nums">{formatCents(i.unitPrice * i.qty)}</span>
-              </li>
-            ))}
-          </ul>
-          <dl className="mt-3 space-y-1 border-t pt-3 text-sm">
-            <Line label="Subtotal" value={formatCents(subtotal)} muted />
-            {order.discount > 0 && <Line label={`Discount${order.coupon ? ` (${order.coupon})` : ""}`} value={`−${formatCents(order.discount)}`} muted />}
-            <Line label="Shipping" value={order.shipping ? formatCents(order.shipping) : "Free"} muted />
-            <Line label="Total (incl. GST)" value={formatCents(total)} strong />
-            <Line label="GST" value={formatCents(Math.round(total / 11))} muted />
-            {order.refunded > 0 && <Line label="Refunded" value={`−${formatCents(order.refunded)}`} muted />}
-          </dl>
-        </Panel>
+          <aside className="space-y-4">
+            <Panel title="Customer">
+              <div className="space-y-3 text-sm">
+                <div className="space-y-0.5">
+                  <p className="font-semibold">{order.customer.name}</p>
+                  <a href={`mailto:${order.customer.email}`} className="block break-all text-muted-foreground hover:text-foreground hover:underline">{order.customer.email}</a>
+                  <a href={`tel:${order.customer.phone}`} className="block text-muted-foreground hover:text-foreground hover:underline">{order.customer.phone}</a>
+                </div>
+                <div className="border-t pt-3">
+                  <p className="font-medium">{pickup ? "Local pickup" : `${DELIVERY_LABEL[order.delivery]} delivery`}</p>
+                  <p className="mt-1 text-muted-foreground">{order.shipTo.address}</p>
+                  <p className="text-muted-foreground">{order.shipTo.suburb} {order.shipTo.state} {order.shipTo.postcode}</p>
+                </div>
+              </div>
+            </Panel>
 
-        <Panel title="Payment">
-          {order.source === "legacy" ? (
-            <p className="text-sm text-muted-foreground">Payment details remain in the original WooCommerce records.</p>
-          ) : order.payment ? (
-            <div className="space-y-0.5 text-sm">
-              <p className="font-medium">
-                Paid with {order.payment.provider} · {fmtDateTime(order.payment.paidAt)}
-              </p>
-              <p className="text-muted-foreground">
-                {order.payment.provider === "Afterpay" ? "Afterpay order " : "Transaction "}
-                <span className="font-mono text-foreground">{order.payment.transactionId}</span>
-              </p>
-            </div>
-          ) : order.status === "pending_payment" ? (
-            <p className="text-sm text-muted-foreground">
-              Awaiting payment by {order.paymentMethods.map((m) => PAYMENT_METHODS[m].toLowerCase()).join(", ")}.
-            </p>
-          ) : (
-            <p className="text-sm text-muted-foreground">{order.status === "cancelled" && !order.paidAt ? "Not paid." : "Paid offline (bank transfer or in store)."}</p>
-          )}
-        </Panel>
+            <Panel title="Payment">
+              {order.source === "legacy" ? (
+                <p className="text-sm text-muted-foreground">Payment details remain in the original WooCommerce records.</p>
+              ) : order.payment ? (
+                <div className="space-y-0.5 text-sm">
+                  <p className="font-medium">Paid with {order.payment.provider} · {fmtDateTime(order.payment.paidAt)}</p>
+                  <p className="break-all text-muted-foreground">
+                    {order.payment.provider === "Afterpay" ? "Afterpay order " : "Transaction "}
+                    <span className="font-mono text-foreground">{order.payment.transactionId}</span>
+                  </p>
+                </div>
+              ) : order.status === "pending_payment" ? (
+                <p className="text-sm text-muted-foreground">Awaiting payment by {order.paymentMethods.map((m) => PAYMENT_METHODS[m].toLowerCase()).join(", ")}.</p>
+              ) : (
+                <p className="text-sm text-muted-foreground">{order.status === "cancelled" && !order.paidAt ? "Not paid." : "Paid offline (bank transfer or in store)."}</p>
+              )}
+            </Panel>
 
-        <Refunds order={order} onRefund={() => setRefunding({ preset: null })} />
-
-        {order.note && (
-          <Panel title="Note to customer">
-            <p className="whitespace-pre-line text-sm">{order.note}</p>
-          </Panel>
-        )}
-
-        <Panel title="Invoice"><InvoiceLink orderId={order.id} legacy={order.source === "legacy"} /></Panel>
+            <Panel title="Invoice"><InvoiceLink orderId={order.id} email={order.customer.email} orderNumber={order.number} total={total} items={order.items} legacy={order.source === "legacy"} /></Panel>
+          </aside>
+        </div>
       </div>
 
       <RefundDialog order={order} preset={refunding?.preset ?? null} open={refunding !== null} onOpenChange={(open) => !open && setRefunding(null)} />
@@ -299,7 +292,7 @@ export function OrderDetail({ order: initialOrder, standalone = false }: { order
           </Button>
         )}
         {order.status === "pending_payment" && (
-          <Button type="button" variant="outline" className="w-full" onClick={() => setOrderStatus(order.id, "paid")}>
+          <Button type="button" variant="outline" className="w-full" onClick={() => setOrderStatus(order.id, "processing")}>
             Mark payment received
           </Button>
         )}
@@ -312,7 +305,7 @@ export function OrderDetail({ order: initialOrder, standalone = false }: { order
           </Button>
         )}
         {order.status === "cancelled" && (
-          <Button type="button" variant="outline" className="w-full" onClick={() => setOrderStatus(order.id, order.paidAt ? "paid" : "pending_payment")}>
+          <Button type="button" variant="outline" className="w-full" onClick={() => setOrderStatus(order.id, order.paidAt ? "processing" : "pending_payment")}>
             Reinstate order
           </Button>
         )}
@@ -472,11 +465,30 @@ function DispatchSteps({ active }: { active: number }) {
 }
 
 /** The customer's order page, which doubles as the invoice they pay from. */
-export function InvoiceLink({ orderId, legacy = false }: { orderId: string; legacy?: boolean }) {
+export function InvoiceLink({ orderId, email, orderNumber, total, items, legacy = false }: { orderId: string; email: string; orderNumber: string; total: number; items: AdminOrder["items"]; legacy?: boolean }) {
   const path = `/order/${orderId}`;
+  function emailInvoice() {
+    const invoiceUrl = new URL(path, window.location.origin).href;
+    const itemLines = items.map((item) => `${item.name} × ${item.qty} — ${formatCents(item.unitPrice * item.qty)}`).join("\n");
+    const body = [
+      `Hi ${email},`,
+      "",
+      `Here is your invoice for order ${orderNumber}.`,
+      itemLines,
+      `Total: ${formatCents(total)}`,
+      ...(!legacy ? ["", `View your full order: ${invoiceUrl}`] : []),
+      "",
+      "Thank you,",
+      "CarBeat",
+    ].join("\n");
+    window.location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(`Invoice for order ${orderNumber}`)}&body=${encodeURIComponent(body)}`;
+  }
   return (
     <div>
-      <p className="mb-3 text-sm text-muted-foreground">{legacy ? "Print or save a copy of this imported order as a PDF." : "Send the order page to the customer, or print/save a PDF invoice."}</p>
+      <p className="mb-3 text-sm text-muted-foreground">{legacy ? "Prepare an invoice summary email for this imported order." : "Email the customer a link to their order, or print a PDF copy."}</p>
+      <Button type="button" className="mb-2 w-full" onClick={emailInvoice}>
+        <Mail /> Email invoice
+      </Button>
       {!legacy && <div className="mb-2 flex gap-2">
         <Button
           variant="outline"

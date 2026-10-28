@@ -1,8 +1,8 @@
 "use client";
 
-import { Download, Pencil, Plus, Search, Trash2, Upload } from "lucide-react";
+import { Copy, Download, Pencil, Plus, Search, Trash2, Upload } from "lucide-react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
@@ -117,6 +117,7 @@ export function fitsSummary(fits: AdminProduct["fits"], makes: VehicleMake[]) {
 
 export function ProductsManager() {
   const { products, departments, makes, deleteProduct, importProducts } = useAdminStore();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const fileInput = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
@@ -130,6 +131,7 @@ export function ProductsManager() {
   const [make, setMake] = useState(ALL);
   const [status, setStatus] = useState(ALL);
   const [deleting, setDeleting] = useState<AdminProduct | null>(null);
+  const [duplicating, setDuplicating] = useState<string | null>(null);
 
   const makeModels = new Set(makes.find((m) => m.id === make)?.models.flatMap((m) => [m.id, ...m.subModels.map((s) => s.id)]));
   const q = query.trim().toLowerCase();
@@ -143,6 +145,48 @@ export function ProductsManager() {
   );
 
   const departmentName = (id: string) => departmentLabel(departments, id) ?? "Unassigned";
+
+  async function duplicateProduct(product: AdminProduct) {
+    const takenSkus = new Set(products.map((item) => item.sku.toUpperCase()));
+    let suffix = "-COPY";
+    let sku = "";
+    for (let n = 2; ; n++) {
+      sku = `${product.sku.slice(0, 40 - suffix.length)}${suffix}`.toUpperCase();
+      if (!takenSkus.has(sku)) break;
+      suffix = `-COPY-${n}`;
+    }
+    const duplicate: AdminProduct = {
+      ...product,
+      id: newId("p"),
+      slug: "",
+      sku,
+      name: `Copy of ${product.name}`.slice(0, 120),
+      status: "draft",
+      stock: 0,
+      images: [...product.images],
+      features: [...product.features],
+      keywords: [...product.keywords],
+      optionGroups: product.optionGroups.map((group) => ({ ...group, values: group.values.map((choice) => ({ ...choice })) })),
+      specs: product.specs.map(([label, value]) => [label, value] as [string, string]),
+      addOnIds: [...product.addOnIds],
+      dealPrice: null,
+      trending: false,
+      rating: 0,
+      reviews: 0,
+    };
+
+    setDuplicating(product.id);
+    try {
+      const [result] = await importProducts([duplicate]);
+      if (result.error) throw new Error(result.error);
+      toast.success("Draft copy created. Review it before publishing.");
+      router.push(`/admin/products/${encodeURIComponent(result.id)}/edit`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Couldn't duplicate this product.");
+    } finally {
+      setDuplicating(null);
+    }
+  }
 
   function exportCsv() {
     const csvCell = (value: string | number | boolean | null) => {
@@ -315,6 +359,9 @@ export function ProductsManager() {
                           <Link href={`/admin/products/${p.id}/edit`} aria-label={`Edit ${p.name}`}>
                             <Pencil />
                           </Link>
+                        </Button>
+                        <Button variant="ghost" size="icon-sm" onClick={() => void duplicateProduct(p)} disabled={duplicating !== null} aria-label={`Duplicate ${p.name}`} title="Duplicate as draft">
+                          <Copy />
                         </Button>
                         <Button variant="ghost" size="icon-sm" onClick={() => setDeleting(p)} aria-label={`Delete ${p.name}`}>
                           <Trash2 />

@@ -164,7 +164,7 @@ export async function createInvoice(input: InvoiceInput): Promise<AdminOrder> {
     await tx.insert(orders).values({
       id,
       source: "invoice",
-      status: input.paid ? "paid" : "pending_payment",
+      status: input.paid ? "processing" : "pending_payment",
       paidAt: input.paid ? new Date().toISOString() : null,
       email: input.customer.email,
       name: input.customer.name,
@@ -327,7 +327,7 @@ export async function setOrderStatus(id: string, status: OrderStatus, shipment?:
     // Refunded is set by refunding the order in full, and is final.
     if (order.status === "refunded" || status === "refunded") throw new AdminError("Refunded orders are changed by refunding them, not by changing their status.");
     const next: Partial<Record<OrderStatus, OrderStatus[]>> = {
-      pending_payment: ["paid", "cancelled"],
+      pending_payment: ["processing", "paid", "cancelled"],
       processing: ["confirmed", "cancelled"],
       paid: ["confirmed", "cancelled"],
       confirmed: ["preparing", "cancelled"],
@@ -344,6 +344,7 @@ export async function setOrderStatus(id: string, status: OrderStatus, shipment?:
       .update(orders)
       .set({
         status,
+        ...(order.status === "pending_payment" && (status === "processing" || status === "paid") && { paidAt: new Date().toISOString() }),
         ...(shipment !== undefined && { shippingCarrier: shipment?.carrier ?? null, trackingNumber: shipment?.trackingNumber ?? null }),
         ...((status === "fulfilled" || status === "completed") && !order.shippedAt && { shippedAt: new Date().toISOString() }),
       })

@@ -15,7 +15,7 @@ export default async function AdminOrderDetailsPage(props: PageProps<"/admin/ord
   if (!order) notFound();
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto max-w-6xl">
       <div className="mb-5 flex flex-wrap gap-2">
         <Button asChild variant="outline"><Link href="/admin/orders"><ArrowLeft /> All orders</Link></Button>
         <Button asChild variant="outline"><Link href={`/admin/orders/${encodeURIComponent(id)}/invoice`}><FileText /> View invoice</Link></Button>

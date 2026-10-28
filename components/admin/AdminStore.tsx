@@ -183,6 +183,7 @@ export function AdminStoreProvider({ initial, children }: { initial: AdminData; 
               : {
                   ...o,
                   status,
+                  ...(o.status === "pending_payment" && (status === "processing" || status === "paid") && { paidAt: new Date().toISOString() }),
                   ...(shipment !== undefined && { shipment: shipment ?? undefined }),
                   ...(status === "fulfilled" && o.status !== "fulfilled" && { shippedAt }),
                 },
