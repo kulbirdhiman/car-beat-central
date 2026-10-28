@@ -89,7 +89,12 @@ export function OrderHelp(props: HelpProps) {
                     </p>
                   )}
                   <p className="mt-2 text-muted-foreground">{status.body(r.kind)}</p>
-                  {r.response && <p className="mt-2 whitespace-pre-line rounded-md bg-muted p-3">{r.response}</p>}
+                  {r.response && (
+                    <div className="mt-3 rounded-md border-l-2 border-primary bg-muted p-3">
+                      <p className="mb-1 text-xs font-semibold text-foreground">Reply from CarBeat</p>
+                      <p className="whitespace-pre-line text-muted-foreground">{r.response}</p>
+                    </div>
+                  )}
                 </li>
               );
             })}

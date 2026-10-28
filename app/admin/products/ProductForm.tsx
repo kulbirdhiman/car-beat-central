@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { departmentTree, type AdminProduct } from "@/lib/admin/model";
-import { CATEGORY_LABELS } from "@/lib/data";
+import { CATEGORY_LABELS, formatPrice } from "@/lib/data";
 import { productDescriptionText } from "@/lib/product-description";
 import type { Category } from "@/lib/types";
 
@@ -160,11 +160,29 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
           <ArrowLeft /> Products
         </Link>
       </Button>
-      <PageHeader title={product ? `Edit ${product.name}` : "Add product"} description="Prices are whole AUD, GST inclusive." />
+      <PageHeader title={product ? `Edit ${product.name}` : "Add product"} description="Start with the required details, then add the extra product information. Prices are whole AUD, GST inclusive." />
 
-      <form ref={formRef} onSubmit={submit} noValidate className="grid gap-6 pb-24 xl:grid-cols-3">
-        <div className="space-y-6 xl:col-span-2">
-          <Card>
+      <form ref={formRef} onSubmit={submit} noValidate className="mx-auto max-w-6xl space-y-6 pb-24">
+        <nav aria-label="Product form sections" className="no-scrollbar sticky top-16 z-10 -mx-2 flex gap-2 overflow-x-auto rounded-xl border bg-background/95 p-2 shadow-sm backdrop-blur sm:mx-0 sm:flex-wrap">
+          {[
+            ["Basics", "#pf-basics"],
+            ["Photos", "#pf-images"],
+            ["Price & stock", "#pf-pricing"],
+            ["Vehicle fitment", "#pf-fitment"],
+            ["Options", "#pf-options"],
+            ["Specifications", "#pf-specs"],
+            ["Add-ons", "#pf-addons"],
+            ["Publish", "#pf-publish"],
+          ].map(([label, href]) => (
+            <a key={href} href={href} className="shrink-0 rounded-lg border bg-card px-3 py-2 text-sm font-medium transition-colors hover:border-primary/40 hover:text-primary">
+              {label}
+            </a>
+          ))}
+        </nav>
+
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start">
+        <div className="min-w-0 space-y-6">
+          <Card id="pf-basics" className="scroll-mt-36">
             <CardHeader>
               <CardTitle>Details</CardTitle>
             </CardHeader>
@@ -189,7 +207,7 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
               <Field id="pf-keywords" label="Keywords (comma or line separated)" error={errors.keywords} className="sm:col-span-2">
                 <Textarea id="pf-keywords" value={form.keywords} onChange={set("keywords")} rows={3} placeholder="e.g. carplay stereo, wireless head unit" aria-invalid={!!errors.keywords} />
               </Field>
-              <div className="space-y-3 sm:col-span-2">
+              <div id="pf-options" className="scroll-mt-36 space-y-3 sm:col-span-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <h3 className="text-sm font-medium">Options and prices</h3>
@@ -244,7 +262,7 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
             </CardContent>
           </Card>
 
-          <Card>
+          <Card id="pf-specs" className="scroll-mt-36">
             <CardHeader>
               <CardTitle>Specifications</CardTitle>
               <CardDescription>Shown in the Specifications tab, after brand and category. The first four also feature on the homepage spotlight.</CardDescription>
@@ -298,7 +316,7 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
             </CardContent>
           </Card>
 
-          <Card>
+          <Card id="pf-images" className="scroll-mt-36">
             <CardHeader>
               <CardTitle>Product images</CardTitle>
             </CardHeader>
@@ -315,7 +333,7 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
             </CardContent>
           </Card>
 
-          <Card>
+          <Card id="pf-pricing" className="scroll-mt-36">
             <CardHeader>
               <CardTitle>Pricing &amp; stock</CardTitle>
             </CardHeader>
@@ -332,7 +350,7 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
             </CardContent>
           </Card>
 
-          <Card>
+          <Card id="pf-fitment" className="scroll-mt-36">
             <CardHeader>
               <CardTitle>Vehicle fitment</CardTitle>
               <CardDescription>Which vehicles this product fits.</CardDescription>
@@ -351,7 +369,7 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
             </CardContent>
           </Card>
 
-          <Card>
+          <Card id="pf-addons" className="scroll-mt-36">
             <CardHeader>
               <CardTitle>Add-ons</CardTitle>
               <CardDescription>
@@ -370,7 +388,19 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
         </div>
 
         <div className="space-y-6">
-          <Card>
+          <ProductPreview
+            name={form.name}
+            brand={form.brand}
+            image={form.image}
+            galleryCount={images.length + (form.image ? 1 : 0)}
+            price={form.price}
+            rrp={form.rrp}
+            dealPrice={form.dealPrice}
+            category={form.category}
+            status={form.status}
+          />
+
+          <Card id="pf-publish" className="scroll-mt-36">
             <CardHeader>
               <CardTitle>Status</CardTitle>
             </CardHeader>
@@ -440,6 +470,8 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
               </label>
             </CardContent>
           </Card>
+
+        </div>
         </div>
 
         {/* Kept in view so the form can be saved from anywhere on the page. */}
@@ -460,5 +492,70 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
         </div>
       </form>
     </>
+  );
+}
+
+function ProductPreview({
+  name,
+  brand,
+  image,
+  galleryCount,
+  price,
+  rrp,
+  dealPrice,
+  category,
+  status,
+}: {
+  name: string;
+  brand: string;
+  image: string;
+  galleryCount: number;
+  price: string;
+  rrp: string;
+  dealPrice: string;
+  category: string;
+  status: string;
+}) {
+  const validPrice = Number.isInteger(Number(price)) && Number(price) > 0;
+  const validRrp = Number.isInteger(Number(rrp)) && Number(rrp) >= Number(price);
+  const validDeal = Number.isInteger(Number(dealPrice)) && Number(dealPrice) > 0 && Number(dealPrice) < Number(price);
+
+  return (
+    <Card className="overflow-hidden xl:sticky xl:top-24">
+      <CardHeader>
+        <CardTitle>Live preview</CardTitle>
+        <CardDescription>Updates as you edit the product.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="overflow-hidden rounded-xl border bg-background">
+          <div className="relative aspect-square bg-muted">
+            {image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={image} alt={name ? `${name} preview` : "Product photo preview"} className="size-full object-cover" />
+            ) : (
+              <div className="grid size-full place-items-center text-sm text-muted-foreground">Add a main photo</div>
+            )}
+            <span className="absolute left-2 top-2 rounded-full bg-background/95 px-2.5 py-1 text-xs font-semibold">
+              {status === "active" ? "Active" : "Draft"}
+            </span>
+            {validDeal && <span className="absolute right-2 top-2 rounded-full bg-destructive px-2.5 py-1 text-xs font-bold text-white">Deal</span>}
+          </div>
+          <div className="space-y-2 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{brand || "Brand"}</p>
+            <h3 className="line-clamp-2 min-h-10 font-semibold">{name || "Product name will appear here"}</h3>
+            <p className="text-xs text-muted-foreground">{category in CATEGORY_LABELS ? CATEGORY_LABELS[category as Category] : "Choose a category"}</p>
+            <div className="flex flex-wrap items-baseline gap-2">
+              {validPrice ? (
+                <span className="font-display text-2xl font-bold">{formatPrice(validDeal ? Number(dealPrice) : Number(price))}</span>
+              ) : (
+                <span className="text-sm text-muted-foreground">Add a price</span>
+              )}
+              {validRrp && Number(rrp) > Number(price) && <span className="text-sm text-muted-foreground line-through">{formatPrice(Number(rrp))}</span>}
+            </div>
+            <p className="border-t pt-2 text-xs text-muted-foreground">{galleryCount} product photo{galleryCount === 1 ? "" : "s"}</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

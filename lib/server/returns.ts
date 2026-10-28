@@ -96,6 +96,7 @@ export async function respondToReturn(returnId: string, action: "approve" | "rej
   const [request] = await db.select().from(orderReturns).where(eq(orderReturns.id, returnId)).limit(1);
   if (!request) throw new AdminError("Request not found.", 404);
   if (!isOpenReturn(request)) throw new AdminError("This request has already been dealt with.");
+  if (!response.trim()) throw new AdminError("Write a message for the customer before responding.");
 
   if (action === "approve" && request.kind === "cancel") {
     const order = await getOrder(request.orderId);
@@ -111,7 +112,6 @@ export async function respondToReturn(returnId: string, action: "approve" | "rej
     return request.orderId;
   }
 
-  if (action === "reject" && !response) throw new AdminError("Tell the customer why it's declined.");
   if (action === "approve" && request.status === "approved") throw new AdminError("This return is already approved. Refund it once the items arrive.");
   const updated = await db
     .update(orderReturns)

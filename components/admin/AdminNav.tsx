@@ -1,12 +1,13 @@
 "use client";
 
-import { Car, FilePlus2, Layers, LayoutDashboard, Menu, Package, ShoppingBag, TicketPercent, Users } from "lucide-react";
+import { Car, FilePlus2, Layers, LayoutDashboard, Menu, Package, RotateCcw, ShoppingBag, TicketPercent, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { isOpenReturn } from "@/lib/returns";
 import { useAdminStore } from "./AdminStore";
 
 const LINKS = [
@@ -15,15 +16,19 @@ const LINKS = [
   { href: "/admin/departments", label: "Departments", icon: Layers },
   { href: "/admin/categories", label: "Vehicle Categories", icon: Car },
   { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
+  { href: "/admin/returns", label: "Returns", icon: RotateCcw },
   { href: "/admin/orders/new", label: "New invoice", icon: FilePlus2 },
   { href: "/admin/offers", label: "Offers & Coupons", icon: TicketPercent },
   { href: "/admin/customers", label: "Customers", icon: Users },
 ] as const;
 
+const isProductEditor = (pathname: string) => pathname === "/admin/products/new" || /^\/admin\/products\/[^/]+\/edit$/.test(pathname);
+
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const { orders } = useAdminStore();
   const toShip = orders.filter((o) => ["processing", "paid", "confirmed", "preparing"].includes(o.status)).length;
+  const openReturns = orders.reduce((total, order) => total + order.returns.filter(isOpenReturn).length, 0);
   // The most specific matching link is the active one, so New invoice doesn't also light up Orders.
   const activeHref = LINKS.filter(({ href }) => (href === "/admin" ? pathname === href : pathname.startsWith(href)))
     .map(({ href }) => href)
@@ -51,6 +56,11 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
                 {toShip}
               </span>
             )}
+            {href === "/admin/returns" && openReturns > 0 && (
+              <span className={cn("rounded-full px-1.5 text-xs tabular-nums", active ? "bg-background/20" : "bg-primary text-primary-foreground")}>
+                {openReturns}
+              </span>
+            )}
           </Link>
         );
       })}
@@ -59,6 +69,8 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 export function AdminSidebar() {
+  const pathname = usePathname();
+  if (isProductEditor(pathname)) return null;
   return (
     <aside className="sticky top-16 hidden h-[calc(100dvh-4rem)] w-60 shrink-0 border-r bg-background p-4 xl:block">
       <NavLinks />
@@ -68,6 +80,8 @@ export function AdminSidebar() {
 
 export function AdminMobileNav() {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+  if (isProductEditor(pathname)) return null;
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>

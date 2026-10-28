@@ -42,10 +42,10 @@ export function ReturnStatusBadge({ status }: { status: ReturnStatus }) {
 export const refundable = (order: AdminOrder) => (orderWasPaid(order) ? Math.max(0, orderTotal(order) - order.refunded) : 0);
 
 /** Preset for the refund dialog when it settles a return request. */
-type Preset = { returnId: string; amount: number; reason: string; restock: Record<string, number> };
+export type ReturnRefundPreset = { returnId: string; amount: number; reason: string; restock: Record<string, number> };
 
 /** The customer's cancellation and return requests, with approve / decline / refund actions on the open ones. */
-export function ReturnRequests({ order, onRefund }: { order: AdminOrder; onRefund: (preset: Preset) => void }) {
+export function ReturnRequests({ order, onRefund }: { order: AdminOrder; onRefund: (preset: ReturnRefundPreset) => void }) {
   if (order.returns.length === 0) return null;
   return (
     <section className="rounded-lg border p-4">
@@ -61,7 +61,7 @@ export function ReturnRequests({ order, onRefund }: { order: AdminOrder; onRefun
   );
 }
 
-function ReturnRow({ order, request, onRefund }: { order: AdminOrder; request: ReturnRequest; onRefund: (preset: Preset) => void }) {
+function ReturnRow({ order, request, onRefund }: { order: AdminOrder; request: ReturnRequest; onRefund: (preset: ReturnRefundPreset) => void }) {
   const { respondToReturn } = useAdminStore();
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState<"approve" | "reject" | null>(null);
@@ -70,7 +70,7 @@ function ReturnRow({ order, request, onRefund }: { order: AdminOrder; request: R
   const left = refundable(order);
 
   async function respond(action: "approve" | "reject") {
-    if (action === "reject" && !message.trim()) return toast.error("Write a short message telling the customer why it's declined.");
+    if (!message.trim()) return toast.error("Write a message for the customer before responding.");
     if (action === "approve" && cancel && !confirm(`Cancel this order and record a ${formatCents(left)} refund? Pay the customer back yourself.`)) return;
     setBusy(action);
     try {
@@ -113,7 +113,7 @@ function ReturnRow({ order, request, onRefund }: { order: AdminOrder; request: R
       {open && (
         <div className="space-y-2 rounded-md border border-dashed p-3">
           <Label htmlFor={`reply-${request.id}`} className="text-xs text-muted-foreground">
-            Message to the customer {request.status === "requested" && !cancel ? "(return instructions, or why it's declined)" : "(optional when approving)"}
+            Message to the customer (required for approval or decline)
           </Label>
           <Textarea id={`reply-${request.id}`} value={message} onChange={(e) => setMessage(e.target.value)} maxLength={1000} rows={2} />
           <div className="flex flex-wrap gap-2">
@@ -197,7 +197,7 @@ export function Refunds({ order, onRefund }: { order: AdminOrder; onRefund: () =
  * Records a refund: the amount (any part of what's left), a reason, and which items go back into stock.
  * No money moves: the admin pays the customer back themselves. Refunding in full sets the order to "Refunded".
  */
-export function RefundDialog({ order, preset, open, onOpenChange }: { order: AdminOrder; preset: Preset | null; open: boolean; onOpenChange: (open: boolean) => void }) {
+export function RefundDialog({ order, preset, open, onOpenChange }: { order: AdminOrder; preset: ReturnRefundPreset | null; open: boolean; onOpenChange: (open: boolean) => void }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
@@ -208,7 +208,7 @@ export function RefundDialog({ order, preset, open, onOpenChange }: { order: Adm
   );
 }
 
-function RefundForm({ order, preset, onDone }: { order: AdminOrder; preset: Preset | null; onDone: () => void }) {
+function RefundForm({ order, preset, onDone }: { order: AdminOrder; preset: ReturnRefundPreset | null; onDone: () => void }) {
   const { refundOrder } = useAdminStore();
   const left = refundable(order);
   const paidWith = order.payment?.provider;

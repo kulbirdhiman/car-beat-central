@@ -107,6 +107,8 @@ export const orders = pgTable(
     paymentMethods: jsonb("payment_methods").$type<PaymentMethod[]>(),
     /** Message to the customer, shown on the invoice. */
     note: text("note"),
+    /** Staff-only notes; never shown on the customer's order page or invoice. */
+    internalNote: text("internal_note"),
   },
   (t) => [index("orders_created").on(t.createdAt), index("orders_email").on(t.email), index("orders_user").on(t.userId)],
 ).enableRLS();

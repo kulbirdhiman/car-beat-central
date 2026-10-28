@@ -61,10 +61,10 @@ export default async function ShopPage(props: PageProps<"/shop">) {
     : dept
       ? dept.department.name
       : filters.category
-      ? CATEGORY_LABELS[filters.category]
-      : car
-        ? `Parts for your ${car.subModel?.name ?? car.model.name}`
-        : "All parts";
+        ? CATEGORY_LABELS[filters.category]
+        : car
+          ? `Parts for your ${car.subModel?.name ?? car.model.name}`
+          : "All parts";
 
   const active = [
     filters.q && { label: `“${filters.q}”`, key: "q" },
@@ -189,7 +189,7 @@ export default async function ShopPage(props: PageProps<"/shop">) {
                 </Button>
               </div>
             ) : (
-              <ul className="grid grid-cols-2 gap-2 sm:gap-4 xl:grid-cols-3 2xl:grid-cols-4">
+              <ul className="grid grid-cols-2 gap-2 sm:gap-4 xl:grid-cols-4 2xl:grid-cols-4">
                 {products.map((p, i) => (
                   <li key={p.id} className="animate-in fade-in slide-in-from-bottom-3 fill-mode-both duration-500" style={{ animationDelay: `${Math.min(i, 8) * 50}ms` }}>
                     <ProductCard product={p} sizes="(min-width: 1536px) 20vw, (min-width: 1280px) 25vw, (min-width: 1024px) 35vw, 50vw" />

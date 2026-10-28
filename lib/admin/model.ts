@@ -102,6 +102,8 @@ export type AdminOrder = {
   paymentMethods: PaymentMethod[];
   /** Message to the customer, shown on the invoice. Empty for none. */
   note: string;
+  /** Private order notes for staff; never shown to the customer. */
+  internalNote: string;
   /** The carrier and tracking number, once entered. */
   shipment?: Shipment;
   /** When it was marked shipped (or picked up). */
