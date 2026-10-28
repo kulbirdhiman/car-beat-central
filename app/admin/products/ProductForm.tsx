@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { newId, useAdminStore } from "@/components/admin/AdminStore";
 import { ImageUpload } from "@/components/admin/ImageUpload";
+import { MultiImageUpload } from "@/components/admin/MultiImageUpload";
 import { RichDescriptionEditor } from "@/components/admin/RichDescriptionEditor";
 import { ModelPicker, ProductPicker } from "@/components/admin/Pickers";
 import { Field, PageHeader } from "@/components/admin/ui";
@@ -302,22 +303,14 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
               <CardTitle>Product images</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="mb-3 text-sm text-muted-foreground">Add up to 25 photos. The first photo is used on product cards.</p>
+              <p className="mb-3 text-sm text-muted-foreground">Add one main photo and up to 24 gallery photos. The main photo is used on product cards.</p>
               <div className="space-y-3">
                 <Field id="pf-image" label="Main product image" error={errors.image}>
                   <ImageUpload id="pf-image" folder="products" value={form.image} onChange={(image) => setForm((f) => ({ ...f, image }))} invalid={!!errors.image} />
                 </Field>
-                {images.map((image, index) => (
-                  <div key={index} className="flex items-start gap-2">
-                    <div className="min-w-0 flex-1">
-                      <Field id={`pf-image-${index}`} label={`Additional image ${index + 1}`}>
-                        <ImageUpload id={`pf-image-${index}`} folder="products" value={image} onChange={(url) => setImages((rows) => rows.map((row, i) => i === index ? url : row))} />
-                      </Field>
-                    </div>
-                    <Button type="button" variant="ghost" size="icon" className="mt-6" aria-label={`Remove image ${index + 1}`} onClick={() => setImages((rows) => rows.filter((_, i) => i !== index))}><X /></Button>
-                  </div>
-                ))}
-                {images.length < 24 && <Button type="button" variant="outline" size="sm" onClick={() => setImages((rows) => [...rows, ""])}><Plus /> Add image</Button>}
+                <Field label="Gallery photos">
+                  <MultiImageUpload images={images} onChange={setImages} maxImages={24} />
+                </Field>
               </div>
             </CardContent>
           </Card>

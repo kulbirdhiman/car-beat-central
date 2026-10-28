@@ -6,7 +6,7 @@ import { PageShell } from "@/components/layout/PageShell";
 import { ProductCard } from "@/components/product/ProductCard";
 import { ProductDescription, productDescriptionText } from "@/components/product/ProductDescription";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CATEGORY_GALLERY, CATEGORY_LABELS, discountPercent, findDepartment, formatPrice } from "@/lib/data";
+import { CATEGORY_LABELS, discountPercent, findDepartment, formatPrice } from "@/lib/data";
 import { getAddOns, getCarBrands, getProductBySlug, getRelated, getStoreDepartments } from "@/lib/server/queries";
 import { listReviews } from "@/lib/server/reviews";
 import { getSpecs } from "@/lib/server/specs";
@@ -29,9 +29,18 @@ const PERKS = [
   { icon: Wrench, title: "Pro fitting", body: "In every capital city" },
 ];
 
+function descriptionPreview(text: string, limit = 180) {
+  if (text.length <= limit) return text;
+  const excerpt = text.slice(0, limit);
+  const lastSpace = excerpt.lastIndexOf(" ");
+  return `${excerpt.slice(0, lastSpace > limit * 0.6 ? lastSpace : limit).trimEnd()}…`;
+}
+
 export default async function ProductPage(props: PageProps<"/products/[slug]">) {
   const product = await getProductBySlug((await props.params).slug);
   if (!product) notFound();
+  const descriptionText = productDescriptionText(product.description);
+  const shortDescription = descriptionPreview(descriptionText);
   const [brands, reviews, departments, related, addOns] = await Promise.all([
     getCarBrands(),
     listReviews(product.id),
@@ -43,7 +52,7 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
   const hasOptions = !!product.optionGroups?.length;
   const price = product.deal?.price ?? product.price;
   const off = discountPercent(price, product.rrp);
-  const images = [...new Set([product.image, ...(product.images ?? []), ...CATEGORY_GALLERY[product.category]])].slice(0, 25);
+  const images = [...new Set([product.image, ...(product.images ?? [])])].slice(0, 25);
   const fits = product.fits;
   const groups =
     fits === "universal"
@@ -99,10 +108,10 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
 
           {product.description && (
             <p className="mt-4 line-clamp-3 whitespace-pre-line leading-relaxed text-muted-foreground">
-              {productDescriptionText(product.description)}
+              {shortDescription}
             </p>
           )}
-          {(productDescriptionText(product.description).length > 220 || product.description.includes("\n")) && (
+          {descriptionText.length > shortDescription.length && (
             <a href="#details" className="mt-1 inline-block text-sm font-semibold text-primary underline-offset-4 hover:underline">
               Read more
             </a>
