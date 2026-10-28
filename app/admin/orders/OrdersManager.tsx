@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, Download, ExternalLink, Mail, Pencil, Plus, Search, Trash2, Truck } from "lucide-react";
+import { Check, Copy, Download, ExternalLink, Loader2, Mail, Pencil, Plus, Save, Search, Trash2, Truck, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { DELIVERY_LABEL, ORDER_STATUS_LABEL, orderSubtotal, orderTotal, type AdminOrder } from "@/lib/admin/model";
 import { formatCents } from "@/lib/data";
 import { PAYMENT_METHODS } from "@/lib/payment";
@@ -175,20 +176,28 @@ export function OrderDetail({ order: initialOrder, standalone = false }: { order
   const total = orderTotal(order);
   const pickup = order.delivery === "collect";
   const units = order.items.reduce((n, i) => n + i.qty, 0);
+  const shippingAddress = [order.customer.name, order.shipTo.address, order.shipTo.suburb, order.shipTo.state, order.shipTo.postcode].filter(Boolean).join("\n");
   const [refunding, setRefunding] = useState<{ preset: Parameters<typeof RefundDialog>[0]["preset"] } | null>(null);
 
   return (
     <>
       {standalone ? (
-        <header className="flex flex-wrap items-start justify-between gap-4 border-b p-5 sm:p-6">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              {order.source === "invoice" ? "Invoice order" : order.source === "legacy" ? "Imported order" : "Order"}
-            </p>
-            <h1 className="mt-1 font-mono text-2xl font-bold">{order.number}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{order.source === "invoice" ? "Raised" : "Placed"} {fmtDateTime(order.createdAt)} · {formatCents(total)}</p>
+        <header className="flex flex-wrap items-center justify-between gap-5 rounded-2xl border bg-card p-5 shadow-sm sm:p-7">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="label-mono text-muted-foreground">
+                {order.source === "invoice" ? "Invoice order" : order.source === "legacy" ? "Imported order" : "Customer order"}
+              </p>
+              <OrderStatusBadge status={order.status} />
+            </div>
+            <h1 className="mt-2 break-all font-mono text-3xl font-bold tracking-tight">{order.number}</h1>
+            <p className="mt-2 text-sm text-muted-foreground">{order.source === "invoice" ? "Raised" : "Placed"} {fmtDateTime(order.createdAt)}</p>
           </div>
-          <OrderStatusBadge status={order.status} />
+          <div className="rounded-xl bg-secondary/70 px-5 py-4 sm:min-w-48 sm:text-right">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Order total</p>
+            <p className="mt-1 font-display text-3xl font-bold tabular-nums">{formatCents(total)}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{units} item{units === 1 ? "" : "s"}</p>
+          </div>
         </header>
       ) : (
         <SheetHeader className="border-b pr-12">
@@ -204,7 +213,7 @@ export function OrderDetail({ order: initialOrder, standalone = false }: { order
         </SheetHeader>
       )}
 
-      <div className={cn("space-y-4", standalone ? "p-4 sm:p-6" : "p-4")}>
+      <div className={cn("space-y-5", standalone ? "pt-0" : "p-4")}>
         <ReturnRequests order={order} onRefund={(preset) => setRefunding({ preset })} />
 
         {(["processing", "paid", "confirmed", "preparing", "fulfilled", "completed"].includes(order.status)) && <Fulfilment order={order} />}
@@ -237,20 +246,50 @@ export function OrderDetail({ order: initialOrder, standalone = false }: { order
           </div>
 
           <aside className="space-y-4">
-            <Panel title="Customer">
-              <div className="space-y-3 text-sm">
-                <div className="space-y-0.5">
-                  <p className="font-semibold">{order.customer.name}</p>
-                  <a href={`mailto:${order.customer.email}`} className="block break-all text-muted-foreground hover:text-foreground hover:underline">{order.customer.email}</a>
-                  <a href={`tel:${order.customer.phone}`} className="block text-muted-foreground hover:text-foreground hover:underline">{order.customer.phone}</a>
-                </div>
-                <div className="border-t pt-3">
-                  <p className="font-medium">{pickup ? "Local pickup" : `${DELIVERY_LABEL[order.delivery]} delivery`}</p>
-                  <p className="mt-1 text-muted-foreground">{order.shipTo.address}</p>
-                  <p className="text-muted-foreground">{order.shipTo.suburb} {order.shipTo.state} {order.shipTo.postcode}</p>
-                </div>
+            <Panel title="Customer details">
+              <div className="space-y-1 text-sm">
+                <p className="font-semibold">{order.customer.name}</p>
+                <a href={`mailto:${order.customer.email}`} className="block break-all text-muted-foreground hover:text-foreground hover:underline">{order.customer.email}</a>
+                <a href={`tel:${order.customer.phone}`} className="block text-muted-foreground hover:text-foreground hover:underline">{order.customer.phone}</a>
               </div>
             </Panel>
+
+            <Panel title={pickup ? "Collection details" : "Shipping address"}>
+              <div className="space-y-3 text-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="font-medium">{pickup ? "Local pickup" : `${DELIVERY_LABEL[order.delivery]} delivery`}</p>
+                  {!pickup && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(shippingAddress);
+                          toast.success("Shipping address copied.");
+                        } catch {
+                          toast.error("Couldn't copy the shipping address.");
+                        }
+                      }}
+                    >
+                      <Copy /> Copy address
+                    </Button>
+                  )}
+                </div>
+                {pickup ? (
+                  <p className="text-muted-foreground">Customer will collect this order.</p>
+                ) : (
+                  <address className="space-y-0.5 not-italic">
+                    <p className="font-medium">{order.customer.name}</p>
+                    <p>{order.shipTo.address}</p>
+                    <p>{order.shipTo.suburb}</p>
+                    <p>{[order.shipTo.state, order.shipTo.postcode].filter(Boolean).join(" ")}</p>
+                  </address>
+                )}
+              </div>
+            </Panel>
+
+            {standalone && <InternalOrderNotes key={order.id} orderId={order.id} initialNote={order.internalNote} />}
 
             <Panel title="Payment">
               {order.source === "legacy" ? (
@@ -270,6 +309,54 @@ export function OrderDetail({ order: initialOrder, standalone = false }: { order
               )}
             </Panel>
 
+            {(order.status === "pending_payment" || ["processing", "paid", "confirmed", "preparing"].includes(order.status) || order.status === "cancelled") && (
+              <Panel title="Order actions">
+                <div className="grid gap-2">
+                  {!order.paidAt && order.status === "pending_payment" && (
+                    <Button type="button" variant="outline" className="w-full" onClick={() => setOrderStatus(order.id, "processing")}>
+                      <Check /> Mark payment received
+                    </Button>
+                  )}
+                  {order.status === "pending_payment" && (
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      className="w-full"
+                      onClick={async () => {
+                        if (!confirm(`Delete unpaid order ${order.number}? This cannot be undone.`)) return;
+                        try {
+                          await deleteOrder(order.id);
+                          router.push("/admin/orders");
+                        } catch (error) {
+                          toast.error(error instanceof Error ? error.message : "Couldn't delete this order.");
+                        }
+                      }}
+                    >
+                      <Trash2 /> Delete unpaid order
+                    </Button>
+                  )}
+                  {(["processing", "paid", "confirmed", "preparing"].includes(order.status)) && (
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      className="w-full"
+                      onClick={() => {
+                        if (order.payment && order.refunded < total && !confirm("Cancelling doesn't refund the payment. Use Refund for that. Cancel anyway?")) return;
+                        setOrderStatus(order.id, "cancelled");
+                      }}
+                    >
+                      <X /> Cancel order
+                    </Button>
+                  )}
+                  {order.status === "cancelled" && (
+                    <Button type="button" variant="outline" className="w-full" onClick={() => setOrderStatus(order.id, order.paidAt ? "processing" : "pending_payment")}>
+                      Reinstate order
+                    </Button>
+                  )}
+                </div>
+              </Panel>
+            )}
+
             <Panel title="Invoice"><InvoiceLink orderId={order.id} email={order.customer.email} orderNumber={order.number} total={total} items={order.items} legacy={order.source === "legacy"} /></Panel>
           </aside>
         </div>
@@ -277,39 +364,6 @@ export function OrderDetail({ order: initialOrder, standalone = false }: { order
 
       <RefundDialog order={order} preset={refunding?.preset ?? null} open={refunding !== null} onOpenChange={(open) => !open && setRefunding(null)} />
 
-      <div className={cn("flex flex-col gap-2 border-t p-4", standalone ? "sm:flex-row sm:justify-end sm:p-6" : "mt-auto")}>
-        {!order.paidAt && order.status === "pending_payment" && (
-          <Button
-            type="button"
-            variant="destructive"
-            onClick={async () => {
-              if (!confirm(`Delete unpaid order ${order.number}? This cannot be undone.`)) return;
-              try { await deleteOrder(order.id); router.push("/admin/orders"); }
-              catch (error) { toast.error(error instanceof Error ? error.message : "Couldn't delete this order."); }
-            }}
-          >
-            <Trash2 /> Delete order
-          </Button>
-        )}
-        {order.status === "pending_payment" && (
-          <Button type="button" variant="outline" className="w-full" onClick={() => setOrderStatus(order.id, "processing")}>
-            Mark payment received
-          </Button>
-        )}
-        {(["processing", "paid", "confirmed", "preparing"].includes(order.status)) && (
-          <Button type="button" variant="destructive" className="w-full" onClick={() => {
-            if (order.payment && order.refunded < total && !confirm("Cancelling doesn't refund the payment. Use Refund for that. Cancel anyway?")) return;
-            setOrderStatus(order.id, "cancelled");
-          }}>
-            Cancel order
-          </Button>
-        )}
-        {order.status === "cancelled" && (
-          <Button type="button" variant="outline" className="w-full" onClick={() => setOrderStatus(order.id, order.paidAt ? "processing" : "pending_payment")}>
-            Reinstate order
-          </Button>
-        )}
-      </div>
     </>
   );
 }
@@ -317,11 +371,72 @@ export function OrderDetail({ order: initialOrder, standalone = false }: { order
 /** A titled block in the order panel. */
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-lg border p-4">
-      <h3 className="mb-3 text-sm font-semibold">{title}</h3>
+    <section className="rounded-2xl border bg-card p-5 shadow-sm">
+      <h3 className="mb-4 text-sm font-semibold tracking-tight">{title}</h3>
       {children}
     </section>
   );
+}
+
+function InternalOrderNotes({ orderId, initialNote }: { orderId: string; initialNote: string }) {
+  const { saveOrderInternalNote } = useAdminStore();
+  const notes = readInternalNotes(initialNote);
+  const [note, setNote] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    const text = note.trim();
+    if (!text) return;
+    setSaving(true);
+    try {
+      await saveOrderInternalNote(orderId, text);
+      setNote("");
+      toast.success("Internal note added.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Couldn't save the internal note.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Panel title="Internal notes">
+      <p className="mb-3 text-xs text-muted-foreground">Private staff notes. Customers cannot see these.</p>
+      {notes.length > 0 && (
+        <ol className="mb-4 space-y-3">
+          {notes.map((entry, index) => (
+            <li key={`${entry.createdAt}-${index}`} className="rounded-lg bg-muted/60 p-3">
+              <p className="whitespace-pre-wrap text-sm">{entry.text}</p>
+              {entry.createdAt && <p className="mt-2 text-xs text-muted-foreground">{fmtDateTime(entry.createdAt)}</p>}
+            </li>
+          ))}
+        </ol>
+      )}
+      <Textarea value={note} onChange={(event) => setNote(event.target.value)} maxLength={5000} rows={3} placeholder="Write a new note…" />
+      <div className="mt-2 flex items-center justify-between gap-3">
+        <span className="text-xs text-muted-foreground">{note.length}/5000</span>
+        <Button size="sm" onClick={() => void save()} disabled={saving || !note.trim()}>
+          {saving ? <Loader2 className="animate-spin" /> : <Save />} Add note
+        </Button>
+      </div>
+    </Panel>
+  );
+}
+
+function readInternalNotes(value: string): { text: string; createdAt: string }[] {
+  if (!value) return [];
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (Array.isArray(parsed)) {
+      const notes = parsed.filter((entry): entry is { text: string; createdAt: string } =>
+        !!entry && typeof entry === "object" && typeof entry.text === "string" && typeof entry.createdAt === "string",
+      );
+      if (notes.length) return notes;
+    }
+  } catch {
+    // Display notes saved before the history format as one legacy note.
+  }
+  return [{ text: value, createdAt: "" }];
 }
 
 /**

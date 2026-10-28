@@ -28,6 +28,7 @@ type Store = AdminData & {
   /** `shipment`: the carrier and tracking number to save with it (null clears them). */
   setOrderStatus: (id: string, status: OrderStatus, shipment?: Shipment | null) => void;
   deleteOrder: (id: string) => Promise<void>;
+  saveOrderInternalNote: (id: string, note: string) => Promise<void>;
   /** Saved before it's shown, since the server numbers and prices it. Rejects with the server's error. */
   createInvoice: (input: InvoiceInput) => Promise<AdminOrder>;
   /** Money moves, so these wait for the server rather than updating first. Both reject with the server's error. */
@@ -199,6 +200,18 @@ export function AdminStoreProvider({ initial, children }: { initial: AdminData; 
         await api("DELETE", `/orders/${id}`);
         setOrders((list) => list.filter((o) => o.id !== id));
         toast.success("Order deleted.");
+      },
+
+      saveOrderInternalNote: async (id, note) => {
+        const internalNote = note.trim();
+        setOrders((list) => list.map((order) => order.id === id ? { ...order, internalNote } : order));
+        try {
+          const saved = await api<AdminOrder>("PATCH", `/orders/${id}/note`, { note: internalNote });
+          setOrders((list) => upsert(list, saved));
+        } catch (error) {
+          await resync();
+          throw error;
+        }
       },
 
       createInvoice: async (input) => {

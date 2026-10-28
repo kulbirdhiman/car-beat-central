@@ -15,14 +15,15 @@ export default async function AdminOrderDetailsPage(props: PageProps<"/admin/ord
   if (!order) notFound();
 
   return (
-    <div className="mx-auto max-w-6xl">
-      <div className="mb-5 flex flex-wrap gap-2">
-        <Button asChild variant="outline"><Link href="/admin/orders"><ArrowLeft /> All orders</Link></Button>
-        <Button asChild variant="outline"><Link href={`/admin/orders/${encodeURIComponent(id)}/invoice`}><FileText /> View invoice</Link></Button>
+    <div className="mx-auto w-full max-w-7xl space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">Order management</p>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline"><Link href="/admin/orders"><ArrowLeft /> All orders</Link></Button>
+          <Button asChild variant="outline"><Link href={`/admin/orders/${encodeURIComponent(id)}/invoice`}><FileText /> View invoice</Link></Button>
+        </div>
       </div>
-      <article className="overflow-hidden rounded-2xl border bg-card shadow-sm">
-        <OrderDetail order={order} standalone />
-      </article>
+      <OrderDetail order={order} standalone />
     </div>
   );
 }

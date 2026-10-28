@@ -279,6 +279,7 @@ export async function listAdminOrders({ id = null, limit = 500 }: { id?: string 
     source: o.source,
     paymentMethods: o.paymentMethods ?? DEFAULT_PAYMENT_METHODS,
     note: o.note ?? "",
+    internalNote: o.internalNote ?? "",
     shipment: o.shippingCarrier && o.trackingNumber ? { carrier: o.shippingCarrier, trackingNumber: o.trackingNumber } : undefined,
     shippedAt: o.shippedAt ?? undefined,
     paidAt: o.paidAt ?? undefined,
@@ -286,6 +287,34 @@ export async function listAdminOrders({ id = null, limit = 500 }: { id?: string 
     returns: history.returns.get(o.id) ?? [],
     refunds: history.refunds.get(o.id) ?? [],
   }));
+}
+
+/** Adds a private staff note to an order and returns the updated admin order. */
+export async function updateOrderInternalNote(id: string, note: string): Promise<AdminOrder> {
+  const [current] = await db.select({ internalNote: orders.internalNote }).from(orders).where(eq(orders.id, id)).limit(1);
+  if (!current) throw new AdminError("Order not found.", 404);
+
+  let notes: { text: string; createdAt: string }[] = [];
+  if (current.internalNote) {
+    try {
+      const parsed: unknown = JSON.parse(current.internalNote);
+      if (Array.isArray(parsed)) {
+        notes = parsed.filter((entry): entry is { text: string; createdAt: string } =>
+          !!entry && typeof entry === "object" && typeof entry.text === "string" && typeof entry.createdAt === "string",
+        );
+      }
+    } catch {
+      // Keep existing plain-text notes from before the note history was introduced.
+    }
+    if (!notes.length) notes = [{ text: current.internalNote, createdAt: "" }];
+  }
+
+  notes.push({ text: note, createdAt: new Date().toISOString() });
+  const [updated] = await db.update(orders).set({ internalNote: JSON.stringify(notes) }).where(eq(orders.id, id)).returning({ id: orders.id });
+  if (!updated) throw new AdminError("Order not found.", 404);
+  const [order] = await listAdminOrders({ id, limit: 1 });
+  if (!order) throw new AdminError("Order not found.", 404);
+  return order;
 }
 
 /**

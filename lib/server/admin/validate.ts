@@ -243,6 +243,10 @@ export function parseOrderStatus(value: unknown): OrderStatus {
   return oneOf(asBody(value), "status", ORDER_STATUSES);
 }
 
+export function parseOrderInternalNote(value: unknown): string {
+  return text(asBody(value), "note", { max: 5000, label: "Internal note" });
+}
+
 export function parseRefund(value: unknown): RefundInput {
   const body = asBody(value);
   const restock = body.restock ?? [];

@@ -68,7 +68,7 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
 
   return (
     <PageShell
-      className="pt-6"
+      className="max-w-[1200px] pt-6"
       crumbs={[
         { label: "Home", href: "/" },
         { label: "Shop", href: "/shop" },
