@@ -211,11 +211,11 @@ export function Dashboard() {
           </CardHeader>
           <CardContent>
             <ul className="divide-y">
-              {(Object.keys(ORDER_STATUS_LABEL) as OrderStatus[]).map((status) => (
+              {(Object.keys(ORDER_STATUS_LABEL) as OrderStatus[]).filter((status) => status !== "paid").map((status) => (
                 <li key={status} className="flex items-center justify-between py-2.5">
                   <OrderStatusBadge status={status} />
                   <Link href={`/admin/orders?status=${status}`} className="text-sm font-medium tabular-nums hover:underline">
-                    {dateOrders.filter((o) => o.status === status).length}
+                    {dateOrders.filter((o) => o.status === status || (status === "processing" && o.status === "paid")).length}
                   </Link>
                 </li>
               ))}

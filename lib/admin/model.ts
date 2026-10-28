@@ -134,7 +134,8 @@ export type InvoiceInput = {
 export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   pending_payment: "Awaiting payment",
   processing: "Processing",
-  paid: "Paid",
+  // Legacy rows may still use `paid`; show them in the processing stage.
+  paid: "Processing",
   confirmed: "Confirmed",
   preparing: "Preparing order",
   fulfilled: "Shipped",
