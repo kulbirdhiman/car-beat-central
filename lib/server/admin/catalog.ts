@@ -89,6 +89,7 @@ const productColumns = {
   stock: products.stock,
   status: products.status,
   fits: products.fits,
+  fitmentYears: products.fitmentYears,
   image: products.image,
   images: products.images,
   description: products.description,

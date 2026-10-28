@@ -1,7 +1,7 @@
 import { CreditCard, RotateCcw, ShieldCheck, Truck, Wrench } from "lucide-react";
 
 const ITEMS = [
-  { icon: Truck, title: "Free shipping", body: "Australia-wide over $99" },
+  { icon: Truck, title: "$29 standard shipping", body: "Australia-wide delivery" },
   { icon: ShieldCheck, title: "Fitment guarantee", body: "Or we pay return postage" },
   { icon: Wrench, title: "Pro installers", body: "In every capital city" },
   { icon: CreditCard, title: "No surprises", body: "Prices include GST" },

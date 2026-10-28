@@ -5,9 +5,11 @@ import type { CarBrand } from "./types";
 
 const KEY = "carbeat:garage";
 const SUBMODEL_KEY = "carbeat:garage-submodel";
+const YEAR_KEY = "carbeat:garage-year";
 const listeners = new Set<() => void>();
 
 export type GarageCar = {
+  year?: number;
   brand: CarBrand;
   model: CarBrand["models"][number];
   subModel?: NonNullable<CarBrand["models"][number]["subModels"]>[number];
@@ -29,8 +31,10 @@ export function readGarage(): string | null {
   }
 }
 
-function write(modelId: string | null, subModelId?: string) {
+function write(modelId: string | null, subModelId?: string, year?: number) {
   try {
+    if (modelId && year) localStorage.setItem(YEAR_KEY, String(year));
+    else localStorage.removeItem(YEAR_KEY);
     if (modelId) localStorage.setItem(KEY, modelId);
     else localStorage.removeItem(KEY);
     if (modelId && subModelId) localStorage.setItem(SUBMODEL_KEY, subModelId);
@@ -43,7 +47,7 @@ function write(modelId: string | null, subModelId?: string) {
 
 function subscribe(listener: () => void) {
   listeners.add(listener);
-  const onStorage = (e: StorageEvent) => (e.key === KEY || e.key === SUBMODEL_KEY) && listener();
+  const onStorage = (e: StorageEvent) => (e.key === KEY || e.key === SUBMODEL_KEY || e.key === YEAR_KEY) && listener();
   window.addEventListener("storage", onStorage);
   return () => {
     listeners.delete(listener);
@@ -69,10 +73,14 @@ export function useGarage() {
   const subModelId = useSyncExternalStore(subscribe, () => {
     try { return localStorage.getItem(SUBMODEL_KEY); } catch { return null; }
   }, () => null);
+  const year = useSyncExternalStore(subscribe, () => {
+    try { return Number(localStorage.getItem(YEAR_KEY)) || undefined; } catch { return undefined; }
+  }, () => undefined);
+  const car = findCar(brands, modelId, subModelId);
   return {
     // A saved model the admin has since deleted reads as no car.
-    car: findCar(brands, modelId, subModelId),
-    save: (id: string, subId?: string) => write(id, subId),
+    car: car ? { ...car, year } : null,
+    save: (id: string, subId?: string, year?: number) => write(id, subId, year),
     clear: () => write(null),
   };
 }

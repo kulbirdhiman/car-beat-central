@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.SITE_URL ?? "http://localhost:3000"),
   title: "CarBeat: Car Audio & Accessories Australia",
   description:
-    "Car stereos, speakers, subwoofers, dash cams and accessories matched to your car. Free shipping Australia-wide over $99, prices include GST.",
+    "Car stereos, speakers, subwoofers, dash cams and accessories matched to your car. Standard shipping Australia-wide for $29, prices include GST.",
   openGraph: {
     title: "CarBeat: Car Audio & Accessories Australia",
     description: "Parts matched to your make and model, fitted by certified installers in every capital city.",

@@ -21,6 +21,8 @@ export type Product = {
   reviews: number;
   /** Car model or sub-model ids this product fits, or "universal". */
   fits: string[] | "universal";
+  /** Product-specific inclusive year ranges, keyed by model or submodel id. */
+  fitmentYears?: Record<string, { from: number | null; to: number | null }>;
   /** Admin department the product belongs to (used for coupon scopes). */
   departmentId: string | null;
   /** Name of the product's department, shown as its category in the store. */
@@ -68,7 +70,7 @@ export type StoreDepartment = {
 export type CarBrand = {
   id: string;
   name: string;
-  models: { id: string; name: string; subModels?: { id: string; name: string; years: string }[] }[];
+  models: { id: string; name: string; fitmentYearRanges?: string[]; subModels?: { id: string; name: string; years: string; fitmentYearRanges?: string[] }[] }[];
 };
 
 export type Offer = {

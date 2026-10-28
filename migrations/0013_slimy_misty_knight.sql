@@ -1,0 +1,1 @@
+ALTER TABLE "products" ADD COLUMN "fitment_years" jsonb DEFAULT '{}'::jsonb NOT NULL;

@@ -11,7 +11,7 @@ export const getStoreChromeData = unstable_cache(
     const [departments, brands, total] = await Promise.all([getStoreDepartments(), getCarBrands(), getProductCount()]);
     return { departments, brands, total };
   },
-  ["store-chrome-data-v2"],
+  ["store-chrome-data-v3"],
   { revalidate: 60, tags: ["store-home-data"] },
 );
 
@@ -44,7 +44,7 @@ export const getHomeData = unstable_cache(
       deals: products.filter((product) => product.deal),
     };
   },
-  ["store-home-data-v1"],
+  ["store-home-data-v2"],
   { revalidate: 60, tags: ["store-home-data"] },
 );
 

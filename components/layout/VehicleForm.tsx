@@ -1,5 +1,7 @@
 "use client";
 
+import { vehicleOptionLabel, vehicleYearOptions } from "@/lib/fitment-years";
+
 import { ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -39,8 +41,10 @@ export function VehicleForm({
   const [brandId, setBrandId] = useState(garage.car?.brand.id ?? "");
   const [modelId, setModelId] = useState(garage.car?.model.id ?? "");
   const [subModelId, setSubModelId] = useState(garage.car?.subModel?.id ?? "");
+  const [year, setYear] = useState(garage.car?.year ? String(garage.car.year) : "");
   const brand = brands.find((b) => b.id === brandId);
   const model = brand?.models.find((m) => m.id === modelId);
+  const yearOptions = vehicleYearOptions(model?.subModels?.find((sub) => sub.id === subModelId) ?? model);
   const count = modelId ? (fitCounts[subModelId || modelId] ?? 0) : null;
   const t = tones[tone];
   const selectClass = cn(selectBase, t.select);
@@ -52,9 +56,9 @@ export function VehicleForm({
       onSubmit={(e) => {
         e.preventDefault();
         if (!modelId) return;
-        garage.save(modelId, subModelId || undefined);
+        garage.save(modelId, subModelId || undefined, year ? Number(year) : undefined);
         onDone?.();
-        router.push(`/shop?model=${modelId}${subModelId ? `&submodel=${subModelId}` : ""}`);
+        router.push(`/shop?model=${modelId}${subModelId ? `&submodel=${subModelId}` : ""}${year ? `&year=${year}` : ""}`);
       }}
     >
       <select
@@ -63,7 +67,7 @@ export function VehicleForm({
         onChange={(e) => {
           setBrandId(e.target.value);
           setModelId("");
-          setSubModelId("");
+          setSubModelId(""); setYear("");
         }}
         className={selectClass}
         style={style}
@@ -75,22 +79,26 @@ export function VehicleForm({
           </option>
         ))}
       </select>
-      <select aria-label="Model" value={modelId} onChange={(e) => { setModelId(e.target.value); setSubModelId(""); }} disabled={!brand} className={selectClass} style={style}>
+      <select aria-label="Model" value={modelId} onChange={(e) => { setModelId(e.target.value); setSubModelId(""); setYear(""); }} disabled={!brand} className={selectClass} style={style}>
         <option value="">{brand ? "Select model" : "Choose a make first"}</option>
         {brand?.models.map((m) => (
           <option key={m.id} value={m.id}>
-            {m.name}
+            {vehicleOptionLabel(m)} ({fitCounts[m.id] ?? 0} products)
           </option>
         ))}
       </select>
       {model && model.subModels && model.subModels.length > 0 && (
-        <select aria-label="Sub-model (optional)" value={subModelId} onChange={(e) => setSubModelId(e.target.value)} className={selectClass} style={style}>
-          <option value="">Any {model.name} version</option>
-          {model.subModels.map((sub) => <option key={sub.id} value={sub.id}>{sub.name}{sub.years ? ` · ${sub.years}` : ""}</option>)}
+        <select aria-label="Sub-model (optional)" value={subModelId} onChange={(e) => { setSubModelId(e.target.value); setYear(""); }} className={selectClass} style={style}>
+          <option value="">Any {model.name} version ({fitCounts[model.id] ?? 0} products)</option>
+          {model.subModels.map((sub) => <option key={sub.id} value={sub.id}>{vehicleOptionLabel(sub)} ({fitCounts[sub.id] ?? 0} products)</option>)}
         </select>
       )}
+      <select aria-label="Year" value={year} onChange={(e) => setYear(e.target.value)} disabled={!model} className={selectClass} style={style}>
+        <option value="">{model ? "All years" : "Choose a model first"}</option>
+        {yearOptions.map((value) => <option key={value} value={value}>{value}</option>)}
+      </select>
       <Button type="submit" size="xl" className="col-span-full mt-1 w-full" disabled={!modelId}>
-        {count === null ? "Show matching parts" : `Show ${count} matching parts`}
+        {count === null || year ? "Show matching parts" : `Show ${count} matching parts`}
         <ArrowRight />
       </Button>
     </form>

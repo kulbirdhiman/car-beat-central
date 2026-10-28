@@ -33,7 +33,7 @@ export default async function ShopPage(props: PageProps<"/shop">) {
     listProducts(filters),
     getCarBrands(),
     getStoreDepartments(),
-    getFitCounts(),
+    getFitCounts(filters),
     getProductCount(),
     getLiveOffers(),
     getDeals(),
@@ -51,7 +51,10 @@ export default async function ShopPage(props: PageProps<"/shop">) {
       if (v === null) next.delete(k);
       else next.set(k, v);
     }
-    if (changes.model === null) next.delete("submodel");
+    if (changes.model === null) {
+      next.delete("submodel");
+      next.delete("year");
+    }
     const qs = next.toString();
     return qs ? `/shop?${qs}` : "/shop";
   };
@@ -71,13 +74,14 @@ export default async function ShopPage(props: PageProps<"/shop">) {
     filters.category && { label: CATEGORY_LABELS[filters.category], key: "category" },
     filters.dept && { label: dept?.department.name ?? filters.dept, key: "dept" },
     car && { label: `${car.brand.name} ${car.subModel?.name ?? car.model.name}`, key: "model" },
+    filters.year && { label: `Year: ${filters.year}`, key: "year" },
     filters.maxPrice && { label: `Under $${filters.maxPrice}`, key: "maxPrice" },
     filters.onSale && { label: "On sale", key: "sale" },
   ].filter(Boolean) as { label: string; key: string }[];
 
   const filterPanel = (
     <div className="space-y-4">
-      <VehicleFilter key={`${filters.model ?? "none"}:${filters.subModel ?? "none"}`} modelId={filters.model} subModelId={filters.subModel} fitCounts={fitCounts} />
+      <VehicleFilter key={`${filters.model ?? "none"}:${filters.subModel ?? "none"}:${filters.year ?? "all"}`} modelId={filters.model} subModelId={filters.subModel} year={filters.year} fitCounts={fitCounts} />
 
       <FilterCard title="Categories">
         <CategoryLink href={hrefWith({ dept: null, category: null })} active={!filters.dept && !filters.category} label="All categories" count={total}>

@@ -1,3 +1,4 @@
+import { fitmentYearLabel } from "../fitment-years";
 import "server-only";
 import { and, asc, count, desc, eq, ilike, inArray, isNotNull, lte, ne, or, sql, type SQL } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
@@ -46,6 +47,7 @@ function toProduct({ product: p, dealPrice, claimed, departmentName, departmentP
     rating: p.rating,
     reviews: p.reviews,
     fits: p.fits,
+    fitmentYears: p.fitmentYears,
     badge: p.badge ?? undefined,
     image: p.image,
     images: p.images ?? [],
@@ -86,6 +88,7 @@ export type ProductFilters = {
   dept?: string;
   model?: string;
   subModel?: string;
+  year?: number;
   maxPrice?: number;
   onSale?: boolean;
   sort?: SortKey;
@@ -123,6 +126,10 @@ export async function listProducts(filters: ProductFilters = {}): Promise<Produc
     );
   }
   if (filters.model) where.push(fitsAny(filters.subModel ? [filters.model, filters.subModel] : [filters.model]));
+  if (filters.model && filters.year) {
+    const matchingIds = [filters.model, ...(filters.subModel ? [filters.subModel] : [])];
+    where.push(or(sql`${products.fits} = '"universal"'::jsonb`, ...matchingIds.map((id) => sql`(${products.fits} ? ${id} AND (${products.fitmentYears}->${id}->>'from' IS NULL OR (${products.fitmentYears}->${id}->>'from')::int <= ${filters.year}) AND (${products.fitmentYears}->${id}->>'to' IS NULL OR (${products.fitmentYears}->${id}->>'to')::int >= ${filters.year}))`)));
+  }
   if (filters.maxPrice) where.push(lte(price, filters.maxPrice));
   if (filters.onSale) where.push(isNotNull(deals.dealPrice));
   if (filters.ids) {
@@ -217,24 +224,29 @@ export async function getStoreDepartments(): Promise<StoreDepartment[]> {
 }
 
 /** Products that fit each model id, for the vehicle pickers' "Show N matching parts". */
-export async function getFitCounts(): Promise<Record<string, number>> {
-  const [all, brands] = await Promise.all([listProducts(), getCarBrands()]);
+export async function getFitCounts(filters: ProductFilters = {}): Promise<Record<string, number>> {
+  const [all, brands] = await Promise.all([listProducts({ ...filters, model: undefined, subModel: undefined, limit: undefined }), getCarBrands()]);
   return Object.fromEntries(
     brands.flatMap((b) => b.models.flatMap((m) => [
-      [m.id, all.filter((p) => productFitsModel(p, m.id)).length] as const,
-      ...(m.subModels ?? []).map((s) => [s.id, all.filter((p) => productFitsModel(p, m.id, s.id)).length] as const),
+      [m.id, all.filter((p) => productFitsModel(p, m.id, undefined, filters.year)).length] as const,
+      ...(m.subModels ?? []).map((s) => [s.id, all.filter((p) => productFitsModel(p, m.id, s.id, filters.year)).length] as const),
     ])),
   );
 }
 
 /** Makes and their models in admin order, for the store's vehicle pickers. Makes with no models are left out. */
 export async function getCarBrands(): Promise<CarBrand[]> {
-  const [makes, models, subs] = await Promise.all([
+  const [makes, models, subs, fitments] = await Promise.all([
     db.select({ id: vehicleMakes.id, name: vehicleMakes.name }).from(vehicleMakes).orderBy(vehicleMakes.position),
     db.select({ id: vehicleModels.id, makeId: vehicleModels.makeId, name: vehicleModels.name, position: vehicleModels.position }).from(vehicleModels).orderBy(vehicleModels.position),
     db.select({ id: vehicleSubmodels.id, modelId: vehicleSubmodels.modelId, name: vehicleSubmodels.name, years: vehicleSubmodels.years, position: vehicleSubmodels.position }).from(vehicleSubmodels).orderBy(vehicleSubmodels.position),
+    db.select({ fits: products.fits, fitmentYears: products.fitmentYears }).from(products).where(isActive),
   ]);
   const subsByModel = Map.groupBy(subs, (s) => s.modelId);
+  const yearRanges = (ids: string[]) => [...new Set(fitments.flatMap((product) => {
+    if (product.fits === "universal") return [];
+    return ids.filter((id) => product.fits.includes(id)).map((id) => fitmentYearLabel(product, id)).filter(Boolean);
+  }))].sort();
   const brands: CarBrand[] = [];
   for (const make of makes) {
     brands.push({
@@ -243,7 +255,8 @@ export async function getCarBrands(): Promise<CarBrand[]> {
       models: models.filter((model) => model.makeId === make.id).map((model) => ({
         id: model.id,
         name: model.name,
-        subModels: (subsByModel.get(model.id) ?? []).map((sub) => ({ id: sub.id, name: sub.name, years: sub.years })),
+        fitmentYearRanges: yearRanges([model.id, ...(subsByModel.get(model.id) ?? []).map((sub) => sub.id)]),
+        subModels: (subsByModel.get(model.id) ?? []).map((sub) => ({ id: sub.id, name: sub.name, years: sub.years, fitmentYearRanges: yearRanges([model.id, sub.id]) })),
       })),
     });
   }

@@ -56,6 +56,8 @@ export type AdminProduct = {
   status: "active" | "draft";
   /** Vehicle model or sub-model ids this product fits, or "universal". */
   fits: string[] | "universal";
+  /** Product-specific inclusive year ranges, keyed by model or submodel id. */
+  fitmentYears?: Record<string, { from: number | null; to: number | null }>;
   image: string;
   /** Product-specific gallery photos, in display order. */
   images: string[];

@@ -200,6 +200,7 @@ export function parseProduct(productId: string, value: unknown): ProductInput {
     stock: int(body, "stock", { label: "Stock" }),
     status: oneOf(body, "status", ["active", "draft"] as const),
     fits,
+    fitmentYears: parseFitmentYears(body.fitmentYears, fits),
     image: image(body, "image"),
     images: productImages(body),
     description: sanitizeProductDescription(text(body, "description", { max: 12000 })),
@@ -389,4 +390,21 @@ export function parseOffer(offerId: string, value: unknown): Omit<Offer, "create
     endsAt,
     active: bool(body, "active"),
   };
+}
+
+function parseFitmentYears(value: unknown, fits: AdminProduct["fits"]): NonNullable<AdminProduct["fitmentYears"]> {
+  if (value === undefined) return {};
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new AdminError("Invalid fitment years.");
+  const result: NonNullable<AdminProduct["fitmentYears"]> = {};
+  for (const [key, range] of Object.entries(value)) {
+    if (fits === "universal" || !fits.includes(key)) throw new AdminError("Year ranges must belong to a selected model or sub-model.");
+    if (!range || typeof range !== "object") throw new AdminError("Enter both fitment years.");
+    const input = range as { from?: number | null; to?: number | null };
+    const from = input.from ?? null;
+    const to = input.to ?? null;
+    if ((from !== null && (!Number.isInteger(from) || from < 0 || from > 9999)) || (to !== null && (!Number.isInteger(to) || to < 0 || to > 9999))) throw new AdminError("Use numbers for fitment years.");
+    if (from === null && to === null) continue;
+    result[key] = from !== null && to !== null && from > to ? { from: to, to: from } : { from, to };
+  }
+  return result;
 }

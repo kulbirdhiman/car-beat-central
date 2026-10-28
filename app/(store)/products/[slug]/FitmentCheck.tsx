@@ -1,5 +1,6 @@
 "use client";
 
+import { fitmentYearLabel } from "@/lib/fitment-years";
 import { CarFront, CircleAlert, CircleCheck } from "lucide-react";
 import Link from "next/link";
 import { productFitsModel } from "@/lib/data";
@@ -8,7 +9,7 @@ import type { Product } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 /** Tells the shopper whether this product fits the car saved in their garage. */
-export function FitmentCheck({ fits }: { fits: Product["fits"] }) {
+export function FitmentCheck({ fits, fitmentYears }: Pick<Product, "fits" | "fitmentYears">) {
   const { car } = useGarage();
 
   if (!car) {
@@ -26,7 +27,8 @@ export function FitmentCheck({ fits }: { fits: Product["fits"] }) {
     );
   }
 
-  const ok = productFitsModel({ fits }, car.model.id, car.subModel?.id);
+  const ok = productFitsModel({ fits, fitmentYears }, car.model.id, car.subModel?.id, car.year);
+  const years = fitmentYearLabel({ fitmentYears }, car.subModel?.id ?? "") || fitmentYearLabel({ fitmentYears }, car.model.id);
   const Icon = ok ? CircleCheck : CircleAlert;
   return (
     <div
@@ -39,7 +41,7 @@ export function FitmentCheck({ fits }: { fits: Product["fits"] }) {
       <span className="text-foreground">
         {ok ? (
           <>
-            <strong>Fits your {car.brand.name} {car.subModel?.name ?? car.model.name}.</strong> Guaranteed, or we pay return postage.
+            <strong>Fits your {car.brand.name} {car.subModel?.name ?? car.model.name}.</strong> {years ? `For model years ${years}. Check your vehicle year before ordering.` : "Guaranteed, or we pay return postage."}
           </>
         ) : (
           <>

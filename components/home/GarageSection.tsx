@@ -1,5 +1,7 @@
 "use client";
 
+import { vehicleOptionLabel, vehicleYearOptions } from "@/lib/fitment-years";
+
 import { ArrowRight, BookmarkCheck, BookmarkPlus, CarFront, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -18,17 +20,20 @@ export function GarageSection({ products }: { products: Product[] }) {
   // Until the shopper picks something here, show their saved car (or the Ranger, Australia's best seller).
   const [picked, setPicked] = useState<string | null>(null);
   const [pickedSubModel, setPickedSubModel] = useState("");
+  const [pickedYear, setPickedYear] = useState("");
   const car =
     findCar(brands, picked ?? garage.car?.model.id ?? "ranger") ?? (brands[0] ? { brand: brands[0], model: brands[0].models[0] } : null);
   if (!car) return null;
   const { brand, model } = car;
   const subModelId = picked === null ? garage.car?.subModel?.id ?? "" : pickedSubModel;
   const subModel = model.subModels?.find((s) => s.id === subModelId);
-  const isSaved = garage.car?.model.id === model.id && garage.car.subModel?.id === subModel?.id;
+  const year = picked === null ? garage.car?.year : Number(pickedYear) || undefined;
+  const yearOptions = vehicleYearOptions(subModel ?? model);
+  const isSaved = garage.car?.model.id === model.id && garage.car.subModel?.id === subModel?.id && garage.car.year === year;
 
   // Model-specific parts first, then universal ones.
   const matches = products
-    .filter((p) => productFitsModel(p, model.id, subModel?.id))
+    .filter((p) => productFitsModel(p, model.id, subModel?.id, year))
     .sort((a, b) => Number(a.fits === "universal") - Number(b.fits === "universal"));
 
   return (
@@ -38,7 +43,7 @@ export function GarageSection({ products }: { products: Product[] }) {
         title={
           isSaved ? (
             <>
-              Picked for your <span className="text-primary">{brand.name} {subModel?.name ?? model.name}</span>
+              Picked for your <span className="text-primary">{brand.name} {vehicleOptionLabel(subModel ?? model)}</span>
             </>
           ) : (
             "Parts that fit. No guesswork."
@@ -62,7 +67,7 @@ export function GarageSection({ products }: { products: Product[] }) {
               key={b.id}
               type="button"
               aria-pressed={b.id === brand.id}
-              onClick={() => { setPicked(b.models[0].id); setPickedSubModel(""); }}
+              onClick={() => { setPicked(b.models[0].id); setPickedSubModel(""); setPickedYear(""); }}
               className={cn(
                 "h-11 shrink-0 rounded-xl border px-5 font-display text-sm font-bold transition-colors",
                 b.id === brand.id ? "border-primary bg-primary/10 text-primary" : "bg-background hover:border-foreground/30",
@@ -81,10 +86,10 @@ export function GarageSection({ products }: { products: Product[] }) {
               <select
                 aria-label="Model"
                 value={model.id}
-                onChange={(e) => { setPicked(e.target.value); setPickedSubModel(""); }}
+                onChange={(e) => { setPicked(e.target.value); setPickedSubModel(""); setPickedYear(""); }}
                 className="h-12 w-full appearance-none rounded-xl border border-input bg-background px-4 pr-10 text-sm font-medium outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
               >
-                {brand.models.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                {brand.models.map((m) => <option key={m.id} value={m.id}>{vehicleOptionLabel(m)} ({products.filter((product) => productFitsModel(product, m.id)).length} products)</option>)}
               </select>
               <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             </span>
@@ -97,12 +102,12 @@ export function GarageSection({ products }: { products: Product[] }) {
                 <select
                   aria-label="Sub-model (optional)"
                   value={subModelId}
-                  onChange={(e) => { setPicked(model.id); setPickedSubModel(e.target.value); }}
+                  onChange={(e) => { setPicked(model.id); setPickedSubModel(e.target.value); setPickedYear(""); }}
                   disabled={!model.subModels?.length}
                   className="h-12 w-full appearance-none rounded-xl border border-input bg-background px-4 pr-10 text-sm font-medium outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:bg-muted disabled:text-muted-foreground"
                 >
-                  <option value="">{model.subModels?.length ? `Any ${model.name} version` : "No sub-models listed"}</option>
-                  {model.subModels?.map((s) => <option key={s.id} value={s.id}>{s.name}{s.years ? ` · ${s.years}` : ""}</option>)}
+                  <option value="">{model.subModels?.length ? `Any ${model.name} version (${products.filter((product) => productFitsModel(product, model.id)).length} products)` : "No sub-models listed"}</option>
+                  {model.subModels?.map((s) => <option key={s.id} value={s.id}>{vehicleOptionLabel(s)} ({products.filter((product) => productFitsModel(product, model.id, s.id)).length} products)</option>)}
                 </select>
                 <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               </span>
@@ -111,18 +116,26 @@ export function GarageSection({ products }: { products: Product[] }) {
           </div>
         </div>
 
+        <label className="mt-4 block">
+          <span className="mb-2 block text-sm font-semibold">4. Choose a year</span>
+          <select aria-label="Year" value={year ?? ""} onChange={(e) => { setPicked(model.id); setPickedSubModel(subModelId); setPickedYear(e.target.value); }} className="h-12 w-full rounded-xl border border-input bg-background px-4 text-sm">
+            <option value="">All years</option>
+            {yearOptions.map((value) => <option key={value} value={value}>{value}</option>)}
+          </select>
+        </label>
+
         <div className="mt-5 flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Selected vehicle</p>
-            <p className="mt-0.5 truncate font-semibold">{brand.name} {model.name}{subModel ? ` · ${subModel.name}` : ""}</p>
+            <p className="mt-0.5 truncate font-semibold">{brand.name} {subModel ? `${model.name} · ${vehicleOptionLabel(subModel)}` : vehicleOptionLabel(model)}{year ? ` · ${year}` : ""}</p>
           </div>
           <div className="flex flex-wrap gap-2 sm:justify-end">
-            <Button variant="outline" className="h-10" onClick={() => (isSaved ? garage.clear() : garage.save(model.id, subModel?.id))}>
+            <Button variant="outline" className="h-10" onClick={() => (isSaved ? garage.clear() : garage.save(model.id, subModel?.id, year))}>
               {isSaved ? <BookmarkCheck className="text-primary" /> : <BookmarkPlus />}
               {isSaved ? "Saved to garage" : "Save vehicle"}
             </Button>
             <Button asChild variant="ink" className="h-10">
-              <Link href={`/shop?model=${model.id}${subModel ? `&submodel=${subModel.id}` : ""}`}>
+              <Link href={`/shop?model=${model.id}${subModel ? `&submodel=${subModel.id}` : ""}${year ? `&year=${year}` : ""}`}>
                 <CarFront /> All {matches.length} parts <ArrowRight />
               </Link>
             </Button>

@@ -1,3 +1,4 @@
+import { loadEnvConfig } from "@next/env";
 import { defineConfig } from "drizzle-kit";
 
 /**
@@ -5,6 +6,8 @@ import { defineConfig } from "drizzle-kit";
  * `npm run db:migrate` applies them to Supabase. Migrations use DIRECT_URL (the session pooler or direct
  * connection) when set, since the transaction pooler the app uses doesn't support everything drizzle-kit does.
  */
+loadEnvConfig(process.cwd(), process.env.NODE_ENV !== "production");
+
 export default defineConfig({
   dialect: "postgresql",
   schema: "./lib/server/schema.ts",

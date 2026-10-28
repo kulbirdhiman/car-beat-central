@@ -1,3 +1,4 @@
+import { fitmentLabel } from "@/lib/fitment-years";
 import type { Metadata } from "next";
 import { ArrowRight, MessageSquareText, RotateCcw, ShieldCheck, Star, Truck, Wrench } from "lucide-react";
 import Link from "next/link";
@@ -23,7 +24,7 @@ export async function generateMetadata(props: PageProps<"/products/[slug]">): Pr
 }
 
 const PERKS = [
-  { icon: Truck, title: "Free shipping", body: "On orders over $99" },
+  { icon: Truck, title: "$29 standard shipping", body: "Australia-wide delivery" },
   { icon: RotateCcw, title: "30-day returns", body: "Change of mind is fine" },
   { icon: ShieldCheck, title: "Fitment guarantee", body: "Or we pay return postage" },
   { icon: Wrench, title: "Pro fitting", body: "In every capital city" },
@@ -51,9 +52,11 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
       : brands.map((b) => ({
           brand: b.name,
           models: b.models.flatMap((m) => {
-            if (fits.includes(m.id)) return [{ id: m.id, name: m.name, subModels: [] }];
-            const subModels = m.subModels?.filter((s) => fits.includes(s.id)) ?? [];
-            return subModels.length ? [{ id: m.id, name: m.name, subModels }] : [];
+            const subModels = m.subModels?.filter((s) => fits.includes(s.id)).map((s) => ({ ...s, name: fitmentLabel(product, s.id, s.name) })) ?? [];
+            return [
+              ...(fits.includes(m.id) ? [{ id: m.id, name: fitmentLabel(product, m.id, m.name), subModels: [] }] : []),
+              ...(subModels.length ? [{ id: m.id, name: m.name, subModels }] : []),
+            ];
           }),
         })).filter((g) => g.models.length > 0);
   // Breadcrumbs follow the product's department; products without one fall back to their type.
@@ -81,7 +84,7 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
         {/* Gallery and fitment stay in view while the details scroll. */}
         <div className="space-y-4 xl:sticky xl:top-28 xl:self-start">
           <ProductGallery images={images} name={product.name} flags={flags} />
-          <CompatibleVehicles groups={groups} />
+          <CompatibleVehicles groups={groups} product={{ fits: product.fits, fitmentYears: product.fitmentYears }} />
         </div>
 
         <div className="min-w-0">
@@ -118,7 +121,7 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
                 </>
               )}
             </div>
-            <p className="mt-2 text-sm text-muted-foreground">Includes GST. Free shipping on orders over $99.</p>
+            <p className="mt-2 text-sm text-muted-foreground">Includes GST. Standard shipping is $29 Australia-wide.</p>
 
             {product.deal && (
               <div className="mt-4">
@@ -132,7 +135,7 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
               </div>
             )}
 
-            <FitmentCheck fits={product.fits} />
+            <FitmentCheck fitmentYears={product.fitmentYears} fits={product.fits} />
             <BuyBox
               productId={product.id}
               name={product.name}
@@ -176,7 +179,7 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
             </TabsContent>
             <TabsContent value="delivery" className="space-y-3 pt-4 text-sm text-muted-foreground">
               <p>
-                <strong className="text-foreground">Free shipping</strong> Australia-wide on orders over $99. Orders are dispatched with tracking.
+                <strong className="text-foreground">$29 standard shipping</strong> Australia-wide. Orders are dispatched with tracking.
               </p>
               <p>
                 <strong className="text-foreground">30-day returns</strong> on unused items, and our fitment guarantee covers return postage if it doesn&apos;t fit your car.{" "}
