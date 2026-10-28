@@ -23,7 +23,7 @@ const LINKS = [
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const { orders } = useAdminStore();
-  const toShip = orders.filter((o) => o.status === "processing" || o.status === "paid").length;
+  const toShip = orders.filter((o) => ["processing", "paid", "confirmed", "preparing"].includes(o.status)).length;
   // The most specific matching link is the active one, so New invoice doesn't also light up Orders.
   const activeHref = LINKS.filter(({ href }) => (href === "/admin" ? pathname === href : pathname.startsWith(href)))
     .map(({ href }) => href)
@@ -60,7 +60,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
 
 export function AdminSidebar() {
   return (
-    <aside className="sticky top-16 hidden h-[calc(100dvh-4rem)] w-60 shrink-0 border-r bg-background p-4 lg:block">
+    <aside className="sticky top-16 hidden h-[calc(100dvh-4rem)] w-60 shrink-0 border-r bg-background p-4 xl:block">
       <NavLinks />
     </aside>
   );
@@ -71,7 +71,7 @@ export function AdminMobileNav() {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Open admin menu">
+        <Button variant="ghost" size="icon" className="xl:hidden" aria-label="Open admin menu">
           <Menu />
         </Button>
       </SheetTrigger>

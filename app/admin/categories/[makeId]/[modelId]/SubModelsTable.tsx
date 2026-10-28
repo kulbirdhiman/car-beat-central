@@ -107,7 +107,7 @@ export function SubModelsTable({ makeId, modelId }: { makeId: string; modelId: s
         open={deleting !== null}
         onOpenChange={(open) => !open && setDeleting(null)}
         title={`Delete ${deleting?.name}?`}
-        description="Products are fitted by model, so no products are affected."
+        description="Products assigned to this sub-model will lose that fitment."
         onConfirm={() => deleting && deleteSubModel(make.id, model.id, deleting.id)}
       />
     </>

@@ -54,7 +54,7 @@ export type AdminProduct = {
   rrp: number;
   stock: number;
   status: "active" | "draft";
-  /** Vehicle model ids this product fits, or "universal". */
+  /** Vehicle model or sub-model ids this product fits, or "universal". */
   fits: string[] | "universal";
   image: string;
   /** Product-specific gallery photos, in display order. */
@@ -135,7 +135,10 @@ export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   pending_payment: "Awaiting payment",
   processing: "Processing",
   paid: "Paid",
+  confirmed: "Confirmed",
+  preparing: "Preparing order",
   fulfilled: "Shipped",
+  completed: "Completed",
   cancelled: "Cancelled",
   refunded: "Refunded",
 };
@@ -156,7 +159,7 @@ export function orderTotal(order: AdminOrder) {
 
 /** Whether money was taken for it, so it can be refunded (mirrors the server's check). */
 export function orderWasPaid(order: AdminOrder) {
-  return !!order.paidAt || order.status === "processing" || order.status === "paid" || order.status === "fulfilled" || order.status === "refunded";
+  return !!order.paidAt || ["processing", "paid", "confirmed", "preparing", "fulfilled", "completed", "refunded"].includes(order.status);
 }
 
 /** A refund as the admin form sends it. Amount in cents. */

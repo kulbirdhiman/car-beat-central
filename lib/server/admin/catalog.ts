@@ -4,7 +4,7 @@ import type { PgTable } from "drizzle-orm/pg-core";
 import type { AdminProduct, Department } from "@/lib/admin/model";
 import { normalizeProductOptionGroups } from "@/lib/product-options";
 import { db, transaction } from "../db";
-import { deals, departments, productReviews, products, vehicleModels } from "../schema";
+import { deals, departments, productReviews, products, vehicleModels, vehicleSubmodels } from "../schema";
 import { AdminError, type ProductInput } from "./validate";
 
 /** The next `position` in a drag-ordered table, so new rows go last. */
@@ -152,8 +152,11 @@ export async function saveProduct(p: ProductInput): Promise<AdminProduct> {
   const [skuClash] = await db.select({ id: products.id }).from(products).where(and(eq(products.sku, p.sku), ne(products.id, p.id)));
   if (skuClash) throw new AdminError("Another product uses this SKU.", 409);
   if (p.fits !== "universal") {
-    const [known] = await db.select({ n: count() }).from(vehicleModels).where(inArray(vehicleModels.id, p.fits));
-    if (known.n !== p.fits.length) throw new AdminError("Some of the fitted vehicle models don't exist.");
+    const [[models], [subModels]] = await Promise.all([
+      db.select({ n: count() }).from(vehicleModels).where(inArray(vehicleModels.id, p.fits)),
+      db.select({ n: count() }).from(vehicleSubmodels).where(inArray(vehicleSubmodels.id, p.fits)),
+    ]);
+    if (Number(models.n) + Number(subModels.n) !== p.fits.length) throw new AdminError("Some of the fitted vehicle models or sub-models don't exist.");
   }
   if (p.addOnIds.length) {
     const [known] = await db.select({ n: count() }).from(products).where(inArray(products.id, p.addOnIds));

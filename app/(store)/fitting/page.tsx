@@ -24,7 +24,7 @@ export default function FittingPage() {
       title="Book a fitting"
       description="Certified installers in every capital city. Tell us about your car and we'll confirm a time within one business day."
     >
-      <div className="grid gap-10 lg:grid-cols-[1.3fr_1fr]">
+      <div className="grid gap-8 xl:grid-cols-[1.3fr_1fr] 2xl:gap-10">
         <BookingForm />
 
         <aside className="space-y-6">

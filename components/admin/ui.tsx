@@ -20,7 +20,10 @@ const STATUS_STYLE: Record<OrderStatus, string> = {
   pending_payment: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
   processing: "bg-indigo-500/15 text-indigo-700 dark:text-indigo-400",
   paid: "bg-sky-500/15 text-sky-700 dark:text-sky-400",
+  confirmed: "bg-cyan-500/15 text-cyan-700 dark:text-cyan-400",
+  preparing: "bg-blue-500/15 text-blue-700 dark:text-blue-400",
   fulfilled: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
+  completed: "bg-green-600/15 text-green-700 dark:text-green-400",
   cancelled: "bg-muted text-muted-foreground line-through",
   refunded: "bg-violet-500/15 text-violet-700 dark:text-violet-400",
 };

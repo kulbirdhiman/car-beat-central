@@ -105,7 +105,7 @@ export function InvoiceForm() {
     try {
       const order = await createInvoice(input);
       toast.success(`Invoice ${order.number} created.`);
-      router.push(`${LIST}?open=${order.id}`);
+      router.push(`/admin/orders/${encodeURIComponent(order.id)}`);
     } catch (error) {
       toast.error((error as Error).message);
       setSaving(false);

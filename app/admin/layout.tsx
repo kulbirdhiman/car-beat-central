@@ -63,7 +63,7 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
           </header>
           <div className="flex">
             <AdminSidebar />
-            <main className="min-w-0 flex-1 px-4 py-8 sm:px-6 lg:px-10">{children}</main>
+            <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-6 xl:px-10 xl:py-8">{children}</main>
           </div>
         </div>
       </AdminStoreProvider>

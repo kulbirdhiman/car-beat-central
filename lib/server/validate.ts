@@ -20,15 +20,19 @@ export async function parseFilters(params: URLSearchParams): Promise<ProductFilt
   const category = params.get("category");
   const dept = params.get("dept");
   const model = params.get("model");
+  const subModel = params.get("submodel");
   const sort = params.get("sort");
   const maxPrice = Number(params.get("maxPrice"));
   const limit = Number(params.get("limit"));
   const ids = params.get("ids");
+  const brands = model ? await getCarBrands() : [];
+  const selectedModel = brands.flatMap((b) => b.models).find((m) => m.id === model);
   return {
     q: params.get("q")?.trim().slice(0, 80) || undefined,
     category: category && category in CATEGORY_LABELS ? (category as Category) : undefined,
     dept: dept && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(dept) ? dept.slice(0, 80) : undefined,
-    model: model && (await getCarBrands()).some((b) => b.models.some((m) => m.id === model)) ? model : undefined,
+    model: selectedModel?.id,
+    subModel: subModel && selectedModel?.subModels?.some((s) => s.id === subModel) ? subModel : undefined,
     maxPrice: maxPrice > 0 ? maxPrice : undefined,
     onSale: params.get("sale") === "1" || undefined,
     sort: sort && sort in SORTS ? (sort as SortKey) : undefined,

@@ -78,7 +78,7 @@ function CustomerOrders({ rows }: { rows: AdminOrder[] }) {
               {rows.map((o) => (
                 <TableRow key={o.id}>
                   <TableCell>
-                    <Link href={`/admin/orders?open=${encodeURIComponent(o.id)}`} className="font-mono font-medium hover:underline">
+                    <Link href={`/admin/orders/${encodeURIComponent(o.id)}`} className="font-mono font-medium hover:underline">
                       {o.number}
                     </Link>
                     {o.source === "legacy" && <span className="ml-2 text-xs text-muted-foreground">Imported</span>}

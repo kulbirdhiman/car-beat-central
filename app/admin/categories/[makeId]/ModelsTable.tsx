@@ -12,11 +12,12 @@ import { VehicleBreadcrumb } from "@/components/admin/VehicleBreadcrumb";
 import { VehicleDialog } from "@/components/admin/VehicleDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import type { VehicleModel } from "@/lib/admin/model";
+import type { SubModel, VehicleModel } from "@/lib/admin/model";
 
 export function ModelsTable({ makeId }: { makeId: string }) {
-  const { makes, products, saveModel, deleteModel, reorderModels } = useAdminStore();
+  const { makes, products, saveModel, saveSubModel, deleteModel, reorderModels } = useAdminStore();
   const [editing, setEditing] = useState<VehicleModel | "new" | null>(null);
+  const [addingSubModel, setAddingSubModel] = useState<VehicleModel | null>(null);
   const [deleting, setDeleting] = useState<VehicleModel | null>(null);
 
   const make = makes.find((m) => m.id === makeId);
@@ -35,15 +36,16 @@ export function ModelsTable({ makeId }: { makeId: string }) {
   }
 
   const base = `/admin/categories/${make.id}`;
-  const fitted = (modelId: string) => products.filter((p) => p.fits !== "universal" && p.fits.includes(modelId)).length;
+  const fitted = (model: VehicleModel) => products.filter((p) => p.fits !== "universal" && (p.fits.includes(model.id) || model.subModels.some((s) => p.fits.includes(s.id)))).length;
   const allModelIds = makes.flatMap((m) => m.models.map((x) => x.id));
+  const allSubIds = makes.flatMap((m) => m.models.flatMap((x) => x.subModels.map((s) => s.id)));
 
   return (
     <>
       <VehicleBreadcrumb trail={[{ label: make.name, href: base }]} />
       <PageHeader
         title={`${make.name} models`}
-        description={make.description || "Click a model to see its sub-models. Drag rows to reorder."}
+        description={make.description || "Add models and their sub-models here. Open a model to manage its full list."}
         actions={
           <Button onClick={() => setEditing("new")}>
             <Plus /> Add model
@@ -74,12 +76,17 @@ export function ModelsTable({ makeId }: { makeId: string }) {
                   header: "Sub-models",
                   className: "text-right tabular-nums",
                   cell: (m) => (
-                    <Link href={`${base}/${m.id}`} className="hover:underline">
-                      {m.subModels.length}
-                    </Link>
+                    <div className="flex items-center justify-end gap-2">
+                      <Link href={`${base}/${m.id}`} className="min-w-5 text-right hover:underline" aria-label={`${m.subModels.length} sub-models for ${m.name}`}>
+                        {m.subModels.length}
+                      </Link>
+                      <Button type="button" size="sm" variant="outline" onClick={() => setAddingSubModel(m)}>
+                        <Plus /> <span className="hidden xl:inline">Add sub-model</span><span className="xl:hidden">Add</span>
+                      </Button>
+                    </div>
                   ),
                 },
-                { header: "Products fitted", className: "hidden text-right tabular-nums sm:table-cell", cell: (m) => fitted(m.id) },
+                { header: "Products fitted", className: "hidden text-right tabular-nums sm:table-cell", cell: (m) => fitted(m) },
                 { header: "Created", className: "hidden whitespace-nowrap text-muted-foreground lg:table-cell", cell: (m) => fmtDate(m.createdAt) },
                 {
                   header: <span className="sr-only">Actions</span>,
@@ -104,12 +111,30 @@ export function ModelsTable({ makeId }: { makeId: string }) {
         />
       )}
 
+      {addingSubModel && (
+        <VehicleDialog
+          level="subModel"
+          parent={`${make.name} ${addingSubModel.name}`}
+          onClose={() => setAddingSubModel(null)}
+          onSave={({ name, description, extra }) => {
+            const sub: SubModel = {
+              id: idFrom(`${addingSubModel.id}-${name}`, allSubIds),
+              name,
+              description,
+              years: extra,
+              createdAt: new Date().toISOString(),
+            };
+            saveSubModel(make.id, addingSubModel.id, sub);
+          }}
+        />
+      )}
+
       <ConfirmDialog
         open={deleting !== null}
         onOpenChange={(open) => !open && setDeleting(null)}
         title={`Delete ${make.name} ${deleting?.name}?`}
         description={`This also deletes its ${deleting?.subModels.length ?? 0} sub-models.${
-          deleting && fitted(deleting.id) ? ` ${fitted(deleting.id)} products are fitted to this model and will lose that fitment.` : ""
+          deleting && fitted(deleting) ? ` ${fitted(deleting)} products are fitted to this model and will lose that fitment.` : ""
         }`}
         onConfirm={() => deleting && deleteModel(make.id, deleting.id)}
       />

@@ -24,7 +24,7 @@ export function Hero({ slides, promo, fitCounts }: { slides: Slide[]; promo?: Of
   }, [index, paused, slides.length]);
 
   return (
-    <section className="mx-auto grid max-w-[1440px] gap-3 px-4 pt-4 sm:px-6 sm:pt-6 lg:grid-cols-[2fr_1fr] lg:px-8">
+    <section className="mx-auto grid max-w-[1440px] gap-3 px-4 pt-4 sm:px-6 sm:pt-6 xl:grid-cols-[2fr_1fr] lg:px-8">
       <div
         className="grain relative isolate flex min-h-[440px] items-center overflow-clip rounded-2xl bg-ink text-white sm:min-h-[480px]"
         aria-roledescription="carousel"
@@ -49,7 +49,7 @@ export function Hero({ slides, promo, fitCounts }: { slides: Slide[]; promo?: Of
           <p className="intro inline-flex w-fit items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider backdrop-blur" style={{ "--delay": "0ms" } as CSSProperties}>
             <span className="size-1.5 rounded-full bg-primary" /> {slide.eyebrow}
           </p>
-          <h1 className="intro mt-5 font-display text-4xl font-extrabold leading-[1] sm:text-5xl lg:text-6xl" style={{ "--delay": "80ms" } as CSSProperties}>
+          <h1 className="intro mt-5 font-display text-4xl font-extrabold leading-[1] sm:text-5xl xl:text-6xl" style={{ "--delay": "80ms" } as CSSProperties}>
             {slide.title}
           </h1>
           <p className="intro mt-4 text-base text-white/75 sm:text-lg" style={{ "--delay": "180ms" } as CSSProperties}>
@@ -100,7 +100,7 @@ export function Hero({ slides, promo, fitCounts }: { slides: Slide[]; promo?: Of
       </div>
 
       {/* The promo is hidden on phones so deals come sooner; its code is also in the Offers section. */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
         <VehicleSearchCard fitCounts={fitCounts} />
         {promo && (
           <Link href="/#offers" className="group relative isolate hidden min-h-[200px] flex-col justify-end overflow-clip rounded-2xl bg-ink p-6 text-white sm:flex">

@@ -45,7 +45,7 @@ export function CartView() {
   }
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
+    <div className="grid gap-6 xl:grid-cols-[1fr_360px] 2xl:gap-8 2xl:grid-cols-[1fr_380px]">
       <ul className="divide-y self-start rounded-xl bg-card ring-1 ring-foreground/[0.07]">
         {lines.map((line) => {
           const p = products[line.productId];
@@ -100,7 +100,7 @@ export function CartView() {
         })}
       </ul>
 
-      <Card className="h-fit lg:sticky lg:top-32">
+      <Card className="h-fit xl:sticky xl:top-32">
         <CardHeader>
           <CardTitle className="font-display text-2xl font-bold">Order summary</CardTitle>
         </CardHeader>

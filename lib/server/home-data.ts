@@ -11,7 +11,7 @@ export const getStoreChromeData = unstable_cache(
     const [departments, brands, total] = await Promise.all([getStoreDepartments(), getCarBrands(), getProductCount()]);
     return { departments, brands, total };
   },
-  ["store-chrome-data-v1"],
+  ["store-chrome-data-v2"],
   { revalidate: 60, tags: ["store-home-data"] },
 );
 
@@ -27,9 +27,10 @@ export const getHomeData = unstable_cache(
     ]);
     const { departments, brands } = chrome;
     const byRating = [...products].sort((a, b) => b.rating - a.rating || b.reviews - a.reviews);
-    const fitCounts = Object.fromEntries(
-      brands.flatMap((brand) => brand.models).map((model) => [model.id, products.filter((product) => productFitsModel(product, model.id)).length]),
-    );
+    const fitCounts = Object.fromEntries(brands.flatMap((brand) => brand.models.flatMap((model) => [
+      [model.id, products.filter((product) => productFitsModel(product, model.id)).length] as const,
+      ...(model.subModels ?? []).map((sub) => [sub.id, products.filter((product) => productFitsModel(product, model.id, sub.id)).length] as const),
+    ])));
 
     return {
       products,

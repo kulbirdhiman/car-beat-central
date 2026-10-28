@@ -19,7 +19,7 @@ export type Product = {
   rrp: number;
   rating: number;
   reviews: number;
-  /** Car model ids this product fits, or "universal". */
+  /** Car model or sub-model ids this product fits, or "universal". */
   fits: string[] | "universal";
   /** Admin department the product belongs to (used for coupon scopes). */
   departmentId: string | null;
@@ -68,7 +68,7 @@ export type StoreDepartment = {
 export type CarBrand = {
   id: string;
   name: string;
-  models: { id: string; name: string }[];
+  models: { id: string; name: string; subModels?: { id: string; name: string; years: string }[] }[];
 };
 
 export type Offer = {
@@ -86,7 +86,7 @@ export type Offer = {
 export type CartLine = { productId: string; qty: number; variantValues?: string[] };
 
 /** "refunded": paid, then refunded in full. Partly refunded orders keep their status. */
-export type OrderStatus = "pending_payment" | "processing" | "paid" | "fulfilled" | "cancelled" | "refunded";
+export type OrderStatus = "pending_payment" | "processing" | "paid" | "confirmed" | "preparing" | "fulfilled" | "completed" | "cancelled" | "refunded";
 
 /** An Australian suburb with its state and postcode. */
 export type Locality = { suburb: string; state: string; postcode: string };

@@ -23,7 +23,7 @@ export function CategoryGrid({ departments }: { departments: StoreDepartment[] }
           </Link>
         }
       />
-      <ul className="grid grid-cols-4 gap-2 sm:gap-3 lg:grid-cols-(--cols)" style={columns}>
+      <ul className="grid grid-cols-4 gap-2 sm:gap-3 xl:grid-cols-(--cols)" style={columns}>
         {departments.map((d, i) => (
           <Reveal as="li" key={d.id} delay={i * 50}>
             <Link href={`/shop?dept=${d.slug}`} className="group block h-full rounded-xl border bg-card p-1.5 transition-[border-color,box-shadow] sm:rounded-2xl sm:p-2 hover:border-primary/40 hover:shadow-[0_16px_32px_-20px_oklch(0.25_0.01_25/0.35)]">

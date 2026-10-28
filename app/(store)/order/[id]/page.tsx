@@ -32,8 +32,8 @@ export default async function OrderPage(props: PageProps<"/order/[id]">) {
 
   const reference = <span className="font-mono font-medium text-foreground">#{orderReference(order.id)}</span>;
   const firstName = order.name.split(" ")[0];
-  const paid = order.status === "processing" || order.status === "paid" || order.status === "fulfilled";
-  const shipped = order.status === "fulfilled";
+  const paid = ["processing", "paid", "confirmed", "preparing", "fulfilled", "completed"].includes(order.status);
+  const shipped = order.status === "fulfilled" || order.status === "completed";
   const tracking = shipped && order.shippingCarrier && order.trackingNumber ? { carrier: CARRIERS[order.shippingCarrier].name, number: order.trackingNumber, url: trackingUrl(order.shippingCarrier, order.trackingNumber) } : null;
   const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
   const awaitingPayment = order.status === "pending_payment";
@@ -54,11 +54,20 @@ export default async function OrderPage(props: PageProps<"/order/[id]">) {
     ? {
         icon: <Truck className="size-8 text-success" />,
         tone: "bg-success/10",
-        title: order.delivery === "collect" ? `Enjoy, ${firstName}.` : `On its way, ${firstName}.`,
-        body: order.delivery === "collect" ? <>Order {reference} has been picked up.</> : <>Order {reference} has shipped.</>,
+        title: order.status === "completed" ? `Order complete, ${firstName}.` : order.delivery === "collect" ? `Enjoy, ${firstName}.` : `On its way, ${firstName}.`,
+        body: order.status === "completed" ? <>Order {reference} is complete.</> : order.delivery === "collect" ? <>Order {reference} has been picked up.</> : <>Order {reference} has shipped.</>,
       }
     : paid
-    ? { icon: <CircleCheck className="size-8 text-success" />, tone: "bg-success/10", title: `Thanks, ${firstName}.`, body: <>Order {reference} is paid. We&apos;ll email {order.email} with tracking.</> }
+    ? {
+        icon: <CircleCheck className="size-8 text-success" />,
+        tone: "bg-success/10",
+        title: `Thanks, ${firstName}.`,
+        body: order.status === "confirmed"
+          ? <>Order {reference} is confirmed and being prepared. We&apos;ll email {order.email} when it ships.</>
+          : order.status === "preparing"
+            ? <>Order {reference} is being prepared for dispatch. We&apos;ll email {order.email} when it ships.</>
+            : <>Order {reference} is paid and in processing. We&apos;ll email {order.email} with tracking.</>,
+      }
     : order.status === "cancelled"
       ? { icon: <CircleX className="size-8 text-destructive" />, tone: "bg-destructive/10", title: "Order cancelled", body: <>Order {reference} was cancelled. Questions? Reply to any of our emails.</> }
       : awaitingPayment
@@ -261,7 +270,8 @@ async function helpFor(order: NonNullable<Awaited<ReturnType<typeof getOrder>>>)
   const viewer = !customer ? "guest" : order.userId === customer.id || customer.emails.includes(order.email.toLowerCase()) ? "owner" : "other";
   const open = returns.some(isOpenReturn);
   const deadline = returnDeadline(order.shippedAt);
-  const windowOpen = order.status === "fulfilled" && !!deadline && deadline.getTime() > Date.now();
+  const isShipped = order.status === "fulfilled" || order.status === "completed";
+  const windowOpen = isShipped && !!deadline && deadline.getTime() > Date.now();
   const left = returnableQty(order.items, returns);
   const returnable =
     windowOpen && !open
@@ -273,10 +283,10 @@ async function helpFor(order: NonNullable<Awaited<ReturnType<typeof getOrder>>>)
     viewer,
     email: order.email,
     canCancel: order.status === "pending_payment",
-    canRequestCancel: (order.status === "processing" || order.status === "paid") && !open,
+    canRequestCancel: ["processing", "paid", "confirmed", "preparing"].includes(order.status) && !open,
     returnable,
     returnBy: deadline?.toISOString() ?? null,
-    windowClosed: order.status === "fulfilled" && !!deadline && !windowOpen,
+    windowClosed: isShipped && !!deadline && !windowOpen,
     returns,
     refunds,
   };

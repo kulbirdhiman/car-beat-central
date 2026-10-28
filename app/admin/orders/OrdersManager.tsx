@@ -12,7 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DELIVERY_LABEL, ORDER_STATUS_LABEL, orderSubtotal, orderTotal, type AdminOrder } from "@/lib/admin/model";
@@ -21,14 +21,15 @@ import { PAYMENT_METHODS } from "@/lib/payment";
 import { CARRIER_KEYS, CARRIERS, trackingUrl, type Carrier } from "@/lib/shipping";
 import { RETURN_KIND_LABEL, isOpenReturn } from "@/lib/returns";
 import type { OrderStatus } from "@/lib/types";
+import { cn } from "@/lib/utils";
 import { RefundDialog, Refunds, ReturnRequests } from "./Refunds";
 
 const ALL = "all";
 /** A filter for orders with an open cancellation or return request. */
 const RETURNS = "returns";
+/** Paid orders which still need dispatch work. */
+const DISPATCH = "dispatch";
 const STATUSES = Object.keys(ORDER_STATUS_LABEL) as OrderStatus[];
-/** Statuses an admin can pick by hand: "refunded" comes from refunding in full. */
-const MANUAL_STATUSES = STATUSES.filter((s) => s !== "refunded");
 
 const openReturn = (o: AdminOrder) => o.returns.find(isOpenReturn);
 
@@ -41,8 +42,7 @@ export function OrdersManager() {
 
   // Status filter and open order live in the URL so the dashboard can link straight to them.
   const statusParam = searchParams.get("status");
-  const status = statusParam === RETURNS ? RETURNS : statusParam && (STATUSES as string[]).includes(statusParam) ? (statusParam as OrderStatus) : ALL;
-  const openOrder = orders.find((o) => o.id === searchParams.get("open")) ?? null;
+  const status = statusParam === RETURNS || statusParam === DISPATCH ? statusParam : statusParam && (STATUSES as string[]).includes(statusParam) ? (statusParam as OrderStatus) : ALL;
 
   function setParam(key: string, value: string | null) {
     const next = new URLSearchParams(searchParams);
@@ -55,7 +55,7 @@ export function OrdersManager() {
   const q = query.trim().toLowerCase();
   const rows = orders.filter(
     (o) =>
-      (status === ALL || o.status === status || (status === RETURNS && !!openReturn(o))) &&
+      (status === ALL || o.status === status || (status === RETURNS && !!openReturn(o)) || (status === DISPATCH && ["processing", "paid", "confirmed", "preparing"].includes(o.status))) &&
       (!q || o.number.toLowerCase().includes(q) || o.customer.name.toLowerCase().includes(q) || o.customer.email.toLowerCase().includes(q)),
   );
 
@@ -81,7 +81,7 @@ export function OrdersManager() {
     <>
       <PageHeader
         title="Orders"
-        description={`${orders.length} orders · ${orders.filter((o) => o.status === "processing" || o.status === "paid").length} ready to ship · ${orders.filter(openReturn).length} open returns.`}
+        description={`${orders.length} orders · ${orders.filter((o) => ["processing", "paid", "confirmed", "preparing"].includes(o.status)).length} in dispatch · ${orders.filter(openReturn).length} open returns.`}
         actions={
           <div className="flex gap-2">
             <Button variant="outline" onClick={exportOrders} disabled={!rows.length}><Download /> Export CSV</Button>
@@ -96,6 +96,7 @@ export function OrdersManager() {
             <Tabs value={status} onValueChange={(v) => setParam("status", v === ALL ? null : v)}>
               <TabsList className="flex-wrap">
                 <TabsTrigger value={ALL}>All ({orders.length})</TabsTrigger>
+                <TabsTrigger value={DISPATCH}>Dispatch ({orders.filter((o) => ["processing", "paid", "confirmed", "preparing"].includes(o.status)).length})</TabsTrigger>
                 {STATUSES.map((s) => (
                   <TabsTrigger key={s} value={s}>
                     {ORDER_STATUS_LABEL[s]} ({orders.filter((o) => o.status === s).length})
@@ -117,9 +118,9 @@ export function OrdersManager() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Order</TableHead>
-                  <TableHead className="hidden md:table-cell">Placed</TableHead>
+                  <TableHead className="hidden xl:table-cell">Placed</TableHead>
                   <TableHead>Customer</TableHead>
-                  <TableHead className="hidden lg:table-cell">Delivery</TableHead>
+                  <TableHead className="hidden xl:table-cell">Delivery</TableHead>
                   <TableHead className="hidden sm:table-cell text-right">Items</TableHead>
                   <TableHead className="text-right">Total</TableHead>
                   <TableHead>Status</TableHead>
@@ -127,26 +128,22 @@ export function OrdersManager() {
               </TableHeader>
               <TableBody>
                 {rows.map((o) => (
-                  <TableRow key={o.id} className="cursor-pointer" onClick={() => setParam("open", o.id)}>
+                  <TableRow key={o.id}>
                     <TableCell className="font-mono">
-                      {/* A real button keeps the row reachable by keyboard; the row click is a mouse shortcut. */}
-                      <button type="button" className="hover:underline" onClick={(e) => {
-                          e.stopPropagation();
-                          setParam("open", o.id);
-                        }}>
+                      <Link href={`/admin/orders/${encodeURIComponent(o.id)}`} className="hover:underline">
                         {o.number}
-                      </button>
+                      </Link>
                       {o.source === "invoice" && <span className="ml-2 font-sans text-xs text-muted-foreground">Invoice</span>}
                       {o.source === "legacy" && <span className="ml-2 font-sans text-xs text-muted-foreground">Imported</span>}
                     </TableCell>
-                    <TableCell className="hidden text-muted-foreground md:table-cell">{fmtDateTime(o.createdAt)}</TableCell>
+                    <TableCell className="hidden text-muted-foreground xl:table-cell">{fmtDateTime(o.createdAt)}</TableCell>
                     <TableCell>
                       <div className="font-medium">{o.customer.name}</div>
                       <div className="text-xs text-muted-foreground">
                         {o.shipTo.suburb}, {o.shipTo.state}
                       </div>
                     </TableCell>
-                    <TableCell className="hidden lg:table-cell">{DELIVERY_LABEL[o.delivery]}</TableCell>
+                    <TableCell className="hidden xl:table-cell">{DELIVERY_LABEL[o.delivery]}</TableCell>
                     <TableCell className="hidden text-right tabular-nums sm:table-cell">{o.items.reduce((n, i) => n + i.qty, 0)}</TableCell>
                     <TableCell className="text-right tabular-nums">{formatCents(orderTotal(o))}</TableCell>
                     <TableCell>
@@ -163,15 +160,15 @@ export function OrdersManager() {
         </CardContent>
       </Card>
 
-      <Sheet open={openOrder !== null} onOpenChange={(open) => !open && setParam("open", null)}>
-        <SheetContent className="w-full overflow-y-auto sm:max-w-lg">{openOrder && <OrderDetail key={openOrder.id} order={openOrder} />}</SheetContent>
-      </Sheet>
     </>
   );
 }
 
-function OrderDetail({ order }: { order: AdminOrder }) {
-  const { setOrderStatus, deleteOrder } = useAdminStore();
+export function OrderDetail({ order: initialOrder, standalone = false }: { order: AdminOrder; standalone?: boolean }) {
+  const store = useAdminStore();
+  const router = useRouter();
+  const order = store.orders.find((item) => item.id === initialOrder.id) ?? initialOrder;
+  const { setOrderStatus, deleteOrder } = store;
   const subtotal = orderSubtotal(order);
   const total = orderTotal(order);
   const pickup = order.delivery === "collect";
@@ -180,22 +177,35 @@ function OrderDetail({ order }: { order: AdminOrder }) {
 
   return (
     <>
-      <SheetHeader className="border-b pr-12">
-        <SheetTitle className="flex items-center gap-3">
-          <span className="font-mono text-lg">{order.number}</span>
+      {standalone ? (
+        <header className="flex flex-wrap items-start justify-between gap-4 border-b p-5 sm:p-6">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {order.source === "invoice" ? "Invoice order" : order.source === "legacy" ? "Imported order" : "Order"}
+            </p>
+            <h1 className="mt-1 font-mono text-2xl font-bold">{order.number}</h1>
+            <p className="mt-1 text-sm text-muted-foreground">{order.source === "invoice" ? "Raised" : "Placed"} {fmtDateTime(order.createdAt)} · {formatCents(total)}</p>
+          </div>
           <OrderStatusBadge status={order.status} />
-          {order.source === "invoice" && <span className="text-xs font-normal text-muted-foreground">Invoice</span>}
-          {order.source === "legacy" && <span className="text-xs font-normal text-muted-foreground">Imported from WooCommerce</span>}
-        </SheetTitle>
-        <SheetDescription>
-          {order.source === "invoice" ? "Raised" : "Placed"} {fmtDateTime(order.createdAt)} · {formatCents(total)}
-        </SheetDescription>
-      </SheetHeader>
+        </header>
+      ) : (
+        <SheetHeader className="border-b pr-12">
+          <SheetTitle className="flex items-center gap-3">
+            <span className="font-mono text-lg">{order.number}</span>
+            <OrderStatusBadge status={order.status} />
+            {order.source === "invoice" && <span className="text-xs font-normal text-muted-foreground">Invoice</span>}
+            {order.source === "legacy" && <span className="text-xs font-normal text-muted-foreground">Imported from WooCommerce</span>}
+          </SheetTitle>
+          <SheetDescription>
+            {order.source === "invoice" ? "Raised" : "Placed"} {fmtDateTime(order.createdAt)} · {formatCents(total)}
+          </SheetDescription>
+        </SheetHeader>
+      )}
 
-      <div className="space-y-4 p-4">
+      <div className={cn("space-y-4", standalone ? "p-5 sm:p-6" : "p-4")}>
         <ReturnRequests order={order} onRefund={(preset) => setRefunding({ preset })} />
 
-        {(order.status === "processing" || order.status === "paid" || order.status === "fulfilled") && <Fulfilment order={order} />}
+        {(["processing", "paid", "confirmed", "preparing", "fulfilled", "completed"].includes(order.status)) && <Fulfilment order={order} />}
 
         <Panel title="Customer">
           <div className="grid gap-4 text-sm sm:grid-cols-2">
@@ -274,44 +284,39 @@ function OrderDetail({ order }: { order: AdminOrder }) {
 
       <RefundDialog order={order} preset={refunding?.preset ?? null} open={refunding !== null} onOpenChange={(open) => !open && setRefunding(null)} />
 
-      <SheetFooter className="border-t">
+      <div className={cn("flex flex-col gap-2 border-t p-4", standalone ? "sm:flex-row sm:justify-end sm:p-6" : "mt-auto")}>
         {!order.paidAt && order.status === "pending_payment" && (
           <Button
             type="button"
             variant="destructive"
             onClick={async () => {
               if (!confirm(`Delete unpaid order ${order.number}? This cannot be undone.`)) return;
-              try { await deleteOrder(order.id); }
+              try { await deleteOrder(order.id); router.push("/admin/orders"); }
               catch (error) { toast.error(error instanceof Error ? error.message : "Couldn't delete this order."); }
             }}
           >
             <Trash2 /> Delete order
           </Button>
         )}
-        <label htmlFor="order-status" className="text-xs font-medium text-muted-foreground">
-          Change status
-        </label>
-        <Select
-          value={order.status}
-          disabled={order.status === "refunded"}
-          onValueChange={(v) => {
-            // Cancelling here doesn't move money: warn when there's a payment to give back.
-            if (v === "cancelled" && order.payment && order.refunded < total && !confirm("Cancelling doesn't refund the payment. Use Refund for that. Cancel anyway?")) return;
-            setOrderStatus(order.id, v as OrderStatus);
-          }}
-        >
-          <SelectTrigger id="order-status" className="w-full">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {(order.status === "refunded" ? STATUSES : MANUAL_STATUSES).map((s) => (
-              <SelectItem key={s} value={s}>
-                {ORDER_STATUS_LABEL[s]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </SheetFooter>
+        {order.status === "pending_payment" && (
+          <Button type="button" variant="outline" className="w-full" onClick={() => setOrderStatus(order.id, "paid")}>
+            Mark payment received
+          </Button>
+        )}
+        {(["processing", "paid", "confirmed", "preparing"].includes(order.status)) && (
+          <Button type="button" variant="destructive" className="w-full" onClick={() => {
+            if (order.payment && order.refunded < total && !confirm("Cancelling doesn't refund the payment. Use Refund for that. Cancel anyway?")) return;
+            setOrderStatus(order.id, "cancelled");
+          }}>
+            Cancel order
+          </Button>
+        )}
+        {order.status === "cancelled" && (
+          <Button type="button" variant="outline" className="w-full" onClick={() => setOrderStatus(order.id, order.paidAt ? "paid" : "pending_payment")}>
+            Reinstate order
+          </Button>
+        )}
+      </div>
     </>
   );
 }
@@ -332,7 +337,8 @@ function Panel({ title, children }: { title: string; children: React.ReactNode }
  */
 function Fulfilment({ order }: { order: AdminOrder }) {
   const { setOrderStatus } = useAdminStore();
-  const shipped = order.status === "fulfilled";
+  const shipped = order.status === "fulfilled" || order.status === "completed";
+  const completed = order.status === "completed";
   const pickup = order.delivery === "collect";
   const [editing, setEditing] = useState(false);
   const [carrier, setCarrier] = useState<Carrier>(order.shipment?.carrier ?? "auspost");
@@ -345,14 +351,15 @@ function Fulfilment({ order }: { order: AdminOrder }) {
     if (!number && !pickup) return setError("Enter the tracking number.");
     if (number && !/^[A-Za-z0-9][A-Za-z0-9 -]*$/.test(number)) return setError("Tracking numbers can only have letters, numbers, spaces and dashes.");
     setError(null);
-    setOrderStatus(order.id, "fulfilled", number ? { carrier, trackingNumber: number } : null);
+    setOrderStatus(order.id, completed ? "completed" : "fulfilled", number ? { carrier, trackingNumber: number } : null);
     setEditing(false);
   }
 
   if (shipped && !editing) {
     const url = order.shipment && trackingUrl(order.shipment.carrier, order.shipment.trackingNumber);
     return (
-      <Panel title={pickup ? "Picked up" : "Shipped"}>
+      <Panel title={completed ? "Order completed" : pickup ? "Picked up" : "Shipped"}>
+        <DispatchSteps active={completed ? 4 : 3} />
         <div className="flex items-start justify-between gap-3 text-sm">
           <div className="min-w-0 space-y-0.5">
             {order.shipment ? (
@@ -376,14 +383,29 @@ function Fulfilment({ order }: { order: AdminOrder }) {
             <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
               <Pencil /> {order.shipment ? "Edit" : "Add tracking"}
             </Button>
+            {!completed && <Button size="sm" onClick={() => setOrderStatus(order.id, "completed")}><Check /> Complete order</Button>}
           </div>
         </div>
       </Panel>
     );
   }
 
+  if (order.status === "processing" || order.status === "paid" || order.status === "confirmed") {
+    const confirmed = order.status === "confirmed";
+    const activeStep = confirmed ? 1 : 0;
+    return (
+      <Panel title="Dispatch workflow">
+        <DispatchSteps active={activeStep} />
+        <Button className="w-full" onClick={() => setOrderStatus(order.id, confirmed ? "preparing" : "confirmed")}>
+          <Check /> {confirmed ? "Start processing" : "Confirm order"}
+        </Button>
+      </Panel>
+    );
+  }
+
   return (
     <Panel title={shipped ? "Edit tracking" : pickup ? "Ready for pickup" : "Ship this order"}>
+      <DispatchSteps active={shipped ? (completed ? 4 : 3) : 2} />
       <form onSubmit={submit} noValidate className="space-y-3">
         <div className="grid gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
           <div className="grid gap-1.5">
@@ -436,6 +458,16 @@ function Fulfilment({ order }: { order: AdminOrder }) {
         </div>
       </form>
     </Panel>
+  );
+}
+
+function DispatchSteps({ active }: { active: number }) {
+  return (
+    <ol className="mb-4 grid grid-cols-4 gap-1 text-center text-[11px] sm:text-xs">
+      {["Confirm", "Process", "Ship", "Complete"].map((step, i) => (
+        <li key={step} className={cn("rounded-md px-1 py-2", i < active ? "bg-success/10 font-semibold text-success" : i === active ? "bg-primary/10 font-semibold text-primary" : "bg-muted text-muted-foreground")}>{i + 1}. {step}</li>
+      ))}
+    </ol>
   );
 }
 

@@ -66,10 +66,10 @@ export async function requestReturn(customer: Customer, orderId: string, input: 
     const nameOf = (productId: string) => items.find((i) => i.productId === productId)?.name ?? "Item";
     let chosen: ReturnItem[];
     if (input.kind === "cancel") {
-      if (order.status !== "processing" && order.status !== "paid") throw new ReturnError(order.status === "fulfilled" ? "This order has already shipped. You can return it once it arrives." : "This order can't be cancelled.");
+      if (!["processing", "paid", "confirmed", "preparing"].includes(order.status)) throw new ReturnError(order.status === "fulfilled" || order.status === "completed" ? "This order has already shipped. You can return it once it arrives." : "This order can't be cancelled.");
       chosen = [...left].filter(([, qty]) => qty > 0).map(([productId, qty]) => ({ productId, name: nameOf(productId), qty }));
     } else {
-      if (order.status !== "fulfilled") throw new ReturnError("Returns open once your order has shipped.");
+      if (order.status !== "fulfilled" && order.status !== "completed") throw new ReturnError("Returns open once your order has shipped.");
       const deadline = returnDeadline(order.shippedAt);
       if (deadline && deadline.getTime() < Date.now()) throw new ReturnError("The return window for this order has closed. For faulty items, contact us about a warranty claim.");
       chosen = input.items.filter((i) => i.qty > 0).map((i) => ({ productId: i.productId, name: nameOf(i.productId), qty: i.qty }));
@@ -133,12 +133,12 @@ export async function refundOrder(orderId: string, input: RefundInput & { cancel
   await transaction(async (tx) => {
     const order = await lockOrder(tx, orderId);
     if (!order) throw new AdminError("Order not found.", 404);
-    const paid = !!order.paidAt || order.status === "processing" || order.status === "paid" || order.status === "fulfilled";
+    const paid = !!order.paidAt || ["processing", "paid", "confirmed", "preparing", "fulfilled", "completed"].includes(order.status);
     if (!paid) throw new AdminError("This order hasn't been paid, so there's nothing to refund. Cancel it instead.");
     const remaining = order.total - order.refundedTotal;
     if (remaining <= 0) throw new AdminError("This order has already been refunded in full.");
     if (input.amount < 1 || input.amount > remaining) throw new AdminError(`The refund must be between $0.01 and ${(remaining / 100).toFixed(2)}, what's left of the order.`);
-    if (input.cancel && order.status !== "processing" && order.status !== "paid") throw new AdminError("Only paid orders that haven't shipped can be cancelled this way.");
+    if (input.cancel && !["processing", "paid", "confirmed", "preparing"].includes(order.status)) throw new AdminError("Only paid orders that haven't shipped can be cancelled this way.");
 
     if (input.returnId) {
       const [request] = await tx.select({ orderId: orderReturns.orderId, status: orderReturns.status }).from(orderReturns).where(eq(orderReturns.id, input.returnId));

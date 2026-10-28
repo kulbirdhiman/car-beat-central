@@ -21,13 +21,13 @@ const chevron = {
  * Sidebar "Shop by vehicle" filter: make → model, one-tap popular cars and the saved garage car.
  * Keeps the shopper's other filters, and saves the choice to the garage.
  */
-export function VehicleFilter({ modelId, fitCounts }: { modelId?: string; fitCounts: Record<string, number> }) {
+export function VehicleFilter({ modelId, subModelId, fitCounts }: { modelId?: string; subModelId?: string; fitCounts: Record<string, number> }) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   const garage = useGarage();
   const brands = useCarBrands();
-  const selected = findCar(brands, modelId ?? null);
+  const selected = findCar(brands, modelId ?? null, subModelId ?? null);
   // The vehicles with the most parts in the catalogue (stable sort keeps admin order on ties).
   const popular = brands
     .flatMap((brand) => brand.models.map((model) => ({ brand, model })))
@@ -35,22 +35,26 @@ export function VehicleFilter({ modelId, fitCounts }: { modelId?: string; fitCou
     .slice(0, 6);
   const [brandId, setBrandId] = useState(selected?.brand.id ?? "");
   const [pick, setPick] = useState(selected?.model.id ?? "");
+  const [pickSubModel, setPickSubModel] = useState(selected?.subModel?.id ?? "");
   const brand = brands.find((b) => b.id === brandId);
+  const model = brand?.models.find((m) => m.id === pick);
 
-  const hrefFor = (id: string | null) => {
+  const hrefFor = (id: string | null, subId?: string | null) => {
     const next = new URLSearchParams(params);
     if (id) next.set("model", id);
     else next.delete("model");
+    if (id && subId) next.set("submodel", subId);
+    else next.delete("submodel");
     const qs = next.toString();
     return qs ? `${pathname}?${qs}` : pathname;
   };
 
-  const choose = (id: string) => {
-    garage.save(id);
-    router.push(hrefFor(id), { scroll: false });
+  const choose = (id: string, subId?: string) => {
+    garage.save(id, subId);
+    router.push(hrefFor(id, subId), { scroll: false });
   };
 
-  const suggested = garage.car && garage.car.model.id !== modelId ? garage.car : null;
+  const suggested = garage.car && (garage.car.model.id !== modelId || garage.car.subModel?.id !== subModelId) ? garage.car : null;
 
   return (
     <div className="overflow-hidden rounded-2xl border bg-card">
@@ -66,7 +70,7 @@ export function VehicleFilter({ modelId, fitCounts }: { modelId?: string; fitCou
           <div className="mb-3 flex items-center gap-2 rounded-lg bg-success/10 px-3 py-2 text-sm">
             <CheckCircle2 className="size-4 shrink-0 text-success" />
             <span className="min-w-0 flex-1 truncate">
-              Fits <strong>{selected.brand.name} {selected.model.name}</strong>
+              Fits <strong>{selected.brand.name} {selected.subModel?.name ?? selected.model.name}</strong>
             </span>
             <Link href={hrefFor(null)} scroll={false} aria-label="Clear vehicle" className="grid size-6 place-items-center rounded-full text-muted-foreground hover:bg-background hover:text-foreground">
               <X className="size-3.5" />
@@ -87,6 +91,7 @@ export function VehicleFilter({ modelId, fitCounts }: { modelId?: string; fitCou
             onChange={(e) => {
               setBrandId(e.target.value);
               setPick("");
+              setPickSubModel("");
             }}
             className={selectClass}
             style={chevron}
@@ -98,7 +103,7 @@ export function VehicleFilter({ modelId, fitCounts }: { modelId?: string; fitCou
               </option>
             ))}
           </select>
-          <select aria-label="Model" value={pick} onChange={(e) => setPick(e.target.value)} disabled={!brand} className={selectClass} style={chevron}>
+          <select aria-label="Model" value={pick} onChange={(e) => { setPick(e.target.value); setPickSubModel(""); }} disabled={!brand} className={selectClass} style={chevron}>
             <option value="">{brand ? "Select model" : "Choose a make first"}</option>
             {brand?.models.map((m) => (
               <option key={m.id} value={m.id}>
@@ -106,18 +111,24 @@ export function VehicleFilter({ modelId, fitCounts }: { modelId?: string; fitCou
               </option>
             ))}
           </select>
-          <Button type="submit" className="h-10" disabled={!pick || pick === modelId}>
-            {pick && pick !== modelId ? `Show ${fitCounts[pick] ?? 0} parts` : "Find parts"}
+          {model?.subModels && model.subModels.length > 0 && (
+            <select aria-label="Sub-model (optional)" value={pickSubModel} onChange={(e) => setPickSubModel(e.target.value)} className={selectClass} style={chevron}>
+              <option value="">Any {model.name} version</option>
+              {model.subModels.map((sub) => <option key={sub.id} value={sub.id}>{sub.name}{sub.years ? ` · ${sub.years}` : ""}</option>)}
+            </select>
+          )}
+          <Button type="submit" className="h-10" disabled={!pick || (pick === modelId && (pickSubModel || undefined) === subModelId)}>
+            {pick && (pick !== modelId || (pickSubModel || undefined) !== subModelId) ? `Show ${fitCounts[pickSubModel || pick] ?? 0} parts` : "Find parts"}
           </Button>
         </form>
 
         {suggested && (
           <button
             type="button"
-            onClick={() => choose(suggested.model.id)}
+            onClick={() => choose(suggested.model.id, suggested.subModel?.id)}
             className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-primary/50 bg-primary/5 py-2 text-xs font-semibold text-primary hover:bg-primary/10"
           >
-            <CarFront className="size-3.5" /> Use my {suggested.brand.name} {suggested.model.name}
+            <CarFront className="size-3.5" /> Use my {suggested.brand.name} {suggested.subModel?.name ?? suggested.model.name}
           </button>
         )}
 

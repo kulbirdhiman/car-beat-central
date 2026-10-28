@@ -4,13 +4,13 @@ import { CarFront, CircleCheck, Globe } from "lucide-react";
 import { useGarage } from "@/lib/garage";
 import { cn } from "@/lib/utils";
 
-type Group = { brand: string; models: { id: string; name: string }[] };
+type Group = { brand: string; models: { id: string; name: string; subModels?: { id: string; name: string; years: string }[] }[] };
 
 /** Every vehicle this part fits, grouped by make, with the shopper's saved car highlighted. */
 export function CompatibleVehicles({ groups }: { groups: Group[] | null }) {
   const { car } = useGarage();
-  const count = groups?.reduce((n, g) => n + g.models.length, 0) ?? 0;
-  const fitsMine = car && (groups === null || groups.some((g) => g.models.some((m) => m.id === car.model.id)));
+  const count = groups?.reduce((n, g) => n + g.models.reduce((total, m) => total + Math.max(1, m.subModels?.length ?? 0), 0), 0) ?? 0;
+  const fitsMine = car && (groups === null || groups.some((g) => g.models.some((m) => m.id === car.model.id && (!m.subModels?.length || m.subModels.some((s) => s.id === car.subModel?.id)))));
 
   return (
     <section aria-labelledby="compat-title" className="rounded-2xl border bg-card p-5">
@@ -18,7 +18,7 @@ export function CompatibleVehicles({ groups }: { groups: Group[] | null }) {
         <h2 id="compat-title" className="flex items-center gap-2 font-semibold">
           <CarFront className="size-5 text-primary" /> Compatible vehicles
         </h2>
-        <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-muted-foreground">{groups ? `${count} models` : "Universal"}</span>
+        <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-muted-foreground">{groups ? `${count} fitments` : "Universal"}</span>
       </div>
 
       {groups === null ? (
@@ -32,20 +32,16 @@ export function CompatibleVehicles({ groups }: { groups: Group[] | null }) {
             <div key={g.brand} className="grid grid-cols-[88px_1fr] items-start gap-3">
               <dt className="pt-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{g.brand}</dt>
               <dd className="flex flex-wrap gap-1.5">
-                {g.models.map((m) => {
-                  const mine = car?.model.id === m.id;
-                  return (
-                    <span
-                      key={m.id}
-                      className={cn(
-                        "inline-flex h-7 items-center gap-1 rounded-full border px-2.5 text-xs font-medium",
-                        mine ? "border-success bg-success/10 text-success" : "bg-background",
-                      )}
-                    >
-                      {mine && <CircleCheck className="size-3.5" />}
-                      {m.name}
+                {g.models.flatMap((m) => {
+                  const matches = m.subModels?.length
+                    ? m.subModels.map((s) => ({ id: s.id, label: `${m.name} · ${s.name}`, mine: car?.model.id === m.id && car.subModel?.id === s.id }))
+                    : [{ id: m.id, label: m.name, mine: car?.model.id === m.id }];
+                  return matches.map((item) => (
+                    <span key={item.id} className={cn("inline-flex h-7 items-center gap-1 rounded-full border px-2.5 text-xs font-medium", item.mine ? "border-success bg-success/10 text-success" : "bg-background")}>
+                      {item.mine && <CircleCheck className="size-3.5" />}
+                      {item.label}
                     </span>
-                  );
+                  ));
                 })}
               </dd>
             </div>
@@ -55,7 +51,7 @@ export function CompatibleVehicles({ groups }: { groups: Group[] | null }) {
 
       {car && (
         <p className={cn("mt-4 rounded-lg px-3 py-2 text-sm", fitsMine ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive")}>
-          {fitsMine ? `✓ Fits your ${car.brand.name} ${car.model.name}` : `Not listed for your ${car.brand.name} ${car.model.name}`}
+          {fitsMine ? `✓ Fits your ${car.brand.name} ${car.subModel?.name ?? car.model.name}` : `Not listed for your ${car.brand.name} ${car.subModel?.name ?? car.model.name}`}
         </p>
       )}
     </section>

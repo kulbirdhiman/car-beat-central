@@ -162,8 +162,8 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
       </Button>
       <PageHeader title={product ? `Edit ${product.name}` : "Add product"} description="Prices are whole AUD, GST inclusive." />
 
-      <form ref={formRef} onSubmit={submit} noValidate className="grid gap-6 pb-24 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
+      <form ref={formRef} onSubmit={submit} noValidate className="grid gap-6 pb-24 xl:grid-cols-3">
+        <div className="space-y-6 xl:col-span-2">
           <Card>
             <CardHeader>
               <CardTitle>Details</CardTitle>
@@ -342,7 +342,7 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
                 <Checkbox checked={universal} onCheckedChange={(v) => setUniversal(v === true)} />
                 Universal: fits every vehicle
               </label>
-              {!universal && <ModelPicker makes={makes} value={models} onChange={setModels} />}
+              {!universal && <ModelPicker makes={makes} value={models} onChange={setModels} includeSubModels />}
               {errors.fits && (
                 <p data-error className="mt-2 text-xs text-destructive">
                   {errors.fits}

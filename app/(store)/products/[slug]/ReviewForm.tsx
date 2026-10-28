@@ -81,7 +81,7 @@ export function ReviewForm({ productId, slug }: { productId: string; slug: strin
             id="review-vehicle"
             name="vehicle"
             placeholder="e.g. Toyota HiLux"
-            defaultValue={v.vehicle ?? (car ? `${car.brand.name} ${car.model.name}` : "")}
+            defaultValue={v.vehicle ?? (car ? `${car.brand.name} ${car.subModel?.name ?? car.model.name}` : "")}
           />
         </Field>
       </div>

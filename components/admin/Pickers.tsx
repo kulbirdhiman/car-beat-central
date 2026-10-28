@@ -18,11 +18,11 @@ function toggle(set: Set<string>, ids: string[], on: boolean) {
 }
 
 /** Vehicle models grouped under their make; ticking a make ticks all its models. */
-export function ModelPicker({ makes, value, onChange }: { makes: VehicleMake[]; value: Set<string>; onChange: (next: Set<string>) => void }) {
+export function ModelPicker({ makes, value, onChange, includeSubModels = false }: { makes: VehicleMake[]; value: Set<string>; onChange: (next: Set<string>) => void; includeSubModels?: boolean }) {
   return (
     <div className="grid gap-3 rounded-lg border p-3 sm:grid-cols-2">
       {makes.map((make) => {
-        const ids = make.models.map((m) => m.id);
+        const ids = make.models.flatMap((m) => [m.id, ...(includeSubModels ? m.subModels.map((s) => s.id) : [])]);
         const picked = ids.filter((id) => value.has(id)).length;
         return (
           <div key={make.id}>
@@ -39,10 +39,22 @@ export function ModelPicker({ makes, value, onChange }: { makes: VehicleMake[]; 
             </label>
             <div className="mt-1.5 ml-6 flex flex-col gap-1.5">
               {make.models.map((m) => (
-                <label key={m.id} className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Checkbox checked={value.has(m.id)} onCheckedChange={(v) => onChange(toggle(value, [m.id], v === true))} />
-                  {m.name}
-                </label>
+                <div key={m.id}>
+                  <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Checkbox checked={value.has(m.id)} onCheckedChange={(v) => onChange(toggle(value, [m.id], v === true))} />
+                    {m.name}
+                  </label>
+                  {includeSubModels && m.subModels.length > 0 && (
+                    <div className="mt-1 ml-6 flex flex-col gap-1 border-l pl-3">
+                      {m.subModels.map((sub) => (
+                        <label key={sub.id} className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Checkbox checked={value.has(sub.id)} onCheckedChange={(v) => onChange(toggle(value, [sub.id], v === true))} />
+                          {sub.name}{sub.years ? <span className="text-[11px] opacity-70">· {sub.years}</span> : null}
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           </div>

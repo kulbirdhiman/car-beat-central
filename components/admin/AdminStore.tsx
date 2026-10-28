@@ -114,9 +114,9 @@ export function AdminStoreProvider({ initial, children }: { initial: AdminData; 
     const updateMake = (id: string, fn: (m: VehicleMake) => VehicleMake) => setMakes((list) => list.map((m) => (m.id === id ? fn(m) : m)));
     const updateModel = (makeId: string, id: string, fn: (m: VehicleModel) => VehicleModel) =>
       updateMake(makeId, (make) => ({ ...make, models: make.models.map((m) => (m.id === id ? fn(m) : m)) }));
-    /** Products lose fitment to deleted models, as on the server. */
-    const dropFitment = (modelIds: string[]) =>
-      setProducts((list) => list.map((p) => (p.fits === "universal" ? p : { ...p, fits: p.fits.filter((id) => !modelIds.includes(id)) })));
+    /** Products lose fitment to deleted models and sub-models, as on the server. */
+    const dropFitment = (vehicleIds: string[]) =>
+      setProducts((list) => list.map((p) => (p.fits === "universal" ? p : { ...p, fits: p.fits.filter((id) => !vehicleIds.includes(id)) })));
     const now = () => new Date().toISOString();
 
     return {
@@ -225,7 +225,7 @@ export function AdminStoreProvider({ initial, children }: { initial: AdminData; 
         save(api("PUT", `/vehicles/makes/${make.id}`, make), { success: `Saved ${make.name}.` });
       },
       deleteMake: (id) => {
-        dropFitment(makes.find((m) => m.id === id)?.models.map((m) => m.id) ?? []);
+        dropFitment(makes.find((m) => m.id === id)?.models.flatMap((m) => [m.id, ...m.subModels.map((s) => s.id)]) ?? []);
         setMakes((list) => list.filter((m) => m.id !== id));
         save(api("DELETE", `/vehicles/makes/${id}`), { success: "Make deleted." });
       },
@@ -244,7 +244,8 @@ export function AdminStoreProvider({ initial, children }: { initial: AdminData; 
         save(api("PUT", `/vehicles/models/${model.id}`, { ...model, parentId: makeId }), { success: `Saved ${model.name}.` });
       },
       deleteModel: (makeId, id) => {
-        dropFitment([id]);
+        const model = makes.find((m) => m.id === makeId)?.models.find((m) => m.id === id);
+        dropFitment([id, ...(model?.subModels.map((s) => s.id) ?? [])]);
         updateMake(makeId, (make) => ({ ...make, models: make.models.filter((m) => m.id !== id) }));
         save(api("DELETE", `/vehicles/models/${id}`), { success: "Model deleted." });
       },
@@ -263,6 +264,7 @@ export function AdminStoreProvider({ initial, children }: { initial: AdminData; 
         save(api("PUT", `/vehicles/submodels/${sub.id}`, { ...sub, parentId: modelId }), { success: `Saved ${sub.name}.` });
       },
       deleteSubModel: (makeId, modelId, id) => {
+        dropFitment([id]);
         updateModel(makeId, modelId, (model) => ({ ...model, subModels: model.subModels.filter((s) => s.id !== id) }));
         save(api("DELETE", `/vehicles/submodels/${id}`), { success: "Sub-model deleted." });
       },

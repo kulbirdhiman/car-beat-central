@@ -48,7 +48,14 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
   const groups =
     fits === "universal"
       ? null
-      : brands.map((b) => ({ brand: b.name, models: b.models.filter((m) => fits.includes(m.id)) })).filter((g) => g.models.length > 0);
+      : brands.map((b) => ({
+          brand: b.name,
+          models: b.models.flatMap((m) => {
+            if (fits.includes(m.id)) return [{ id: m.id, name: m.name, subModels: [] }];
+            const subModels = m.subModels?.filter((s) => fits.includes(s.id)) ?? [];
+            return subModels.length ? [{ id: m.id, name: m.name, subModels }] : [];
+          }),
+        })).filter((g) => g.models.length > 0);
   // Breadcrumbs follow the product's department; products without one fall back to their type.
   const dept = product.departmentId ? findDepartment(departments, (d) => d.id === product.departmentId) : null;
   const section = dept
@@ -70,9 +77,9 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
         { label: product.name },
       ]}
     >
-      <div className="grid gap-8 lg:grid-cols-[1.1fr_1fr] lg:gap-14">
+      <div className="grid gap-6 xl:grid-cols-[1.05fr_1fr] xl:gap-10 2xl:gap-14">
         {/* Gallery and fitment stay in view while the details scroll. */}
-        <div className="space-y-4 lg:sticky lg:top-28 lg:self-start">
+        <div className="space-y-4 xl:sticky xl:top-28 xl:self-start">
           <ProductGallery images={images} name={product.name} flags={flags} />
           <CompatibleVehicles groups={groups} />
         </div>
@@ -189,8 +196,8 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
       </div>
 
       <section id="reviews" className="mt-20 scroll-mt-28">
-        <div className="grid gap-8 lg:grid-cols-[360px_1fr] lg:gap-14">
-          <div className="space-y-4 lg:sticky lg:top-28 lg:self-start">
+        <div className="grid gap-6 xl:grid-cols-[320px_1fr] 2xl:gap-14 2xl:grid-cols-[360px_1fr]">
+          <div className="space-y-4 xl:sticky xl:top-28 xl:self-start">
             <h2 className="font-display text-3xl font-bold">Customer reviews</h2>
             <div className="rounded-2xl border bg-card p-6">
               <div className="flex items-center gap-4">
@@ -254,7 +261,7 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
             More {section.label.toLowerCase()} <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
           </Link>
         </div>
-        <ul className="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-4">
+        <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4">
           {related.map((p) => (
             <li key={p.id}>
               <ProductCard product={p} />
