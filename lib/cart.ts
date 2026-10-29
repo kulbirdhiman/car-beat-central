@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import type { CartLine } from "./types";
+import type { CartLine, ProductOptionSelections } from "./types";
 
 const KEY = "carbeat:cart:v2";
 const MAX_QTY = 20;
@@ -48,7 +48,7 @@ export function cartLineKey(line: Pick<CartLine, "productId" | "variantValues">)
   return `${line.productId}:${JSON.stringify(line.variantValues ?? [])}`;
 }
 
-export function addToCart(productId: string, qty = 1, variantValues?: string[]) {
+export function addToCart(productId: string, qty = 1, variantValues?: ProductOptionSelections) {
   const lines = read();
   const nextLine = { productId, qty: 1, ...(variantValues?.length ? { variantValues } : {}) };
   const key = cartLineKey(nextLine);
@@ -60,13 +60,13 @@ export function addToCart(productId: string, qty = 1, variantValues?: string[]) 
   );
 }
 
-export function setQty(productId: string, qty: number, variantValues?: string[]) {
+export function setQty(productId: string, qty: number, variantValues?: ProductOptionSelections) {
   if (qty < 1) return removeFromCart(productId, variantValues);
   const key = cartLineKey({ productId, variantValues });
   write(read().map((line) => (cartLineKey(line) === key ? { ...line, qty: Math.min(MAX_QTY, qty) } : line)));
 }
 
-export function removeFromCart(productId: string, variantValues?: string[]) {
+export function removeFromCart(productId: string, variantValues?: ProductOptionSelections) {
   const key = cartLineKey({ productId, variantValues });
   write(read().filter((line) => cartLineKey(line) !== key));
 }
