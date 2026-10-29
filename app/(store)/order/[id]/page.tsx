@@ -30,7 +30,7 @@ export default async function OrderPage(props: PageProps<"/order/[id]">) {
   const order = await getOrder(orderId);
   if (!order) notFound();
 
-  const reference = <span className="font-mono font-medium text-foreground">#{orderReference(order.id)}</span>;
+  const reference = <span className="font-mono font-medium text-foreground">#{orderReference(order)}</span>;
   const firstName = order.name.split(" ")[0];
   const paid = ["processing", "paid", "confirmed", "preparing", "fulfilled", "completed"].includes(order.status);
   const shipped = order.status === "fulfilled" || order.status === "completed";
@@ -141,9 +141,9 @@ export default async function OrderPage(props: PageProps<"/order/[id]">) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <BankTransfer reference={orderReference(order.id)} amount={formatCents(order.total)} />
+            <BankTransfer reference={orderReference(order)} amount={formatCents(order.total)} />
             <p className="mt-3 rounded-lg bg-muted p-3 text-xs text-muted-foreground">
-              Use <span className="font-mono font-medium text-foreground">{orderReference(order.id)}</span> as the payment reference so we can match it to your order. We ship once
+              Use <span className="font-mono font-medium text-foreground">{orderReference(order)}</span> as the payment reference so we can match it to your order. We ship once
               the transfer arrives, usually 1–2 business days, and email {order.email} to confirm.
             </p>
           </CardContent>
@@ -160,7 +160,7 @@ export default async function OrderPage(props: PageProps<"/order/[id]">) {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              Pay by cash or EFTPOS when you visit. Quote <span className="font-mono font-medium text-foreground">{orderReference(order.id)}</span> so we can find your invoice.
+              Pay by cash or EFTPOS when you visit. Quote <span className="font-mono font-medium text-foreground">{orderReference(order)}</span> so we can find your invoice.
             </p>
           </CardContent>
         </Card>

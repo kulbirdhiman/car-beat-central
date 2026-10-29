@@ -2,7 +2,7 @@ import "server-only";
 import { and, count, desc, eq, gte, inArray, isNull, lt, ne, notInArray, or, sql, sum } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import type { AdminOrder, InvoiceInput } from "../admin/model";
-import { DEFAULT_PAYMENT_METHODS } from "../payment";
+import { DEFAULT_PAYMENT_METHODS, orderReference } from "../payment";
 import { priceCart, unitPriceCents, type Delivery, type Totals } from "../pricing";
 import type { Shipment } from "../shipping";
 import type { Refund, ReturnRequest } from "../returns";
@@ -259,7 +259,7 @@ export async function listAdminOrders({ id = null, limit = 500 }: { id?: string 
   const history = await listReturnsAndRefunds(rows.map((o) => o.id));
   return rows.map((o) => ({
     id: o.id,
-    number: o.source === "legacy" && o.id.startsWith("woo-") ? `WC-${o.id.slice(4)}` : `CB-${o.number}`,
+    number: orderReference(o),
     createdAt: o.createdAt,
     status: o.status,
     customer: { name: o.name, email: o.email, phone: o.phone },

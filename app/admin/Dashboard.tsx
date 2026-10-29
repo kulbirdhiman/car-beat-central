@@ -1,7 +1,8 @@
 "use client";
 
-import { ArrowUpRight, TriangleAlert } from "lucide-react";
+import { ArrowUpRight, ChevronRight, TriangleAlert } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAdminStore } from "@/components/admin/AdminStore";
 import { Empty, OrderStatusBadge, PageHeader, fmtDateTime } from "@/components/admin/ui";
@@ -57,6 +58,7 @@ function storeDate(iso: string) {
 }
 
 export function Dashboard() {
+  const router = useRouter();
   const { orders, products, departments, makes } = useAdminStore();
   const [datePreset, setDatePreset] = useState<DatePreset>("all");
   const [customFrom, setCustomFrom] = useState("");
@@ -107,10 +109,10 @@ export function Dashboard() {
   const maxDept = Math.max(1, ...deptRows.map((d) => d.revenue));
 
   const stats = [
-    { label: "Revenue (incl. GST)", value: formatCents(revenue), hint: `${counted.length} orders` },
-    { label: "Average order", value: formatCents(counted.length ? Math.round(revenue / counted.length) : 0), hint: "Excludes cancelled and refunded" },
+    { label: "Revenue (incl. GST)", value: formatCents(revenue), hint: `${counted.length} orders`, href: "/admin/orders" },
+    { label: "Average order", value: formatCents(counted.length ? Math.round(revenue / counted.length) : 0), hint: "Excludes cancelled and refunded", href: "/admin/orders" },
     { label: "In dispatch", value: toShip.toLocaleString("en-AU"), hint: "Paid orders to confirm, process or ship", href: "/admin/orders?status=dispatch" },
-    { label: "Catalogue", value: products.length.toLocaleString("en-AU"), hint: `${departments.length} departments · ${makes.length} makes · ${models} models` },
+    { label: "Catalogue", value: products.length.toLocaleString("en-AU"), hint: `${departments.length} departments · ${makes.length} makes · ${models} models`, href: "/admin/products" },
   ];
 
   return (
@@ -146,27 +148,25 @@ export function Dashboard() {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((s) => (
-          <Card key={s.label} size="sm">
+          <Link key={s.label} href={s.href} className="rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+          <Card size="sm" className="h-full transition-colors hover:bg-muted/60">
             <CardHeader>
               <p className="text-sm text-muted-foreground">{s.label}</p>
               <CardTitle className="text-3xl! tabular-nums">{s.value}</CardTitle>
               <p className="text-xs text-muted-foreground">{s.hint}</p>
-              {s.href && (
-                <CardAction>
-                  <Link href={s.href} className="text-muted-foreground hover:text-foreground" aria-label={`View ${s.label.toLowerCase()}`}>
-                    <ArrowUpRight className="size-4" />
-                  </Link>
-                </CardAction>
-              )}
+              <CardAction>
+                <ArrowUpRight aria-hidden="true" className="size-4 text-muted-foreground" />
+              </CardAction>
             </CardHeader>
           </Card>
+          </Link>
         ))}
       </div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-3">
         <Card className="xl:col-span-2">
           <CardHeader>
-            <CardTitle>Recent orders</CardTitle>
+            <CardTitle><Link href="/admin/orders" className="hover:underline">Recent orders</Link></CardTitle>
             <CardAction>
               <Link href="/admin/orders" className="text-sm text-muted-foreground hover:text-foreground">
                 All orders →
@@ -186,18 +186,32 @@ export function Dashboard() {
               </TableHeader>
               <TableBody>
                 {dateOrders.slice(0, 6).map((o) => (
-                  <TableRow key={o.id}>
+                  <TableRow
+                    key={o.id}
+                    className="cursor-pointer"
+                    onClick={(event) => {
+                      if (event.target instanceof Element && event.target.closest("a, button")) return;
+                      if (window.getSelection()?.toString()) return;
+                      router.push(`/admin/orders/${encodeURIComponent(o.id)}`);
+                    }}
+                  >
                     <TableCell className="font-mono">
                       <Link href={`/admin/orders/${encodeURIComponent(o.id)}`} className="hover:underline">
                         {o.number}
                       </Link>
                     </TableCell>
-                    <TableCell>{o.customer.name}</TableCell>
-                    <TableCell className="hidden text-muted-foreground md:table-cell">{fmtDateTime(o.createdAt)}</TableCell>
+                    <TableCell><Link href={`/admin/orders/${encodeURIComponent(o.id)}`} className="block hover:underline">{o.customer.name}</Link></TableCell>
+                    <TableCell className="hidden text-muted-foreground md:table-cell"><Link href={`/admin/orders/${encodeURIComponent(o.id)}`} className="block hover:underline">{fmtDateTime(o.createdAt)}</Link></TableCell>
                     <TableCell>
-                      <OrderStatusBadge status={o.status} />
+                      <Link
+                        href={`/admin/orders?status=${o.status === "paid" ? "processing" : o.status}`}
+                        aria-label={`View ${ORDER_STATUS_LABEL[o.status].toLowerCase()} orders`}
+                        className="inline-flex rounded-full transition-opacity hover:opacity-75 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                      >
+                        <OrderStatusBadge status={o.status} />
+                      </Link>
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">{formatCents(orderTotal(o))}</TableCell>
+                    <TableCell className="text-right tabular-nums"><Link href={`/admin/orders/${encodeURIComponent(o.id)}`} className="block hover:underline">{formatCents(orderTotal(o))}</Link></TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -207,15 +221,24 @@ export function Dashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Orders by status</CardTitle>
+            <CardTitle><Link href="/admin/orders" className="hover:underline">Orders by status</Link></CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="divide-y">
               {(Object.keys(ORDER_STATUS_LABEL) as OrderStatus[]).filter((status) => status !== "paid").map((status) => (
-                <li key={status} className="flex items-center justify-between py-2.5">
-                  <OrderStatusBadge status={status} />
-                  <Link href={`/admin/orders?status=${status}`} className="text-sm font-medium tabular-nums hover:underline">
-                    {dateOrders.filter((o) => o.status === status || (status === "processing" && o.status === "paid")).length}
+                <li key={status}>
+                  <Link
+                    href={`/admin/orders?status=${status}`}
+                    aria-label={`View ${ORDER_STATUS_LABEL[status].toLowerCase()} orders`}
+                    className="group -mx-2 flex items-center justify-between gap-3 rounded-lg px-2 py-3 transition-colors hover:bg-muted/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  >
+                    <OrderStatusBadge status={status} />
+                    <span className="flex items-center gap-3">
+                      <span className="text-sm font-semibold tabular-nums">
+                        {dateOrders.filter((o) => o.status === status || (status === "processing" && o.status === "paid")).length}
+                      </span>
+                      <ChevronRight aria-hidden="true" className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
+                    </span>
                   </Link>
                 </li>
               ))}
@@ -225,7 +248,7 @@ export function Dashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Sales by department</CardTitle>
+            <CardTitle><Link href="/admin/departments" className="hover:underline">Sales by department</Link></CardTitle>
           </CardHeader>
           <CardContent>
             {deptRows.length === 0 ? (
@@ -234,6 +257,7 @@ export function Dashboard() {
               <ul className="space-y-3">
                 {deptRows.map((d) => (
                   <li key={d.id}>
+                    <Link href={`/admin/products?department=${encodeURIComponent(d.id)}`} className="block rounded-lg p-2 -m-2 transition-colors hover:bg-muted/60 focus-visible:outline-2 focus-visible:outline-ring">
                     <div className="mb-1 flex justify-between text-sm">
                       <span>{d.name}</span>
                       <span className="tabular-nums text-muted-foreground">{formatCents(d.revenue)}</span>
@@ -241,6 +265,7 @@ export function Dashboard() {
                     <div className="h-2 rounded-full bg-muted">
                       <div className="h-2 rounded-full bg-primary" style={{ width: `${(d.revenue / maxDept) * 100}%` }} />
                     </div>
+                    </Link>
                   </li>
                 ))}
               </ul>
@@ -250,16 +275,18 @@ export function Dashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Top sellers</CardTitle>
+            <CardTitle><Link href="/admin/products" className="hover:underline">Top sellers</Link></CardTitle>
           </CardHeader>
           <CardContent>
             {topProducts.length === 0 ? <Empty>No catalogue sales in this date range.</Empty> : <ul className="divide-y">
               {topProducts.map((p) => (
-                <li key={p.id} className="flex items-center gap-3 py-2.5">
+                <li key={p.id}>
+                  <Link href={`/admin/products/${encodeURIComponent(p.id)}/edit`} className="flex items-center gap-3 rounded-lg px-2 py-2.5 -mx-2 transition-colors hover:bg-muted/60 focus-visible:outline-2 focus-visible:outline-ring">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={p.image} alt="" className="size-10 rounded-md object-cover" />
                   <span className="min-w-0 flex-1 truncate text-sm">{p.name}</span>
                   <span className="text-sm tabular-nums text-muted-foreground">{p.units} sold</span>
+                  </Link>
                 </li>
               ))}
             </ul>}
@@ -269,7 +296,7 @@ export function Dashboard() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <TriangleAlert className="size-4 text-amber-600" /> Low stock
+              <Link href="/admin/products" className="flex items-center gap-2 hover:underline"><TriangleAlert className="size-4 text-amber-600" /> Low stock</Link>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -278,13 +305,13 @@ export function Dashboard() {
             ) : (
               <ul className="divide-y">
                 {lowStock.map((p) => (
-                  <li key={p.id} className="flex items-center justify-between gap-3 py-2.5">
-                    <Link href={`/admin/products/${p.id}/edit`} className="min-w-0 truncate text-sm hover:underline">
-                      {p.name}
-                    </Link>
+                  <li key={p.id}>
+                    <Link href={`/admin/products/${encodeURIComponent(p.id)}/edit`} className="flex items-center justify-between gap-3 rounded-lg px-2 py-2.5 -mx-2 transition-colors hover:bg-muted/60 focus-visible:outline-2 focus-visible:outline-ring">
+                      <span className="min-w-0 truncate text-sm">{p.name}</span>
                     <span className={p.stock === 0 ? "text-sm font-medium text-destructive" : "text-sm tabular-nums text-amber-700 dark:text-amber-400"}>
                       {p.stock === 0 ? "Out of stock" : `${p.stock} left`}
                     </span>
+                    </Link>
                   </li>
                 ))}
               </ul>

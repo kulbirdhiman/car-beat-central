@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { OrderStatusBadge, fmtDateTime } from "@/components/admin/ui";
 import { Button } from "@/components/ui/button";
 import { DELIVERY_LABEL } from "@/lib/admin/model";
+import { orderReference } from "@/lib/payment";
 import { formatCents } from "@/lib/data";
 import { getOrder } from "@/lib/server/orders";
 import { PrintInvoiceButton } from "./PrintInvoiceButton";
@@ -14,7 +15,7 @@ export default async function AdminOrderInvoicePage(props: PageProps<"/admin/ord
   const { id } = await props.params;
   const order = await getOrder(id);
   if (!order) notFound();
-  const number = order.source === "legacy" && order.id.startsWith("woo-") ? `WC-${order.id.slice(4)}` : `CB-${order.number}`;
+  const number = orderReference(order);
 
   return (
     <div className="mx-auto max-w-4xl">

@@ -18,7 +18,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { DELIVERY_LABEL, ORDER_STATUS_LABEL, orderSubtotal, orderTotal, type AdminOrder } from "@/lib/admin/model";
 import { formatCents } from "@/lib/data";
-import { PAYMENT_METHODS } from "@/lib/payment";
+import { matchesOrderReference, PAYMENT_METHODS } from "@/lib/payment";
 import { CARRIER_KEYS, CARRIERS, trackingUrl, type Carrier } from "@/lib/shipping";
 import { RETURN_KIND_LABEL, isOpenReturn } from "@/lib/returns";
 import type { OrderStatus } from "@/lib/types";
@@ -59,7 +59,7 @@ export function OrdersManager() {
   const rows = orders.filter(
     (o) =>
       (status === ALL || (status !== RETURNS && status !== DISPATCH && matchesStatus(o, status)) || (status === RETURNS && !!openReturn(o)) || (status === DISPATCH && ["processing", "paid", "confirmed", "preparing"].includes(o.status))) &&
-      (!q || o.number.toLowerCase().includes(q) || o.customer.name.toLowerCase().includes(q) || o.customer.email.toLowerCase().includes(q)),
+      (!q || matchesOrderReference(o, q) || o.customer.name.toLowerCase().includes(q) || o.customer.email.toLowerCase().includes(q)),
   );
 
   function exportOrders() {
@@ -140,10 +140,15 @@ export function OrdersManager() {
                       {o.source === "legacy" && <span className="ml-2 font-sans text-xs text-muted-foreground">Imported</span>}
                     </TableCell>
                     <TableCell className="hidden text-muted-foreground xl:table-cell">{fmtDateTime(o.createdAt)}</TableCell>
-                    <TableCell>
+                    <TableCell className="min-w-56 whitespace-normal">
                       <div className="font-medium">{o.customer.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {o.shipTo.suburb}, {o.shipTo.state}
+                      {o.customer.email && (
+                        <a href={`mailto:${o.customer.email}`} className="block break-all text-xs text-muted-foreground hover:underline">
+                          {o.customer.email}
+                        </a>
+                      )}
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {[o.shipTo.address, [o.shipTo.suburb, o.shipTo.state, o.shipTo.postcode].filter(Boolean).join(" ")].filter(Boolean).join(", ") || "No address provided"}
                       </div>
                     </TableCell>
                     <TableCell className="hidden xl:table-cell">{DELIVERY_LABEL[o.delivery]}</TableCell>

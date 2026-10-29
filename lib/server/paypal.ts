@@ -1,5 +1,6 @@
 import "server-only";
 import { eq, sql } from "drizzle-orm";
+import { orderReference } from "../payment";
 import { db } from "./db";
 import type { OrderRecord } from "./orders";
 import { PaymentError, payableOrder } from "./payments";
@@ -67,7 +68,7 @@ const money = (cents: number) => ({ currency_code: CURRENCY, value: (cents / 100
 
 /** The amount, with its breakdown and line items when they add up exactly (PayPal rejects them otherwise). */
 function purchaseUnit(order: OrderRecord) {
-  const reference = order.id.slice(0, 8).toUpperCase();
+  const reference = orderReference(order);
   const unit = { reference_id: order.id, custom_id: order.id, description: `CarBeat order #${reference}`, amount: money(order.total) };
   const itemTotal = order.items.reduce((n, i) => n + i.unitPrice * i.qty, 0);
   if (itemTotal !== order.subtotal || order.subtotal - order.discount + order.shipping !== order.total) return unit;
