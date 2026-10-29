@@ -1,6 +1,6 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
-import { listCoupons } from "@/lib/server/admin/promos";
+import type { Coupon } from "@/lib/admin/model";
 import { productFitsModel } from "@/lib/data";
 import type { Product } from "@/lib/types";
 import { getCarBrands, getLiveOffers, getProductCount, getStoreDepartments, getTrending, listProducts } from "@/lib/server/queries";
@@ -11,7 +11,7 @@ export const getStoreChromeData = unstable_cache(
     const [departments, brands, total] = await Promise.all([getStoreDepartments(), getCarBrands(), getProductCount()]);
     return { departments, brands, total };
   },
-  ["store-chrome-data-v3"],
+  ["store-chrome-data-v4"],
   { revalidate: 60, tags: ["store-home-data"] },
 );
 
@@ -22,7 +22,7 @@ export const getHomeData = unstable_cache(
       listProducts(),
       getTrending(),
       getLiveOffers(),
-      listCoupons(),
+      Promise.resolve([] as Coupon[]),
       getStoreChromeData(),
     ]);
     const { departments, brands } = chrome;
@@ -44,7 +44,7 @@ export const getHomeData = unstable_cache(
       deals: products.filter((product) => product.deal),
     };
   },
-  ["store-home-data-v2"],
+  ["store-home-data-v3"],
   { revalidate: 60, tags: ["store-home-data"] },
 );
 

@@ -1,14 +1,13 @@
 import { fitmentYearLabel } from "../fitment-years";
 import "server-only";
 import { and, asc, count, desc, eq, ilike, inArray, isNotNull, lte, ne, or, sql, type SQL } from "drizzle-orm";
-import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { productFitsModel } from "../data";
 import type { CarBrand, Category, Offer, Product, StoreDepartment } from "../types";
 import { normalizeProductOptionGroups } from "../product-options";
 import { db } from "./db";
-import { coupons, deals, departments, offers, products, vehicleMakes, vehicleModels, vehicleSubmodels } from "./schema";
+import { deals, departments, products, vehicleMakes, vehicleModels, vehicleSubmodels } from "./schema";
 
-const price = sql<number>`COALESCE(${deals.dealPrice}, ${products.price})`;
+const price = sql<number>`${products.price}`;
 // Draft products are hidden from the store everywhere.
 const isActive = eq(products.status, "active");
 
@@ -34,7 +33,7 @@ type ProductRow = {
   departmentParentId: string | null;
 };
 
-function toProduct({ product: p, dealPrice, claimed, departmentName, departmentParentId }: ProductRow): Product {
+function toProduct({ product: p, departmentName, departmentParentId }: ProductRow): Product {
   const optionGroups = normalizeProductOptionGroups(p.optionGroups, p.price, p.variants);
   return {
     id: p.id,
@@ -43,7 +42,7 @@ function toProduct({ product: p, dealPrice, claimed, departmentName, departmentP
     brand: p.brand,
     category: p.category,
     price: p.price,
-    rrp: p.rrp,
+    rrp: p.price,
     rating: p.rating,
     reviews: p.reviews,
     fits: p.fits,
@@ -60,7 +59,7 @@ function toProduct({ product: p, dealPrice, claimed, departmentName, departmentP
     departmentName,
     departmentParentId,
     stock: p.stock,
-    deal: dealPrice === null ? undefined : { price: dealPrice, claimed: claimed ?? 0 },
+    deal: undefined,
   };
 }
 
@@ -131,7 +130,6 @@ export async function listProducts(filters: ProductFilters = {}): Promise<Produc
     where.push(or(sql`${products.fits} = '"universal"'::jsonb`, ...matchingIds.map((id) => sql`(${products.fits} ? ${id} AND (${products.fitmentYears}->${id}->>'from' IS NULL OR (${products.fitmentYears}->${id}->>'from')::int <= ${filters.year}) AND (${products.fitmentYears}->${id}->>'to' IS NULL OR (${products.fitmentYears}->${id}->>'to')::int >= ${filters.year}))`)));
   }
   if (filters.maxPrice) where.push(lte(price, filters.maxPrice));
-  if (filters.onSale) where.push(isNotNull(deals.dealPrice));
   if (filters.ids) {
     if (filters.ids.length === 0) return [];
     where.push(inArray(products.id, filters.ids));
@@ -174,8 +172,7 @@ export async function getTrending(): Promise<Product[]> {
 }
 
 export async function getDeals(): Promise<Product[]> {
-  const rows = await selectProducts().where(and(isActive, isNotNull(deals.dealPrice))).orderBy(desc(deals.claimed));
-  return rows.map(toProduct);
+  return [];
 }
 
 export async function getRelated(product: Product, limit = 4): Promise<Product[]> {
@@ -265,13 +262,5 @@ export async function getCarBrands(): Promise<CarBrand[]> {
 
 /** Offers that are switched on and within their dates, with their coupon code if that code is usable too. */
 export async function getLiveOffers(): Promise<Offer[]> {
-  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Australia/Sydney" });
-  const live = (t: { active: AnyPgColumn; startsAt: AnyPgColumn; endsAt: AnyPgColumn }) =>
-    and(eq(t.active, true), sql`(${t.startsAt} IS NULL OR ${t.startsAt} <= ${today})`, sql`(${t.endsAt} IS NULL OR ${t.endsAt} >= ${today})`);
-  return db
-    .select({ id: offers.id, title: offers.title, subtitle: offers.subtitle, highlight: offers.highlight, image: offers.image, href: offers.href, code: coupons.code })
-    .from(offers)
-    .leftJoin(coupons, and(eq(coupons.id, offers.couponId), live(coupons), sql`(${coupons.usageLimit} IS NULL OR ${coupons.used} < ${coupons.usageLimit})`))
-    .where(live(offers))
-    .orderBy(offers.position);
+  return [];
 }

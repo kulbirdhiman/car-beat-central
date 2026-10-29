@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Check, Loader2, Lock, Tag } from "lucide-react";
+import { ArrowLeft, Check, Loader2, Lock } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useActionState, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
@@ -67,8 +67,7 @@ export function CheckoutForm({
   const hydrated = useSyncExternalStore(noop, () => true, () => false);
   const [state, action, pending] = useActionState<FormState, FormData>(placeOrder, {});
   const [delivery, setDelivery] = useState<Delivery>("standard");
-  const [couponInput, setCouponInput] = useState("");
-  const [coupon, setCoupon] = useState("");
+  const coupon = "";
   const [email, setEmail] = useState(prefill?.email ?? "");
   const [step, setStep] = useState<Step>(1);
   const [payment, setPayment] = useState<PaymentMethod>(payOnline ? "paypal" : "bank_transfer");
@@ -391,33 +390,6 @@ export function CheckoutForm({
               );
             })}
           </ul>
-
-          <div>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Tag className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  value={couponInput}
-                  onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      setCoupon(couponInput.trim());
-                    }
-                  }}
-                  placeholder="Offer code"
-                  aria-label="Offer code"
-                  aria-invalid={!!(couponError || errors.coupon)}
-                  className="h-10 pl-9 font-mono uppercase"
-                />
-              </div>
-              <Button type="button" variant="ink" className="h-10 px-4" onClick={() => setCoupon(couponInput.trim())} disabled={!couponInput.trim()}>
-                Apply
-              </Button>
-            </div>
-            {(couponError || errors.coupon) && <p className="mt-1.5 text-xs text-destructive">{couponError || errors.coupon}</p>}
-            {coupon && totals?.coupon === coupon && !stale && <p className="mt-1.5 text-xs text-success">{coupon} applied</p>}
-          </div>
 
           <OrderSummary totals={totals} stale={stale} />
 

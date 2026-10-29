@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { LayoutGrid, ShieldCheck, SlidersHorizontal, X, Zap } from "lucide-react";
+import { LayoutGrid, ShieldCheck, SlidersHorizontal, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -59,9 +59,7 @@ export default async function ShopPage(props: PageProps<"/shop">) {
     return qs ? `/shop?${qs}` : "/shop";
   };
 
-  const title = filters.onSale
-    ? "Today's deals"
-    : dept
+  const title = dept
       ? dept.department.name
       : filters.category
         ? CATEGORY_LABELS[filters.category]
@@ -76,7 +74,6 @@ export default async function ShopPage(props: PageProps<"/shop">) {
     car && { label: `${car.brand.name} ${car.subModel?.name ?? car.model.name}`, key: "model" },
     filters.year && { label: `Year: ${filters.year}`, key: "year" },
     filters.maxPrice && { label: `Under $${filters.maxPrice}`, key: "maxPrice" },
-    filters.onSale && { label: "On sale", key: "sale" },
   ].filter(Boolean) as { label: string; key: string }[];
 
   const filterPanel = (
@@ -112,12 +109,6 @@ export default async function ShopPage(props: PageProps<"/shop">) {
             {p.label}
           </OptionLink>
         ))}
-      </FilterCard>
-
-      <FilterCard title="Offers">
-        <OptionLink href={hrefWith({ sale: filters.onSale ? null : "1" })} active={!!filters.onSale} checkbox>
-          <Zap className="size-3.5 fill-primary text-primary" /> Today&apos;s deals only
-        </OptionLink>
       </FilterCard>
 
       <Link href="/returns#fitment" className="flex gap-3 rounded-2xl border bg-card p-4 text-sm transition-colors hover:border-foreground/20">

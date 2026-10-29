@@ -58,7 +58,7 @@ export function selectedOptionPriceAdjustment(groups: NonNullable<Product["optio
 export function selectedProductPrice(product: Pick<Product, "optionGroups" | "price" | "deal">, values?: string[]) {
   const groups = product.optionGroups ?? [];
   const adjustment = selectedOptionPriceAdjustment(groups, values);
-  return adjustment === null ? null : (product.deal?.price ?? product.price) + adjustment;
+  return adjustment === null ? null : product.price + adjustment;
 }
 
 export function selectedOptionSummary(product: Product, values?: string[]) {
