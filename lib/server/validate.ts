@@ -2,7 +2,7 @@ import "server-only";
 import { AU_STATES, CATEGORY_LABELS, FITTING_CITIES } from "../data";
 import { PAYMENT_METHODS, type PaymentMethod } from "../payment";
 import { DELIVERY_OPTIONS, type Delivery } from "../pricing";
-import type { CartLine, Category } from "../types";
+import type { CartLine, Category, ProductOptionSelections } from "../types";
 import { getCarBrands, SORTS, type ProductFilters, type SortKey } from "./queries";
 
 /** Field-level errors keyed by input name, shown next to each field. */
@@ -48,8 +48,8 @@ export function parseCart(raw: unknown): CartLine[] | null {
   const lines: CartLine[] = [];
   for (const item of raw) {
     if (typeof item?.productId !== "string" || !Number.isInteger(item?.qty) || item.qty < 1 || item.qty > 20) return null;
-    if (item.variantValues !== undefined && (!Array.isArray(item.variantValues) || item.variantValues.length > 3 || item.variantValues.some((value: unknown) => typeof value !== "string" || value.length > 60))) return null;
-    lines.push({ productId: item.productId, qty: item.qty, ...(item.variantValues ? { variantValues: item.variantValues as string[] } : {}) });
+    if (item.variantValues !== undefined && (!Array.isArray(item.variantValues) || item.variantValues.length > 3 || item.variantValues.some((value: unknown) => Array.isArray(value) ? value.length > 20 || value.some((choice: unknown) => typeof choice !== "string" || choice.length > 60) || new Set(value).size !== value.length : typeof value !== "string" || value.length > 60))) return null;
+    lines.push({ productId: item.productId, qty: item.qty, ...(item.variantValues ? { variantValues: item.variantValues as ProductOptionSelections } : {}) });
   }
   return lines;
 }

@@ -1,12 +1,12 @@
 import type { Coupon } from "./admin/model";
-import type { Product } from "./types";
+import type { Product, ProductOptionSelections } from "./types";
 
 /**
  * Cart pricing for checkout. The server always prices from database products and coupons;
  * client figures are only a preview. All amounts are in cents, GST inclusive.
  */
 
-export type PricedLine = { product: Pick<Product, "id" | "name" | "category" | "price" | "deal" | "departmentId" | "departmentParentId" | "fits" | "optionGroups">; qty: number; selectedPrice?: number; variantValues?: string[] };
+export type PricedLine = { product: Pick<Product, "id" | "name" | "category" | "price" | "deal" | "departmentId" | "departmentParentId" | "fits" | "optionGroups">; qty: number; selectedPrice?: number; variantValues?: ProductOptionSelections };
 
 export const DELIVERY_OPTIONS = {
   standard: { label: "Standard (3-6 business days)", fee: 3100, freeOver: null },

@@ -1,4 +1,4 @@
-import type { Product } from "./types";
+import type { Product, ProductOptionSelections } from "./types";
 
 export function normalizeProductOptionGroups(raw: unknown, basePrice = 0, legacyVariants: unknown = []): NonNullable<Product["optionGroups"]> {
   if (!Array.isArray(raw)) return [];
@@ -41,27 +41,32 @@ export function normalizeProductOptionGroups(raw: unknown, basePrice = 0, legacy
   }));
 }
 
-export function selectedOptionPriceAdjustment(groups: NonNullable<Product["optionGroups"]>, values?: string[]) {
+export function selectedOptionPriceAdjustment(groups: NonNullable<Product["optionGroups"]>, values?: ProductOptionSelections) {
   if (groups.length === 0) return values?.length ? null : 0;
   if (!values || values.length !== groups.length) return null;
   let adjustment = 0;
   for (const [index, group] of groups.entries()) {
-    if (!values[index] && !group.required) continue;
-    const choice = group.values.find((item) => item.name === values[index]);
-    if (!choice) return null;
-    adjustment += choice.price;
+    const value = values[index];
+    const selected = Array.isArray(value) ? value : value ? [value] : [];
+    if (group.required && selected.length === 0) return null;
+    if (new Set(selected).size !== selected.length) return null;
+    for (const name of selected) {
+      const choice = group.values.find((item) => item.name === name);
+      if (!choice) return null;
+      adjustment += choice.price;
+    }
   }
   return adjustment;
 }
 
 /** Resolve the base product/deal price plus the independent selected option adjustments. */
-export function selectedProductPrice(product: Pick<Product, "optionGroups" | "price" | "deal">, values?: string[]) {
+export function selectedProductPrice(product: Pick<Product, "optionGroups" | "price" | "deal">, values?: ProductOptionSelections) {
   const groups = product.optionGroups ?? [];
   const adjustment = selectedOptionPriceAdjustment(groups, values);
   return adjustment === null ? null : product.price + adjustment;
 }
 
-export function selectedOptionSummary(product: Product, values?: string[]) {
+export function selectedOptionSummary(product: Product, values?: ProductOptionSelections) {
   if (!values) return "";
-  return (product.optionGroups ?? []).map((group, index) => `${group.name}: ${values[index] ?? ""}`).filter((part) => !part.endsWith(": ")).join(" · ");
+  return (product.optionGroups ?? []).map((group, index) => `${group.name}: ${Array.isArray(values[index]) ? values[index].join(", ") : values[index] ?? ""}`).filter((part) => !part.endsWith(": ")).join(" · ");
 }

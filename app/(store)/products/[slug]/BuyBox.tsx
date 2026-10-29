@@ -29,7 +29,7 @@ export function BuyBox({ productId, name, image, price, stock, optionGroups, add
   const [added, setAdded] = useState(false);
   const [showBar, setShowBar] = useState(false);
   const [picked, setPicked] = useState<Set<string>>(new Set());
-  const [selectedValues, setSelectedValues] = useState<string[]>(() => optionGroups.map(() => ""));
+  const [selectedValues, setSelectedValues] = useState<string[][]>(() => optionGroups.map(() => []));
   const anchor = useRef<HTMLDivElement>(null);
   const extras = addOns.filter((a) => picked.has(a.id));
   const adjustment = selectedOptionPriceAdjustment(optionGroups, optionGroups.length ? selectedValues : undefined);
@@ -54,7 +54,7 @@ export function BuyBox({ productId, name, image, price, stock, optionGroups, add
     addAll();
     setAdded(true);
     setTimeout(() => setAdded(false), 1800);
-    const selected = optionGroups.map((group, index) => `${group.name}: ${selectedValues[index]}`).join(" · ");
+    const selected = optionGroups.map((group, index) => `${group.name}: ${selectedValues[index].join(", ")}`).join(" · ");
     const description = [selected || name, extras.length ? `${extras.length} add-on${extras.length > 1 ? "s" : ""}` : ""].filter(Boolean).join(" + ");
     toast.success(`Added ${qty + extras.length} to cart`, { description, action: { label: "Checkout", onClick: () => router.push("/checkout") } });
   };
@@ -85,22 +85,60 @@ export function BuyBox({ productId, name, image, price, stock, optionGroups, add
   return (
     <>
       {optionGroups.length > 0 && (
-        <div className="mt-5 grid gap-3">
-          {optionGroups.map((group, index) => (
-            <label key={`${group.name}-${index}`} className="grid gap-1.5 text-sm font-medium">
-              <span>{group.name} <span className="font-normal text-muted-foreground">({group.required ? "Required" : "Optional"})</span></span>
-              <select
-                value={selectedValues[index] ?? ""}
-                onChange={(event) => setSelectedValues((values) => values.map((value, i) => i === index ? event.target.value : value))}
-                className="h-11 rounded-lg border bg-background px-3 font-normal"
-              >
-                <option value="">{group.required ? `Choose ${group.name.toLowerCase()}` : `No ${group.name.toLowerCase()}`}</option>
-                {group.values.map((choice) => <option key={choice.name} value={choice.name}>{choice.name}{choice.price > 0 ? ` (+${formatPrice(choice.price)})` : ""}</option>)}
-              </select>
-            </label>
-          ))}
-          <p className="text-sm text-muted-foreground">{unitPrice === null ? "Choose your options to see the price." : `Selected price: ${formatPrice(unitPrice)}`}</p>
-        </div>
+        <section className="mt-6 overflow-hidden rounded-2xl border bg-background" aria-label="Product options">
+          <div className="border-b bg-muted/30 px-4 py-4 sm:px-5">
+            <h2 className="text-sm font-semibold">Make it yours</h2>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Choose your options. You can select more than one.</p>
+          </div>
+          <div className="divide-y px-4 sm:px-5">
+            {optionGroups.map((group, index) => {
+              const count = selectedValues[index].length;
+              return (
+                <fieldset key={`${group.name}-${index}`} className="min-w-0 py-4">
+                  <legend className="sr-only">{group.name} ({group.required ? "select at least one" : "optional"})</legend>
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2" aria-hidden="true">
+                    <span className="text-sm font-semibold">{group.name}</span>
+                    <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-medium", count > 0 ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground")}>
+                      {count > 0 ? `${count} selected` : group.required ? "Select at least one" : "Optional"}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                    {group.values.map((choice) => {
+                      const selected = selectedValues[index].includes(choice.name);
+                      return (
+                        <label
+                          key={choice.name}
+                          className={cn(
+                            "flex min-h-16 cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2",
+                            selected ? "border-primary bg-primary/5" : "border-border bg-background hover:border-foreground/30 hover:bg-muted/40",
+                          )}
+                        >
+                          <Checkbox
+                            className="size-5 rounded-md"
+                            checked={selected}
+                            onCheckedChange={(checked) => setSelectedValues((values) => values.map((value, i) => i === index
+                              ? group.values.filter((item) => item.name === choice.name ? checked === true : value.includes(item.name)).map((item) => item.name)
+                              : value))}
+                          />
+                          <span className="min-w-0 flex-1">
+                            <span className="block break-words text-sm font-medium leading-snug">{choice.name}</span>
+                            <span className={cn("mt-1 block text-xs tabular-nums", selected ? "text-primary" : "text-muted-foreground")}>
+                              {choice.price > 0 ? `+${formatPrice(choice.price)}` : "No extra cost"}
+                            </span>
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </fieldset>
+              );
+            })}
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t bg-muted/30 px-4 py-3 sm:px-5" aria-live="polite" aria-atomic="true">
+            <span className="text-xs text-muted-foreground">{unitPrice === null ? "Select required options to continue" : "Price with your options"}</span>
+            {unitPrice !== null && <span className="text-base font-semibold tabular-nums">{formatPrice(unitPrice)}</span>}
+          </div>
+        </section>
       )}
       {addOns.length > 0 && (
         <fieldset className="mt-5">

@@ -85,7 +85,10 @@ export type Offer = {
   href: string;
 };
 
-export type CartLine = { productId: string; qty: number; variantValues?: string[] };
+/** One selection per group in legacy carts; multiple selections in new carts. */
+export type ProductOptionSelections = (string | string[])[];
+
+export type CartLine = { productId: string; qty: number; variantValues?: ProductOptionSelections };
 
 /** "refunded": paid, then refunded in full. Partly refunded orders keep their status. */
 export type OrderStatus = "pending_payment" | "processing" | "paid" | "confirmed" | "preparing" | "fulfilled" | "completed" | "cancelled" | "refunded";
