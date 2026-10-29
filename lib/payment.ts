@@ -5,8 +5,17 @@ export const BANK_TRANSFER = {
   accountNumber: "11524133",
 };
 
-/** What a customer puts in the transfer's reference field, so the payment can be matched to their order. */
-export const orderReference = (orderId: string) => orderId.slice(0, 8).toUpperCase();
+/** The same public order number on customer pages, payments, and admin invoices. */
+export function orderReference(order: { id: string; number: number; source?: string | null }) {
+  return order.source === "legacy" && order.id.startsWith("woo-") ? `WC-${order.id.slice(4)}` : `CB-${order.number}`;
+}
+
+/** Also accept references customers received before public order numbers were unified. */
+export function matchesOrderReference(order: { id: string; number: string }, query: string) {
+  const reference = query.trim().replace(/^#\s*/, "").toLowerCase();
+  if (!reference) return false;
+  return [order.number, order.id, order.id.slice(0, 8)].some((value) => value.toLowerCase().includes(reference));
+}
 
 /** Ways a customer can pay. Storefront orders offer PayPal, Afterpay and bank transfer; an admin invoice picks its own. */
 export const PAYMENT_METHODS = {

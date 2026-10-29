@@ -19,7 +19,7 @@ export function OrderCard({ order }: { order: CustomerOrder }) {
   return (
     <li className="rounded-xl bg-card p-5 ring-1 ring-foreground/[0.07]">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <span className="font-mono font-semibold">#{orderReference(order.id)}</span>
+        <span className="font-mono font-semibold">#{orderReference(order)}</span>
         <OrderStatusBadge status={order.status} />
         <span className="text-sm text-muted-foreground">{fmtDate(order.createdAt)}</span>
         <span className="ml-auto text-right font-semibold tabular-nums">
