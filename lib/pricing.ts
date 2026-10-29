@@ -1,4 +1,3 @@
-import { evaluateCoupon } from "./admin/coupons";
 import type { Coupon } from "./admin/model";
 import type { Product } from "./types";
 
@@ -10,7 +9,7 @@ import type { Product } from "./types";
 export type PricedLine = { product: Pick<Product, "id" | "name" | "category" | "price" | "deal" | "departmentId" | "departmentParentId" | "fits" | "optionGroups">; qty: number; selectedPrice?: number; variantValues?: string[] };
 
 export const DELIVERY_OPTIONS = {
-  standard: { label: "Standard (3-6 business days)", fee: 2900, freeOver: null },
+  standard: { label: "Standard (3-6 business days)", fee: 3100, freeOver: null },
   express: { label: "Express (1-2 business days)", fee: 4500, freeOver: null },
   collect: { label: "Local pickup (we'll let you know when it's ready)", fee: 0, freeOver: null },
 } as const;
@@ -18,7 +17,7 @@ export const DELIVERY_OPTIONS = {
 export type Delivery = keyof typeof DELIVERY_OPTIONS;
 
 export function unitPriceCents(product: PricedLine["product"], selectedPrice?: number) {
-  return (selectedPrice ?? product.deal?.price ?? product.price) * 100;
+  return (selectedPrice ?? product.price) * 100;
 }
 
 export type Totals = {
@@ -45,31 +44,14 @@ export function priceCart(
 ): Totals {
   const subtotal = lines.reduce((sum, l) => sum + unitPriceCents(l.product, l.selectedPrice) * l.qty, 0);
 
-  let coupon: string | null = null;
-  let couponError: string | null = null;
-  let discount = 0;
-  let freeShipping = false;
-
-  if (opts.couponCode?.trim()) {
-    if (!opts.coupon) {
-      couponError = "That code isn't valid.";
-    } else {
-      // Coupons see the price actually charged, so deals and codes stack the way the cart shows them.
-      const couponLines = lines.map((l) => ({ product: { ...l.product, price: unitPriceCents(l.product, l.selectedPrice) / 100 }, qty: l.qty }));
-      const result = evaluateCoupon(opts.coupon, couponLines, { isFirstOrder: opts.isFirstOrder ?? true });
-      if (!result.ok) couponError = result.reason;
-      else {
-        coupon = opts.coupon.code;
-        discount = result.discount;
-        freeShipping = result.freeShipping;
-      }
-    }
-  }
+  const coupon = null;
+  const couponError = opts.couponCode?.trim() ? "Discount codes are not available." : null;
+  const discount = 0;
 
   const option = DELIVERY_OPTIONS[opts.delivery];
   const afterDiscount = subtotal - discount;
   const shipping =
-    lines.length === 0 || freeShipping || (option.freeOver !== null && afterDiscount >= option.freeOver) ? 0 : option.fee;
+    lines.length === 0 ? 0 : option.fee;
   const total = afterDiscount + shipping;
 
   return { subtotal, discount, shipping, total, gst: Math.round(total / 11), coupon, couponError };

@@ -8,10 +8,10 @@ import { NewsletterForm } from "./NewsletterForm";
 
 const COLUMNS = [
   {
-    title: "Deals",
+    title: "Shop",
     links: [
-      { label: "Today's deals", href: "/shop?sale=1" },
-      { label: "Offers & codes", href: "/#offers" },
+      { label: "All products", href: "/shop" },
+      { label: "Shop by vehicle", href: "/#garage" },
       { label: "Top rated", href: "/shop?sort=rating" },
       { label: "All products", href: "/shop" },
     ],
@@ -43,8 +43,8 @@ export function SiteFooter({ departments }: { departments: StoreDepartment[] }) 
               <Mail className="size-5" />
             </span>
             <div>
-              <h2 className="font-display text-2xl font-bold">Get price-drop alerts</h2>
-              <p className="mt-1 text-sm text-white/60">Exclusive codes and deal reminders. No spam, unsubscribe any time.</p>
+              <h2 className="font-display text-2xl font-bold">Get CarBeat updates</h2>
+              <p className="mt-1 text-sm text-white/60">New products and installation news. No spam, unsubscribe any time.</p>
             </div>
           </div>
           <NewsletterForm className="w-full lg:w-[420px] lg:max-w-none" />

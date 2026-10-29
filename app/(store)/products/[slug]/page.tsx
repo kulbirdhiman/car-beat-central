@@ -24,7 +24,7 @@ export async function generateMetadata(props: PageProps<"/products/[slug]">): Pr
 }
 
 const PERKS = [
-  { icon: Truck, title: "$29 standard shipping", body: "Australia-wide delivery" },
+  { icon: Truck, title: "$31 standard shipping", body: "Australia-wide delivery" },
   { icon: RotateCcw, title: "30-day returns", body: "Change of mind is fine" },
   { icon: ShieldCheck, title: "Fitment guarantee", body: "Or we pay return postage" },
   { icon: Wrench, title: "Pro fitting", body: "In every capital city" },
@@ -121,7 +121,7 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
                 </>
               )}
             </div>
-            <p className="mt-2 text-sm text-muted-foreground">Includes GST. Standard shipping is $29 Australia-wide.</p>
+            <p className="mt-2 text-sm text-muted-foreground">Includes GST. Standard shipping is $31 Australia-wide.</p>
 
             {product.deal && (
               <div className="mt-4">
@@ -179,7 +179,7 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
             </TabsContent>
             <TabsContent value="delivery" className="space-y-3 pt-4 text-sm text-muted-foreground">
               <p>
-                <strong className="text-foreground">$29 standard shipping</strong> Australia-wide. Orders are dispatched with tracking.
+                <strong className="text-foreground">$31 standard shipping</strong> Australia-wide. Orders are dispatched with tracking.
               </p>
               <p>
                 <strong className="text-foreground">30-day returns</strong> on unused items, and our fitment guarantee covers return postage if it doesn&apos;t fit your car.{" "}

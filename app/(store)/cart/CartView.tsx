@@ -37,7 +37,7 @@ export function CartView() {
             <Link href="/shop">Start shopping</Link>
           </Button>
           <Button asChild size="lg" variant="outline" className="h-10 px-4">
-            <Link href="/shop?sale=1">See today&apos;s deals</Link>
+            <Link href="/shop">Shop all products</Link>
           </Button>
         </div>
       </div>
@@ -112,7 +112,7 @@ export function CartView() {
             </Link>
           </Button>
           <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-            <Lock className="size-3" /> Offer codes are applied at checkout
+            <Lock className="size-3" /> Standard shipping is $31
           </p>
         </CardContent>
       </Card>

@@ -16,7 +16,7 @@ const BASE_FAQS = [
   },
   {
     q: "How much is delivery?",
-    a: "Standard delivery is $29 Australia-wide. Express (1-2 business days) is $45, and local pickup is free.",
+    a: "Standard delivery is $31 Australia-wide. Express (1-2 business days) is $45, and local pickup is free.",
   },
   {
     q: "Can I return something?",
@@ -38,7 +38,7 @@ type Stats = { rating: number; reviews: number };
 
 /** Questions on the right; rating proof and a human fallback on the left. */
 export function Faq({ stats, codes }: { stats: Stats; codes: { code: string; description: string }[] }) {
-  const FAQS = [...BASE_FAQS, codesFaq(codes)];
+  const FAQS = [...BASE_FAQS, ...(codes.length ? [codesFaq(codes)] : [])];
   return (
     <section id="faq" className="mx-auto max-w-[1440px] scroll-mt-32 px-4 pb-20 pt-16 sm:px-6 sm:pb-28 sm:pt-24 lg:px-8">
       <div className="grid gap-8 lg:grid-cols-[1fr_1.6fr] lg:gap-12">

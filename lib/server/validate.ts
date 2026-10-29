@@ -35,7 +35,7 @@ export async function parseFilters(params: URLSearchParams): Promise<ProductFilt
     year: selectedModel && /^\d{4}$/.test(params.get("year") ?? "") ? Number(params.get("year")) : undefined,
     subModel: subModel && selectedModel?.subModels?.some((s) => s.id === subModel) ? subModel : undefined,
     maxPrice: maxPrice > 0 ? maxPrice : undefined,
-    onSale: params.get("sale") === "1" || undefined,
+    onSale: undefined,
     sort: sort && sort in SORTS ? (sort as SortKey) : undefined,
     ids: ids ? ids.split(",").filter(Boolean).slice(0, 50) : undefined,
     limit: limit > 0 ? Math.min(limit, 50) : undefined,

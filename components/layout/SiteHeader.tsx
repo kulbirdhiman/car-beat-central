@@ -109,14 +109,14 @@ function DealsLinkWithState() {
 function DealsLink({ active = false }: { active?: boolean }) {
   return (
     <Link
-      href="/shop?sale=1"
+      href="/shop"
       aria-current={active ? "page" : undefined}
       className={cn(
         "flex h-10 items-center gap-1.5 rounded-full px-4 text-sm font-semibold transition-colors hover:bg-primary/10 hover:text-primary",
         active && "bg-primary/10 text-primary",
       )}
     >
-      <Zap className="size-4 fill-primary text-primary" /> Deals
+      <Zap className="size-4 fill-primary text-primary" /> Shop
     </Link>
   );
 }
@@ -169,13 +169,13 @@ function AllProductsMenu({ departments, total }: { departments: StoreDepartment[
           </ul>
 
           <div className="flex flex-col gap-2">
-            <Link href="/shop?sale=1" onClick={close} className="group relative isolate flex flex-1 flex-col justify-end overflow-clip rounded-xl bg-ink p-4 text-ink-foreground">
+            <Link href="/shop" onClick={close} className="group relative isolate flex flex-1 flex-col justify-end overflow-clip rounded-xl bg-ink p-4 text-ink-foreground">
               <div className="absolute -right-10 -top-10 -z-10 size-36 rounded-full bg-primary/50 blur-2xl" />
               <Zap className="mb-auto size-6 fill-primary text-primary" />
-              <p className="mt-6 font-display text-xl font-extrabold leading-tight">Today&apos;s deals</p>
-              <p className="mt-1 text-sm text-white/65">Price drops, gone at midnight.</p>
+              <p className="mt-6 font-display text-xl font-extrabold leading-tight">Shop all products</p>
+              <p className="mt-1 text-sm text-white/65">Find parts and upgrades for your vehicle.</p>
               <span className="mt-3 flex items-center gap-1 text-sm font-semibold text-primary">
-                Shop deals <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
+                Shop products <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
               </span>
             </Link>
             <Button asChild className="h-11 rounded-xl">
@@ -213,8 +213,8 @@ function MobileMenu({ departments }: { departments: StoreDepartment[] }) {
             </Link>
           </SheetClose>
           <SheetClose asChild>
-            <Link href="/shop?sale=1" className="flex items-center gap-2 rounded-md px-3 py-2.5 font-semibold text-primary hover:bg-muted">
-              <Zap className="size-4 fill-primary" /> Today&apos;s deals
+            <Link href="/shop" className="flex items-center gap-2 rounded-md px-3 py-2.5 font-semibold text-primary hover:bg-muted">
+              <Zap className="size-4 fill-primary" /> Shop all products
             </Link>
           </SheetClose>
           <SheetClose asChild>
@@ -229,8 +229,8 @@ function MobileMenu({ departments }: { departments: StoreDepartment[] }) {
             </Link>
           </SheetClose>
           <SheetClose asChild>
-            <Link href="/#offers" className="rounded-md px-3 py-2.5 font-medium hover:bg-muted">
-              Offers &amp; codes
+            <Link href="/shop" className="rounded-md px-3 py-2.5 font-medium hover:bg-muted">
+              Browse products
             </Link>
           </SheetClose>
           {departments.length > 0 && (
