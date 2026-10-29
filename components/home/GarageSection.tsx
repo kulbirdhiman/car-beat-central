@@ -1,26 +1,36 @@
 "use client";
 
-import { vehicleOptionLabel, vehicleYearOptions } from "@/lib/fitment-years";
+import { vehicleYearOptions } from "@/lib/fitment-years";
 
-import { ArrowRight, BookmarkCheck, BookmarkPlus, CarFront, ChevronDown } from "lucide-react";
+import { ArrowRight, BookmarkCheck, BookmarkPlus, CarFront, Check, ChevronDown, ChevronRight } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ProductCard } from "@/components/product/ProductCard";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { productFitsModel } from "@/lib/data";
 import { findCar, useCarBrands, useGarage } from "@/lib/garage";
 import type { Product } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { SectionHeading } from "./SectionHeading";
 
-/** Make chips, then model chips, then the parts that fit. Starts on the saved car if there is one. */
+const optionClass = "flex min-h-11 w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring";
+
+// Production years belong in the final step, even when imported names include them.
+const modelName = (name: string) => name.replace(/\s*[（(]?\d{4}\s*[–—-]\s*(?:\d{4}|present|onwards)[)）]?/gi, "").trim();
+
+/** Cascading vehicle picker, starting with the shopper's saved vehicle. */
 export function GarageSection({ products }: { products: Product[] }) {
+  const router = useRouter();
   const garage = useGarage();
   const brands = useCarBrands();
   // Until the shopper picks something here, show their saved car (or the Ranger, Australia's best seller).
   const [picked, setPicked] = useState<string | null>(null);
   const [pickedSubModel, setPickedSubModel] = useState("");
   const [pickedYear, setPickedYear] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [step, setStep] = useState<"model" | "submodel" | "year">("model");
   const car =
     findCar(brands, picked ?? garage.car?.model.id ?? "ranger") ?? (brands[0] ? { brand: brands[0], model: brands[0].models[0] } : null);
   if (!car) return null;
@@ -43,7 +53,7 @@ export function GarageSection({ products }: { products: Product[] }) {
         title={
           isSaved ? (
             <>
-              Picked for your <span className="text-primary">{brand.name} {vehicleOptionLabel(subModel ?? model)}</span>
+              Picked for your <span className="text-primary">{brand.name} {modelName((subModel ?? model).name)}</span>
             </>
           ) : (
             "Parts that fit. No guesswork."
@@ -67,7 +77,7 @@ export function GarageSection({ products }: { products: Product[] }) {
               key={b.id}
               type="button"
               aria-pressed={b.id === brand.id}
-              onClick={() => { setPicked(b.models[0].id); setPickedSubModel(""); setPickedYear(""); }}
+              onClick={() => { setPicked(b.models[0].id); setPickedSubModel(""); setPickedYear(""); setStep("model"); setMenuOpen(true); }}
               className={cn(
                 "h-11 shrink-0 rounded-xl border px-5 font-display text-sm font-bold transition-colors",
                 b.id === brand.id ? "border-primary bg-primary/10 text-primary" : "bg-background hover:border-foreground/30",
@@ -79,55 +89,75 @@ export function GarageSection({ products }: { products: Product[] }) {
           </div>
         </div>
 
-        <div className="mt-5 grid gap-4 border-t pt-5 sm:grid-cols-2">
-          <label className="block min-w-0">
-            <span className="mb-2 block text-sm font-semibold">2. Choose a model</span>
-            <span className="relative block">
-              <select
-                aria-label="Model"
-                value={model.id}
-                onChange={(e) => { setPicked(e.target.value); setPickedSubModel(""); setPickedYear(""); }}
-                className="h-12 w-full appearance-none rounded-xl border border-input bg-background px-4 pr-10 text-sm font-medium outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
-              >
-                {brand.models.map((m) => <option key={m.id} value={m.id}>{vehicleOptionLabel(m)} ({products.filter((product) => productFitsModel(product, m.id)).length} products)</option>)}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            </span>
-          </label>
-
-          <div className="min-w-0">
-            <label className="block">
-              <span className="mb-2 block text-sm font-semibold">3. Choose a sub-model <span className="font-normal text-muted-foreground">(optional)</span></span>
-              <span className="relative block">
-                <select
-                  aria-label="Sub-model (optional)"
-                  value={subModelId}
-                  onChange={(e) => { setPicked(model.id); setPickedSubModel(e.target.value); setPickedYear(""); }}
-                  disabled={!model.subModels?.length}
-                  className="h-12 w-full appearance-none rounded-xl border border-input bg-background px-4 pr-10 text-sm font-medium outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:bg-muted disabled:text-muted-foreground"
-                >
-                  <option value="">{model.subModels?.length ? `Any ${model.name} version (${products.filter((product) => productFitsModel(product, model.id)).length} products)` : "No sub-models listed"}</option>
-                  {model.subModels?.map((s) => <option key={s.id} value={s.id}>{vehicleOptionLabel(s)} ({products.filter((product) => productFitsModel(product, model.id, s.id)).length} products)</option>)}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              </span>
-            </label>
-            {!model.subModels?.length && <p className="mt-1.5 text-xs text-muted-foreground">We&apos;ll show parts listed for the whole model.</p>}
-          </div>
+        <div className="mt-5 border-t pt-5">
+          <p className="mb-2 text-sm font-semibold">2. Choose your model</p>
+          <Popover open={menuOpen} onOpenChange={(open) => { setMenuOpen(open); if (open) setStep("model"); }}>
+            <PopoverTrigger asChild>
+              <button type="button" aria-label="Choose model, sub-model and year" className="flex h-12 w-full items-center justify-between rounded-xl border border-input bg-background px-4 text-left text-sm font-medium transition-colors hover:border-primary focus-visible:outline-2 focus-visible:outline-ring">
+                {modelName(model.name)}
+                <ChevronDown className="size-4 text-muted-foreground" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-[min(440px,calc(100vw-2rem))] p-0" aria-label="Choose your vehicle">
+              <div className="flex items-center justify-between border-b px-4 py-3">
+                <p className="text-sm font-semibold">{brand.name} · Find your vehicle</p>
+                <span className="text-xs text-muted-foreground" aria-live="polite">{step === "model" ? "Choose a model" : step === "submodel" ? "Choose a sub-model" : "Choose a year"}</span>
+              </div>
+              <div className="max-h-[65vh] overflow-y-auto">
+                {step === "model" && <div className="p-3">
+                  <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Model</p>
+                  <div className="space-y-1 md:max-h-80 md:overflow-y-auto">
+                    {brand.models.map((m) => (
+                      <button key={m.id} type="button" aria-pressed={m.id === model.id} onClick={() => { setPicked(m.id); setPickedSubModel(""); setPickedYear(""); setStep(m.subModels?.length ? "submodel" : "year"); }} className={cn(optionClass, m.id === model.id && "bg-primary/10 text-primary")}>
+                        <span>{modelName(m.name)}</span><ChevronRight className="size-4 shrink-0" />
+                      </button>
+                    ))}
+                  </div>
+                </div>}
+                {step === "submodel" && <div className="p-3">
+                  <button type="button" onClick={() => setStep("model")} className="mb-3 text-xs text-primary">← Models</button>
+                  <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Sub-model</p>
+                  {(
+                    <div className="space-y-1 md:max-h-80 md:overflow-y-auto">
+                      <button type="button" onClick={() => { setPicked(model.id); setPickedSubModel(""); setPickedYear(""); setStep("year"); }} className={cn(optionClass, !subModelId && "bg-primary/10 text-primary")}>
+                        <span>{model.subModels?.length ? "Any sub-model" : "All versions"}</span><ChevronRight className="size-4 shrink-0" />
+                      </button>
+                      {model.subModels?.map((sub) => (
+                        <button key={sub.id} type="button" aria-pressed={sub.id === subModelId} onClick={() => { setPicked(model.id); setPickedSubModel(sub.id); setPickedYear(""); setStep("year"); }} className={cn(optionClass, sub.id === subModelId && "bg-primary/10 text-primary")}>
+                          <span>{modelName(sub.name)}</span><ChevronRight className="size-4 shrink-0" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>}
+                {step === "year" && <div className="p-3">
+                  <button type="button" onClick={() => setStep(model.subModels?.length ? "submodel" : "model")} className="mb-3 text-xs text-primary">← {model.subModels?.length ? "Sub-models" : "Models"}</button>
+                  <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Year</p>
+                  {(
+                    <div className="space-y-1 md:max-h-80 md:overflow-y-auto">
+                      {[undefined, ...yearOptions].map((value) => (
+                        <button key={value ?? "all"} type="button" aria-pressed={year === value} onClick={() => { setPicked(model.id); setPickedSubModel(subModelId); setPickedYear(value ? String(value) : ""); setMenuOpen(false);
+                          garage.save(model.id, subModelId || undefined, value);
+                          const params = new URLSearchParams({ model: model.id });
+                          if (subModelId) params.set("submodel", subModelId);
+                          if (value) params.set("year", String(value));
+                          router.push(`/shop?${params.toString()}`); }} className={cn(optionClass, year === value && "bg-primary/10 text-primary")}>
+                          <span>{value ?? "All years"}</span>{year === value && <Check className="size-4" />}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>}
+              </div>
+            </PopoverContent>
+          </Popover>
+          <p className="mt-2 text-xs text-muted-foreground">Model → Sub-model → Year</p>
         </div>
-
-        <label className="mt-4 block">
-          <span className="mb-2 block text-sm font-semibold">4. Choose a year</span>
-          <select aria-label="Year" value={year ?? ""} onChange={(e) => { setPicked(model.id); setPickedSubModel(subModelId); setPickedYear(e.target.value); }} className="h-12 w-full rounded-xl border border-input bg-background px-4 text-sm">
-            <option value="">All years</option>
-            {yearOptions.map((value) => <option key={value} value={value}>{value}</option>)}
-          </select>
-        </label>
 
         <div className="mt-5 flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Selected vehicle</p>
-            <p className="mt-0.5 truncate font-semibold">{brand.name} {subModel ? `${model.name} · ${vehicleOptionLabel(subModel)}` : vehicleOptionLabel(model)}{year ? ` · ${year}` : ""}</p>
+            <p className="mt-0.5 truncate font-semibold">{brand.name} {subModel ? `${modelName(model.name)} · ${modelName(subModel.name)}` : modelName(model.name)}{year ? ` · ${year}` : ""}</p>
           </div>
           <div className="flex flex-wrap gap-2 sm:justify-end">
             <Button variant="outline" className="h-10" onClick={() => (isSaved ? garage.clear() : garage.save(model.id, subModel?.id, year))}>
