@@ -46,17 +46,6 @@ export default function FittingPage() {
               ))}
             </ul>
           </div>
-          <ul className="space-y-3 px-1 text-sm">
-            <li className="flex gap-3">
-              <MapPin className="size-5 shrink-0 text-primary" /> Sydney, Melbourne, Brisbane, Perth, Adelaide, Hobart, Canberra and Darwin
-            </li>
-            <li className="flex gap-3">
-              <Clock className="size-5 shrink-0 text-primary" /> Monday to Saturday. Most installs take 1-3 hours.
-            </li>
-            <li className="flex gap-3">
-              <ShieldCheck className="size-5 shrink-0 text-primary" /> 2-year workmanship guarantee
-            </li>
-          </ul>
         </aside>
       </div>
     </PageShell>

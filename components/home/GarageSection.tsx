@@ -98,7 +98,7 @@ export function GarageSection({ products }: { products: Product[] }) {
                 <ChevronDown className="size-4 text-muted-foreground" />
               </button>
             </PopoverTrigger>
-            <PopoverContent align="start" className="w-[min(440px,calc(100vw-2rem))] p-0" aria-label="Choose your vehicle">
+            <PopoverContent align="start" className="w-[var(--radix-popover-trigger-width)] p-0" aria-label="Choose your vehicle">
               <div className="flex items-center justify-between border-b px-4 py-3">
                 <p className="text-sm font-semibold">{brand.name} · Find your vehicle</p>
                 <span className="text-xs text-muted-foreground" aria-live="polite">{step === "model" ? "Choose a model" : step === "submodel" ? "Choose a sub-model" : "Choose a year"}</span>
@@ -106,7 +106,7 @@ export function GarageSection({ products }: { products: Product[] }) {
               <div className="max-h-[65vh] overflow-y-auto">
                 {step === "model" && <div className="p-3">
                   <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Model</p>
-                  <div className="space-y-1 md:max-h-80 md:overflow-y-auto">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:max-h-80 md:grid-cols-3 md:overflow-y-auto lg:grid-cols-4">
                     {brand.models.map((m) => (
                       <button key={m.id} type="button" aria-pressed={m.id === model.id} onClick={() => { setPicked(m.id); setPickedSubModel(""); setPickedYear(""); setStep(m.subModels?.length ? "submodel" : "year"); }} className={cn(optionClass, m.id === model.id && "bg-primary/10 text-primary")}>
                         <span>{modelName(m.name)}</span><ChevronRight className="size-4 shrink-0" />

@@ -60,12 +60,12 @@ export default async function ShopPage(props: PageProps<"/shop">) {
   };
 
   const title = dept
-      ? dept.department.name
-      : filters.category
-        ? CATEGORY_LABELS[filters.category]
-        : car
-          ? `Parts for your ${car.subModel?.name ?? car.model.name}`
-          : "All parts";
+    ? dept.department.name
+    : filters.category
+      ? CATEGORY_LABELS[filters.category]
+      : car
+        ? `Parts for your ${car.subModel?.name ?? car.model.name}`
+        : "All parts";
 
   const active = [
     filters.q && { label: `“${filters.q}”`, key: "q" },
