@@ -29,11 +29,15 @@ export function VehicleForm({
   tone = "light",
   onDone,
   className,
+  department,
+  productLabel = "parts",
 }: {
   fitCounts: Record<string, number>;
   tone?: keyof typeof tones;
   onDone?: () => void;
   className?: string;
+  department?: string;
+  productLabel?: string;
 }) {
   const router = useRouter();
   const garage = useGarage();
@@ -47,7 +51,7 @@ export function VehicleForm({
   const yearOptions = vehicleYearOptions(model?.subModels?.find((sub) => sub.id === subModelId) ?? model);
   const count = modelId ? (fitCounts[subModelId || modelId] ?? 0) : null;
   const t = tones[tone];
-  const selectClass = cn(selectBase, t.select);
+  const selectClass = cn(selectBase, t.select, department && "h-14 rounded-xl bg-background text-base focus:ring-2 focus:ring-primary/15");
   const style = { backgroundImage: chevron(t.stroke), backgroundPosition: "right 12px center", backgroundSize: 16, backgroundRepeat: "no-repeat" };
 
   return (
@@ -58,9 +62,15 @@ export function VehicleForm({
         if (!modelId) return;
         garage.save(modelId, subModelId || undefined, year ? Number(year) : undefined);
         onDone?.();
-        router.push(`/shop?model=${modelId}${subModelId ? `&submodel=${subModelId}` : ""}${year ? `&year=${year}` : ""}`);
+        const params = new URLSearchParams({ model: modelId });
+        if (subModelId) params.set("submodel", subModelId);
+        if (year) params.set("year", year);
+        if (department) params.set("dept", department);
+        router.push(`/shop?${params.toString()}`);
       }}
     >
+      <label className="min-w-0">
+      {department && <span className="mb-2 block text-xs font-semibold">Make</span>}
       <select
         aria-label="Make"
         value={brandId}
@@ -79,6 +89,9 @@ export function VehicleForm({
           </option>
         ))}
       </select>
+      </label>
+      <label className="min-w-0">
+      {department && <span className="mb-2 block text-xs font-semibold">Model</span>}
       <select aria-label="Model" value={modelId} onChange={(e) => { setModelId(e.target.value); setSubModelId(""); setYear(""); }} disabled={!brand} className={selectClass} style={style}>
         <option value="">{brand ? "Select model" : "Choose a make first"}</option>
         {brand?.models.map((m) => (
@@ -87,18 +100,25 @@ export function VehicleForm({
           </option>
         ))}
       </select>
+      </label>
       {model && model.subModels && model.subModels.length > 0 && (
+        <label className="min-w-0">
+        {department && <span className="mb-2 block text-xs font-semibold">Version <span className="font-normal text-muted-foreground">(optional)</span></span>}
         <select aria-label="Sub-model (optional)" value={subModelId} onChange={(e) => { setSubModelId(e.target.value); setYear(""); }} className={selectClass} style={style}>
           <option value="">Any {model.name} version ({fitCounts[model.id] ?? 0} products)</option>
           {model.subModels.map((sub) => <option key={sub.id} value={sub.id}>{vehicleOptionLabel(sub)} ({fitCounts[sub.id] ?? 0} products)</option>)}
         </select>
+        </label>
       )}
+      <label className="min-w-0">
+      {department && <span className="mb-2 block text-xs font-semibold">Year <span className="font-normal text-muted-foreground">(optional)</span></span>}
       <select aria-label="Year" value={year} onChange={(e) => setYear(e.target.value)} disabled={!model} className={selectClass} style={style}>
         <option value="">{model ? "All years" : "Choose a model first"}</option>
         {yearOptions.map((value) => <option key={value} value={value}>{value}</option>)}
       </select>
-      <Button type="submit" size="xl" className="col-span-full mt-1 w-full" disabled={!modelId}>
-        {count === null || year ? "Show matching parts" : `Show ${count} matching parts`}
+      </label>
+      <Button type="submit" size="xl" className={cn("col-span-full mt-1 w-full", department && "mt-3 h-14 rounded-xl")} disabled={!modelId}>
+        {count === null || year ? `Show matching ${productLabel}` : `Show ${count} matching ${productLabel}`}
         <ArrowRight />
       </Button>
     </form>

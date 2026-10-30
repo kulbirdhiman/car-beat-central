@@ -1,6 +1,5 @@
-import { Mail, MapPin, Wrench } from "lucide-react";
+import { Mail, Wrench } from "lucide-react";
 import Link from "next/link";
-import { FITTING_CITIES } from "@/lib/data";
 import type { StoreDepartment } from "@/lib/types";
 import credits from "@/public/images/credits.json";
 import { Logo } from "./Logo";
@@ -60,9 +59,6 @@ export function SiteFooter({ departments }: { departments: StoreDepartment[] }) 
           <ul className="mt-6 space-y-2.5 text-sm text-white/70">
             <li className="flex items-center gap-2.5">
               <Wrench className="size-4 text-primary" /> Fitting Monday to Saturday
-            </li>
-            <li className="flex items-start gap-2.5">
-              <MapPin className="mt-0.5 size-4 shrink-0 text-primary" /> {FITTING_CITIES.join(", ")}
             </li>
           </ul>
         </div>
