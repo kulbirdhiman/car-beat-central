@@ -432,7 +432,7 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ProductPicker products={products.filter((p) => p.id !== product?.id)} value={addOns} onChange={setAddOns} />
+              <ProductPicker products={products.filter((p) => p.id !== product?.id)} departments={departments} value={addOns} onChange={setAddOns} />
               {errors.addOns && (
                 <p data-error className="mt-2 text-xs text-destructive">
                   {errors.addOns}

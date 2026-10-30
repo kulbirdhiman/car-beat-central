@@ -78,22 +78,35 @@ export function DepartmentPicker({ departments, value, onChange }: { departments
 }
 
 /** Searchable product checklist; ticked products stay listed first. */
-export function ProductPicker({ products, value, onChange }: { products: AdminProduct[]; value: Set<string>; onChange: (next: Set<string>) => void }) {
+export function ProductPicker({ products, value, onChange, departments }: { products: AdminProduct[]; value: Set<string>; onChange: (next: Set<string>) => void; departments?: Department[] }) {
   const [query, setQuery] = useState("");
+  const [departmentId, setDepartmentId] = useState("");
   const q = query.trim().toLowerCase();
+  const categoryIds = new Set([departmentId, ...(departments ?? []).filter((d) => d.parentId === departmentId).map((d) => d.id)]);
   const rows = products
+    .filter((p) => !departments || (departmentId ? categoryIds.has(p.departmentId) : value.has(p.id)))
     .filter((p) => value.has(p.id) || !q || p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q) || p.brand.toLowerCase().includes(q))
     .sort((a, b) => Number(value.has(b.id)) - Number(value.has(a.id)));
 
   return (
     <div className="rounded-lg border">
+      {departments && <div className="border-b p-3">
+        <label className="block text-sm font-medium">
+          Add-on category
+          <select value={departmentId} onChange={(e) => { setDepartmentId(e.target.value); setQuery(""); }} className="mt-2 h-11 w-full rounded-lg border bg-background px-3 text-sm">
+            <option value="">Selected add-ons ({value.size})</option>
+            {departmentTree(departments).map((d) => <option key={d.id} value={d.id}>{d.depth ? "↳ " : ""}{d.name}</option>)}
+          </select>
+        </label>
+        <p className="mt-2 text-xs text-muted-foreground">Choose a category to browse extras. Only selected products are saved as add-ons.</p>
+      </div>}
       <div className="relative border-b p-2">
         <Search className="pointer-events-none absolute top-1/2 left-4.5 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search products" className="pl-8" aria-label="Search products" />
       </div>
       <div className="max-h-56 overflow-y-auto p-2">
         {rows.length === 0 ? (
-          <p className="py-4 text-center text-sm text-muted-foreground">No products match.</p>
+          <p className="py-4 text-center text-sm text-muted-foreground">{departments && !departmentId && !value.size ? "Choose a category above to add your first extra." : "No products match."}</p>
         ) : (
           rows.map((p) => (
             <label key={p.id} className="flex items-center gap-3 rounded-md px-1 py-1.5 text-sm hover:bg-muted">
