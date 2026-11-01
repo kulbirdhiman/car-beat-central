@@ -1,7 +1,10 @@
 "use client";
 
-import { ImageUp, Loader2, Plus, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, GripVertical, ImageUp, Loader2, Plus, X } from "lucide-react";
 import { useRef, useState } from "react";
+import { closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { arrayMove, rectSortingStrategy, SortableContext, sortableKeyboardCoordinates, useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -10,21 +13,27 @@ const ACCEPT = ["image/jpeg", "image/png", "image/webp", "image/avif", "image/gi
 const MAX_BYTES = 5 * 1024 * 1024;
 
 /** Upload several product photos at once, then keep their previews together in the editor. */
-export function MultiImageUpload({ images, onChange, maxImages = 24 }: { images: string[]; onChange: (images: string[]) => void; maxImages?: number }) {
+export function MultiImageUpload({ images, onChange, onUploadingChange, maxImages = 25 }: { images: string[]; onChange: (images: string[]) => void; onUploadingChange?: (uploading: boolean) => void; maxImages?: number }) {
   const input = useRef<HTMLInputElement>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
   const [url, setUrl] = useState("");
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState("");
   const [error, setError] = useState("");
 
   async function uploadFiles(files: File[]) {
+    if (!files.length || uploading) return;
     const remaining = maxImages - images.length;
-    if (remaining <= 0) return setError(`You can add up to ${maxImages} additional photos.`);
+    if (remaining <= 0) return setError(`You can add up to ${maxImages} photos.`);
     const selected = files.slice(0, remaining);
     const uploaded: string[] = [];
     const errors: string[] = [];
     setError("");
     setUploading(true);
+    onUploadingChange?.(true);
     try {
       for (const [index, file] of selected.entries()) {
         setProgress(`Uploading ${index + 1} of ${selected.length}…`);
@@ -48,12 +57,13 @@ export function MultiImageUpload({ images, onChange, maxImages = 24 }: { images:
           errors.push(`${file.name}: ${uploadError instanceof Error ? uploadError.message : "Upload failed."}`);
         }
       }
-      if (uploaded.length) onChange([...images, ...uploaded]);
+      if (uploaded.length) onChange([...new Set([...images, ...uploaded])]);
       if (files.length > remaining) errors.push(`Only the first ${remaining} photos were selected; the limit is ${maxImages}.`);
       setError(errors.join(" "));
     } finally {
       setProgress("");
       setUploading(false);
+      onUploadingChange?.(false);
     }
   }
 
@@ -65,11 +75,11 @@ export function MultiImageUpload({ images, onChange, maxImages = 24 }: { images:
       return;
     }
     if (images.length >= maxImages) {
-      setError(`You can add up to ${maxImages} additional photos.`);
+      setError(`You can add up to ${maxImages} photos.`);
       return;
     }
     setError("");
-    onChange([...images, value]);
+    onChange([...new Set([...images, value])]);
     setUrl("");
   }
 
@@ -85,7 +95,7 @@ export function MultiImageUpload({ images, onChange, maxImages = 24 }: { images:
       >
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-medium">{images.length} of {maxImages} additional photos</p>
+            <p className="text-sm font-medium">{images.length} of {maxImages} photos</p>
             <p className="text-xs text-muted-foreground">Select or drop several images at once. JPG, PNG, WebP, AVIF or GIF, up to 5 MB each.</p>
           </div>
           <Button type="button" variant="outline" onClick={() => input.current?.click()} disabled={uploading || images.length >= maxImages}>
@@ -106,27 +116,59 @@ export function MultiImageUpload({ images, onChange, maxImages = 24 }: { images:
           />
         </div>
         <div className="mt-3 flex gap-2">
-          <Input value={url} onChange={(event) => setUrl(event.target.value)} placeholder="Or paste an image URL" aria-label="Additional image URL" disabled={uploading || images.length >= maxImages} />
+          <Input value={url} onChange={(event) => setUrl(event.target.value)} placeholder="Or paste an image URL" aria-label="Image URL" disabled={uploading || images.length >= maxImages} />
           <Button type="button" variant="secondary" onClick={addUrl} disabled={uploading || !url.trim() || images.length >= maxImages}>
             <Plus /> Add URL
           </Button>
         </div>
       </div>
       {images.length > 0 && (
-        <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5">
-          {images.map((image, index) => (
-            <li key={`${image}-${index}`} className="relative aspect-square overflow-hidden rounded-lg border bg-muted/20">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={image} alt={`Product photo ${index + 2}`} className="size-full object-contain p-2" />
-              <span className="absolute bottom-1 left-1 rounded bg-ink/70 px-1.5 py-0.5 text-[10px] font-medium text-white">Photo {index + 2}</span>
-              <Button type="button" variant="secondary" size="icon-sm" aria-label={`Remove photo ${index + 2}`} className="absolute right-1 top-1 size-7 rounded-full shadow" disabled={uploading} onClick={() => onChange(images.filter((_, i) => i !== index))}>
-                <X />
-              </Button>
-            </li>
-          ))}
-        </ul>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={({ active, over }) => {
+          if (!over || active.id === over.id || uploading) return;
+          const from = images.indexOf(String(active.id));
+          const to = images.indexOf(String(over.id));
+          if (from >= 0 && to >= 0) onChange(arrayMove(images, from, to));
+        }}>
+          <SortableContext items={images} strategy={rectSortingStrategy}>
+            <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              {images.map((image, index) => (
+                <SortablePhoto key={image} image={image} index={index} count={images.length} disabled={uploading}
+                  onMove={(to) => onChange(arrayMove(images, index, to))}
+                  onRemove={() => onChange(images.filter((_, i) => i !== index))} />
+              ))}
+            </ul>
+          </SortableContext>
+        </DndContext>
       )}
       {error && <p className="text-xs text-destructive" role="alert">{error}</p>}
     </div>
+  );
+}
+
+function SortablePhoto({ image, index, count, disabled, onMove, onRemove }: {
+  image: string; index: number; count: number; disabled: boolean;
+  onMove: (index: number) => void; onRemove: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: image, disabled });
+  return (
+    <li ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={cn("relative rounded-lg border bg-background p-2", index === 0 && "border-primary", isDragging && "z-10 opacity-70 shadow-lg")}>
+      <div className="relative aspect-square bg-muted/20">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={image} alt={`Product photo ${index + 1}`} draggable={false} className="size-full object-contain p-2" />
+        <Button type="button" variant="secondary" size="icon-sm" className="absolute left-1 top-1 touch-none cursor-grab active:cursor-grabbing"
+          aria-label={`Reorder photo ${index + 1}`} disabled={disabled} {...attributes} {...listeners}><GripVertical /></Button>
+        <Button type="button" variant="secondary" size="icon-sm" aria-label={`Remove photo ${index + 1}`}
+          className="absolute right-1 top-1" disabled={disabled} onClick={onRemove}><X /></Button>
+      </div>
+      <div className="mt-2 flex items-center justify-between gap-1">
+        <span className="text-xs font-medium">{index === 0 ? "Hero image" : `Photo ${index + 1}`}</span>
+        <div className="flex gap-1">
+          <Button type="button" variant="ghost" size="icon-sm" aria-label={`Move photo ${index + 1} earlier`} disabled={disabled || index === 0} onClick={() => onMove(index - 1)}><ArrowLeft /></Button>
+          <Button type="button" variant="ghost" size="icon-sm" aria-label={`Move photo ${index + 1} later`} disabled={disabled || index === count - 1} onClick={() => onMove(index + 1)}><ArrowRight /></Button>
+        </div>
+      </div>
+      {index > 0 && <Button type="button" variant="outline" size="sm" className="mt-1 w-full" disabled={disabled} onClick={() => onMove(0)}>Make hero</Button>}
+    </li>
   );
 }
