@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 
-// Uploaded images live in Supabase Storage; next/image only serves remote images from listed hosts.
+// next/image serves remote catalogue images only from these trusted hosts.
 const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname : null;
 
 const nextConfig: NextConfig = {
@@ -12,6 +12,7 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["**.preview.c35.airoapp.ai"],
   images: {
     remotePatterns: [
+      { protocol: "https", hostname: "i.ebayimg.com", port: "", pathname: "/images/**" },
       { protocol: "https", hostname: "carbeats.com.au", pathname: "/wp-content/uploads/**" },
       ...(supabaseHost ? [{ protocol: "https" as const, hostname: supabaseHost, pathname: "/storage/v1/object/public/**" }] : []),
     ],

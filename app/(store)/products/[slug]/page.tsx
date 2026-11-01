@@ -5,7 +5,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/components/layout/PageShell";
 import { ProductCard } from "@/components/product/ProductCard";
-import { productDescriptionText } from "@/components/product/ProductDescription";
+import { ProductDescription, productDescriptionText } from "@/components/product/ProductDescription";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CATEGORY_LABELS, discountPercent, findDepartment, formatPrice } from "@/lib/data";
 import { getAddOns, getCarBrands, getProductBySlug, getRelated, getStoreDepartments } from "@/lib/server/queries";
@@ -45,6 +45,7 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
   const price = product.deal?.price ?? product.price;
   const off = discountPercent(price, product.rrp);
   const images = [...new Set([product.image, ...(product.images ?? [])])].slice(0, 25);
+  const hasDescription = !!product.description.trim() || product.features.length > 0;
   const fits = product.fits;
   const groups =
     fits === "universal"
@@ -162,11 +163,25 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
             ))}
           </ul>
 
-          <Tabs id="details" defaultValue="specs" className="mt-8 scroll-mt-28">
+          <Tabs id="details" defaultValue={hasDescription ? "description" : "specs"} className="mt-8 scroll-mt-28">
             <TabsList className="w-full">
+              {hasDescription && <TabsTrigger value="description">Description</TabsTrigger>}
               <TabsTrigger value="specs">Specifications</TabsTrigger>
               <TabsTrigger value="delivery">Delivery</TabsTrigger>
             </TabsList>
+            {hasDescription && (
+              <TabsContent value="description" className="space-y-5 pt-4 text-sm leading-relaxed">
+                {product.description.trim() && <ProductDescription description={product.description} />}
+                {product.features.length > 0 && (
+                  <section aria-label="Key features">
+                    <h2 className="mb-3 font-display text-xl font-bold">Key features</h2>
+                    <ul className="list-disc space-y-2 pl-5">
+                      {product.features.map((feature, index) => <li key={index}>{feature}</li>)}
+                    </ul>
+                  </section>
+                )}
+              </TabsContent>
+            )}
             <TabsContent value="specs" className="pt-4">
               <dl className="overflow-hidden rounded-xl border bg-card text-sm">
                 {getSpecs(product).map(([label, value], i) => (
