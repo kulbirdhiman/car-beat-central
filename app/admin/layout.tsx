@@ -43,18 +43,18 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
   return (
     <ClerkProvider>
       <AdminStoreProvider initial={await getAdminData()}>
-        <div className="min-h-full bg-secondary/50">
+        <div className="min-h-dvh bg-secondary/50">
           <header className="sticky top-0 z-30 border-b bg-background">
-            <div className="flex h-16 items-center justify-between gap-3 px-4 sm:px-6">
-              <div className="flex items-center gap-2">
+            <div className="flex h-16 items-center justify-between gap-2 px-3 sm:gap-3 sm:px-6">
+              <div className="flex min-w-0 items-center gap-1 sm:gap-2">
                 <AdminMobileNav />
-                <Link href="/admin" className="flex items-center gap-3">
-                  <Logo />
-                  <span className="rounded-md bg-foreground px-2 py-0.5 text-xs font-medium text-background">Admin</span>
+                <Link href="/admin" className="flex min-w-0 items-center gap-2 sm:gap-3">
+                  <Logo className="gap-1.5 sm:gap-2.5 [&>span:last-child]:text-lg sm:[&>span:last-child]:text-[1.35rem]" />
+                  <span className="hidden sm:inline-block rounded-md bg-foreground px-2 py-0.5 text-xs font-medium text-background">Admin</span>
                 </Link>
               </div>
-              <div className="flex items-center gap-4">
-                <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
+              <div className="flex shrink-0 items-center gap-2 sm:gap-4">
+                <Link href="/" className="text-xs text-muted-foreground hover:text-foreground sm:text-sm">
                   View store →
                 </Link>
                 <UserButton />
@@ -63,7 +63,7 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
           </header>
           <div className="flex">
             <AdminSidebar />
-            <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-6 xl:px-10 xl:py-8">{children}</main>
+            <main className="min-w-0 flex-1 px-3 py-4 sm:px-6 sm:py-6 xl:px-10 xl:py-8">{children}</main>
           </div>
         </div>
       </AdminStoreProvider>

@@ -13,7 +13,7 @@ const chevron = (stroke: string) =>
   `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='${stroke}' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`;
 
 const selectBase =
-  "h-11 w-full appearance-none rounded-lg border pl-3 pr-9 text-sm outline-none transition-colors focus:border-primary disabled:opacity-50";
+  "h-11 min-w-0 w-full appearance-none rounded-lg border pl-3 pr-9 text-sm outline-none transition-colors focus:border-primary disabled:opacity-50";
 
 const tones = {
   light: { select: "bg-background", stroke: "%23888" },
@@ -51,7 +51,7 @@ export function VehicleForm({
   const yearOptions = vehicleYearOptions(model?.subModels?.find((sub) => sub.id === subModelId) ?? model);
   const count = modelId ? (fitCounts[subModelId || modelId] ?? 0) : null;
   const t = tones[tone];
-  const selectClass = cn(selectBase, t.select, department && "h-14 rounded-xl bg-background text-base focus:ring-2 focus:ring-primary/15");
+  const selectClass = cn(selectBase, t.select, department && "h-11 rounded-xl bg-background text-base sm:h-14 focus:ring-2 focus:ring-primary/15");
   const style = { backgroundImage: chevron(t.stroke), backgroundPosition: "right 12px center", backgroundSize: 16, backgroundRepeat: "no-repeat" };
 
   return (
@@ -117,7 +117,7 @@ export function VehicleForm({
         {yearOptions.map((value) => <option key={value} value={value}>{value}</option>)}
       </select>
       </label>
-      <Button type="submit" size="xl" className={cn("col-span-full mt-1 w-full", department && "mt-3 h-14 rounded-xl")} disabled={!modelId}>
+      <Button type="submit" size="xl" className={cn("col-span-full mt-1 w-full", department && "mt-2 h-11 rounded-xl sm:h-14")} disabled={!modelId}>
         {count === null || year ? `Show matching ${productLabel}` : `Show ${count} matching ${productLabel}`}
         <ArrowRight />
       </Button>

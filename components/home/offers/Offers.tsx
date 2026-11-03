@@ -9,7 +9,7 @@ import { CopyCodeButton } from "./CopyCodeButton";
 export function Offers({ offers }: { offers: Offer[] }) {
   if (offers.length === 0) return null;
   return (
-    <section id="offers" className="mx-auto max-w-[1440px] scroll-mt-32 px-4 pt-16 sm:px-6 sm:pt-24 lg:px-8">
+    <section id="offers" className="mx-auto max-w-[1440px] scroll-mt-32 px-4 pt-8 sm:px-6 sm:pt-16 lg:pt-24 lg:px-8">
       <SectionHeading eyebrow="Offers & codes" title="Stack the savings" description="Copy a code and apply it at checkout. One code per order." />
       <ul className="grid gap-3 sm:gap-4 lg:grid-cols-3">
         {offers.map((offer, i) => (

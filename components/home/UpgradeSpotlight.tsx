@@ -25,7 +25,7 @@ export async function UpgradeSpotlight({ product }: { product: Product }) {
   const highlights = specs.length > 0 ? specs : product.features.slice(0, 4).map((f): [string, string] => ["Feature", f]);
 
   return (
-    <section className="mx-auto max-w-[1440px] px-4 pt-16 sm:px-6 sm:pt-24 lg:px-8">
+    <section className="mx-auto max-w-[1440px] px-4 pt-8 sm:px-6 sm:pt-16 lg:pt-24 lg:px-8">
       <Reveal className="grid overflow-clip rounded-3xl border bg-card xl:grid-cols-2">
         <div className="relative min-h-[320px] bg-muted xl:min-h-full">
           <Image src={product.image} alt={product.name} fill sizes="(min-width: 1024px) 50vw, 100vw" className="object-cover" />

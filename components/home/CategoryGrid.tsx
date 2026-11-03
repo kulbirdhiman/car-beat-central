@@ -19,7 +19,7 @@ export function CategoryGrid({ departments }: { departments: StoreDepartment[] }
   const categories = CATEGORY_ORDER.map((category) => ({ ...category, department: all.find((d) => category.match.test(`${d.name} ${d.slug}`)) }));
 
   return (
-    <section id="categories" className="mx-auto max-w-[1440px] scroll-mt-32 px-4 pt-16 sm:px-6 sm:pt-24 lg:px-8">
+    <section id="categories" className="mx-auto max-w-[1440px] scroll-mt-32 px-4 pt-8 sm:px-6 sm:pt-16 lg:pt-24 lg:px-8">
       <SectionHeading
         eyebrow="Shop by category"
         title="Everything your car's missing"

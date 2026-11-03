@@ -14,7 +14,7 @@ export function TodayDeals({ deals }: { deals: Product[] }) {
   const maxSaving = Math.max(...deals.map((p) => p.rrp - p.deal!.price));
 
   return (
-    <section id="deals" className="mx-auto max-w-[1440px] scroll-mt-32 px-4 pt-14 sm:px-6 sm:pt-20 lg:px-8">
+    <section id="deals" className="mx-auto max-w-[1440px] scroll-mt-32 px-4 pt-8 sm:px-6 sm:pt-16 lg:pt-20 lg:px-8">
       <div className="grain relative overflow-clip rounded-3xl bg-ink p-4 text-ink-foreground sm:p-8 lg:p-10">
         <div className="pointer-events-none absolute -right-40 -top-56 size-[560px] rounded-full bg-primary/25 blur-[140px]" />
 

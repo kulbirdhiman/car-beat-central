@@ -11,18 +11,18 @@ const ITEMS = [
 export function TrustBar() {
   return (
     <section aria-label="Why shop with CarBeat" className="mx-auto max-w-[1440px] px-4 pt-3 sm:px-6 lg:px-8">
-      <ul className="no-scrollbar flex gap-px overflow-x-auto rounded-2xl border bg-border xl:grid xl:grid-cols-5">
+      <ul className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border bg-border sm:grid-cols-3 xl:grid-cols-5">
         {ITEMS.map(({ icon: Icon, title, body }) => (
           <li
             key={title}
-            className="flex min-w-[220px] shrink-0 items-center gap-3 bg-card px-5 py-4 first:rounded-l-2xl last:rounded-r-2xl lg:min-w-0"
+            className="flex min-w-0 items-center gap-2 bg-card px-3 py-3 last:col-span-2 sm:last:col-span-1 xl:gap-3 xl:px-5 xl:py-4"
           >
-            <span className="grid size-10 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+            <span className="grid size-8 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
               <Icon className="size-5" />
             </span>
             <span className="min-w-0">
-              <span className="block text-sm font-semibold">{title}</span>
-              <span className="block truncate text-xs text-muted-foreground">{body}</span>
+              <span className="block text-xs font-semibold sm:text-sm">{title}</span>
+              <span className="block text-[11px] sm:text-xs text-muted-foreground">{body}</span>
             </span>
           </li>
         ))}

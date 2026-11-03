@@ -40,7 +40,7 @@ type Stats = { rating: number; reviews: number };
 export function Faq({ stats, codes }: { stats: Stats; codes: { code: string; description: string }[] }) {
   const FAQS = [...BASE_FAQS, ...(codes.length ? [codesFaq(codes)] : [])];
   return (
-    <section id="faq" className="mx-auto max-w-[1440px] scroll-mt-32 px-4 pb-20 pt-16 sm:px-6 sm:pb-28 sm:pt-24 lg:px-8">
+    <section id="faq" className="mx-auto max-w-[1440px] scroll-mt-32 px-4 pb-10 pt-8 sm:px-6 sm:pb-20 sm:pt-16 lg:pt-24 lg:px-8">
       <div className="grid gap-8 lg:grid-cols-[1fr_1.6fr] lg:gap-12">
         <div className="space-y-3">
           <SectionHeading eyebrow="Common questions" title="Frequently asked questions" description="Everything worth knowing before you order." className="mb-6 sm:mb-6" />

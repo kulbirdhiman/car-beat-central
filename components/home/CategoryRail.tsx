@@ -21,7 +21,7 @@ export function CategoryRail({ groups }: { groups: RailGroup[] }) {
   const scroll = (dir: 1 | -1) => rail.current?.scrollBy({ left: dir * rail.current.clientWidth * 0.8, behavior: "smooth" });
 
   return (
-    <section className="mx-auto max-w-[1440px] px-4 pt-16 sm:px-6 sm:pt-24 lg:px-8">
+    <section className="mx-auto max-w-[1440px] px-4 pt-8 sm:px-6 sm:pt-16 lg:pt-24 lg:px-8">
       <SectionHeading
         eyebrow="Best sellers"
         title="Shop the range"
