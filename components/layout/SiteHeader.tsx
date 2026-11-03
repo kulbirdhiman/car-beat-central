@@ -35,11 +35,11 @@ export function SiteHeader({ departments, total }: { departments: StoreDepartmen
           scrolled ? "shadow-[0_18px_40px_-18px_oklch(0.2_0.01_25/0.35)]" : "shadow-[0_2px_10px_-4px_oklch(0.2_0.01_25/0.12)]",
         )}
       >
-        <div className="flex h-16 items-center gap-2 px-3 sm:px-4 lg:h-[68px] lg:gap-3">
+        <div className="flex h-16 items-center gap-1 px-2 sm:gap-2 sm:px-4 lg:h-[68px] lg:gap-3">
           <MobileMenu departments={departments} />
 
           <Link href="/" aria-label="CarBeat home" className="mr-1 shrink-0 rounded-md lg:mr-3">
-            <Logo />
+            <Logo className="gap-1.5 sm:gap-2.5 [&>span:first-child]:size-7 sm:[&>span:first-child]:size-8 [&>span:last-child]:text-lg sm:[&>span:last-child]:text-[1.35rem]" />
           </Link>
 
           <nav aria-label="Main" className="hidden items-center gap-1 md:flex">
@@ -51,11 +51,11 @@ export function SiteHeader({ departments, total }: { departments: StoreDepartmen
 
           <SearchBox departments={departments} className="mx-1 hidden min-w-0 flex-1 md:block lg:mx-3" />
 
-          <div className="ml-auto flex shrink-0 items-center gap-1.5 md:ml-0">
+          <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1.5 md:ml-0">
             <Link
               href="/fitting"
               aria-label="Book a fitting"
-              className="flex h-10 items-center gap-2 rounded-full px-3 text-sm font-semibold transition-colors hover:bg-secondary"
+              className="hidden sm:flex h-10 items-center gap-2 rounded-full px-2 text-sm font-semibold sm:px-3 transition-colors hover:bg-secondary"
             >
               <CalendarCheck className="size-5" />
               <span className="hidden xl:inline">Book a fitting</span>
@@ -65,7 +65,7 @@ export function SiteHeader({ departments, total }: { departments: StoreDepartmen
             <Link
               href="/account"
               aria-label="My account"
-              className="flex h-10 items-center gap-2 rounded-full px-3 text-sm font-semibold transition-colors hover:bg-secondary"
+              className="flex h-10 items-center gap-2 rounded-full px-2 text-sm font-semibold sm:px-3 transition-colors hover:bg-secondary"
             >
               <CircleUserRound className="size-5" />
               <span className="hidden xl:inline">Account</span>
@@ -198,10 +198,10 @@ function MobileMenu({ departments }: { departments: StoreDepartment[] }) {
           <Menu />
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-80 overflow-y-auto">
+      <SheetContent side="left" className="w-80 max-w-[calc(100vw-2rem)] overflow-y-auto">
         <SheetHeader>
           <SheetTitle>
-            <Logo />
+            <Logo className="gap-1.5 sm:gap-2.5 [&>span:first-child]:size-7 sm:[&>span:first-child]:size-8 [&>span:last-child]:text-lg sm:[&>span:last-child]:text-[1.35rem]" />
           </SheetTitle>
         </SheetHeader>
         <nav className="grid gap-0.5 px-4 pb-6">

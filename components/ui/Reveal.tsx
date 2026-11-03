@@ -15,7 +15,7 @@ export function Reveal({ children, delay = 0, className = "", as: Tag = "div" }:
 
   useEffect(() => {
     const node = ref.current;
-    if (!node) return;
+    if (!node || !("IntersectionObserver" in window) || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -23,7 +23,7 @@ export function Reveal({ children, delay = 0, className = "", as: Tag = "div" }:
           observer.disconnect();
         }
       },
-      { rootMargin: "0px 0px -10% 0px" },
+      { rootMargin: "0px 0px 40px 0px" },
     );
     observer.observe(node);
     return () => observer.disconnect();

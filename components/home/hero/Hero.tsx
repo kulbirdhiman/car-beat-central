@@ -26,7 +26,7 @@ export function Hero({ slides, promo, fitCounts }: { slides: Slide[]; promo?: Of
   return (
     <section className="mx-auto grid max-w-[1440px] gap-3 px-4 pt-4 sm:px-6 sm:pt-6 xl:grid-cols-[2fr_1fr] lg:px-8">
       <div
-        className="grain relative isolate flex min-h-[440px] items-center overflow-clip rounded-2xl bg-ink text-white sm:min-h-[480px]"
+        className="grain relative isolate flex min-h-[320px] items-center overflow-clip rounded-2xl bg-ink text-white sm:min-h-[480px]"
         aria-roledescription="carousel"
         aria-label="Featured"
         onPointerEnter={() => setPaused(true)}
@@ -45,18 +45,18 @@ export function Hero({ slides, promo, fitCounts }: { slides: Slide[]; promo?: Of
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-ink/95 via-ink/60 to-transparent" />
         <div className="absolute inset-x-0 bottom-0 -z-10 h-40 bg-gradient-to-t from-ink/80 to-transparent" />
 
-        <div key={index} className="relative z-10 max-w-lg px-6 pb-24 pt-10 sm:px-10 lg:px-12" aria-live="polite">
+        <div key={index} className="relative z-10 min-w-0 max-w-lg px-5 pb-20 pt-6 sm:px-10 sm:pb-24 sm:pt-10 lg:px-12" aria-live="polite">
           <p className="intro inline-flex w-fit items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider backdrop-blur" style={{ "--delay": "0ms" } as CSSProperties}>
             <span className="size-1.5 rounded-full bg-primary" /> {slide.eyebrow}
           </p>
-          <h1 className="intro mt-5 font-display text-4xl font-extrabold leading-[1] sm:text-5xl xl:text-6xl" style={{ "--delay": "80ms" } as CSSProperties}>
+          <h1 className="intro mt-4 font-display text-3xl font-extrabold leading-[1] sm:text-5xl xl:text-6xl" style={{ "--delay": "80ms" } as CSSProperties}>
             {slide.title}
           </h1>
-          <p className="intro mt-4 text-base text-white/75 sm:text-lg" style={{ "--delay": "180ms" } as CSSProperties}>
+          <p className="intro mt-3 text-sm text-white/75 sm:text-lg" style={{ "--delay": "180ms" } as CSSProperties}>
             {slide.body}
           </p>
-          <div className="intro mt-7 flex flex-wrap items-center gap-4" style={{ "--delay": "260ms" } as CSSProperties}>
-            <Button asChild size="xl" className="group">
+          <div className="intro mt-5 flex flex-wrap items-center gap-3 sm:mt-7" style={{ "--delay": "260ms" } as CSSProperties}>
+            <Button asChild size="xl" className="group h-11 max-w-full whitespace-normal px-4 text-sm sm:h-14 sm:px-6">
               <Link href={slide.cta.href}>
                 {slide.cta.label}
                 <ArrowRight className="transition-transform group-hover:translate-x-1" />
@@ -68,7 +68,7 @@ export function Hero({ slides, promo, fitCounts }: { slides: Slide[]; promo?: Of
 
         {/* Controls: arrows plus progress dots. */}
         <div className="absolute inset-x-0 bottom-0 z-10 flex items-center justify-between gap-4 p-5 sm:px-10 lg:px-12">
-          <div className="flex gap-2">
+          <div className="flex min-w-0 flex-wrap gap-2">
             {slides.map((s, i) => (
               <button
                 key={s.alt}
@@ -88,7 +88,7 @@ export function Hero({ slides, promo, fitCounts }: { slides: Slide[]; promo?: Of
               </button>
             ))}
           </div>
-          <div className="flex gap-2">
+          <div className="flex min-w-0 flex-wrap gap-2">
             <Button variant="outline" size="icon-lg" className="rounded-full border-white/20 bg-white/10 text-white backdrop-blur hover:bg-white hover:text-foreground" onClick={() => go(-1)} aria-label="Previous slide">
               <ChevronLeft />
             </Button>
@@ -99,11 +99,11 @@ export function Hero({ slides, promo, fitCounts }: { slides: Slide[]; promo?: Of
         </div>
       </div>
 
-      {/* The promo is hidden on phones so deals come sooner; its code is also in the Offers section. */}
+      {/* Keep the current promotion accessible on every screen size. */}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
         <VehicleSearchCard fitCounts={fitCounts} />
         {promo && (
-          <Link href="/#offers" className="group relative isolate hidden min-h-[200px] flex-col justify-end overflow-clip rounded-2xl bg-ink p-6 text-white sm:flex">
+          <Link href="/#offers" className="group relative isolate flex min-h-[160px] flex-col justify-end overflow-clip rounded-2xl bg-ink p-6 text-white sm:min-h-[200px]">
             <Image src={promo.image} alt="" fill sizes="(min-width: 1024px) 33vw, 50vw" className="-z-10 object-cover transition-transform duration-700 group-hover:scale-105" />
             <div className="absolute inset-0 -z-10 bg-gradient-to-t from-ink/95 via-ink/50 to-ink/10" />
             <p className="text-xs font-semibold uppercase tracking-wider text-white/70">{promo.title}</p>

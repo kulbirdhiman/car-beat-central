@@ -6,12 +6,12 @@ import { cn } from "@/lib/utils";
 
 export function PageHeader({ title, description, actions }: { title: string; description?: string; actions?: React.ReactNode }) {
   return (
-    <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-      <div>
-        <h1 className="font-display text-3xl font-bold sm:text-4xl">{title}</h1>
-        {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
+    <div className="mb-5 flex min-w-0 flex-col gap-4 sm:mb-8 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+      <div className="min-w-0">
+        <h1 className="break-words font-display text-2xl font-bold sm:text-4xl">{title}</h1>
+        {description && <p className="mt-1 max-w-3xl text-sm text-muted-foreground">{description}</p>}
       </div>
-      {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+      {actions && <div className="grid w-full min-w-0 grid-cols-2 gap-2 [&>*]:min-w-0 [&>*]:whitespace-normal sm:flex sm:w-auto sm:flex-wrap">{actions}</div>}
     </div>
   );
 }
@@ -41,7 +41,7 @@ export const fmtDateTime = (iso: string) =>
 
 export function Field({ id, label, error, className, children }: { id?: string; label: string; error?: string; className?: string; children: React.ReactNode }) {
   return (
-    <div className={cn("grid gap-1.5", className)}>
+    <div className={cn("grid min-w-0 gap-1.5", className)}>
       <Label htmlFor={id}>{label}</Label>
       {children}
       {error && <p className="text-xs text-destructive">{error}</p>}

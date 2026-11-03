@@ -47,7 +47,7 @@ export function GarageSection({ products }: { products: Product[] }) {
     .sort((a, b) => Number(a.fits === "universal") - Number(b.fits === "universal"));
 
   return (
-    <section id="garage" className="mx-auto max-w-[1440px] scroll-mt-32 px-4 pt-16 sm:px-6 sm:pt-24 lg:px-8">
+    <section id="garage" className="mx-auto max-w-[1440px] scroll-mt-32 px-4 pt-8 sm:px-6 sm:pt-16 lg:pt-24 lg:px-8">
       <SectionHeading
         eyebrow={garage.car ? "My garage" : "Shop by vehicle"}
         title={

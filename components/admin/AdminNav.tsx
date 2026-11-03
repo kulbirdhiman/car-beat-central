@@ -80,8 +80,6 @@ export function AdminSidebar() {
 
 export function AdminMobileNav() {
   const [open, setOpen] = useState(false);
-  const pathname = usePathname();
-  if (isProductEditor(pathname)) return null;
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
@@ -89,7 +87,7 @@ export function AdminMobileNav() {
           <Menu />
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-72 p-4 pt-12">
+      <SheetContent side="left" className="w-72 max-w-[calc(100vw-2rem)] overflow-y-auto p-4 pt-12">
         <SheetTitle className="sr-only">Admin menu</SheetTitle>
         <NavLinks onNavigate={() => setOpen(false)} />
       </SheetContent>

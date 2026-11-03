@@ -30,11 +30,11 @@ export function InstallGallery({ products }: { products: Product[] }) {
   if (shots.length === 0) return null;
 
   return (
-    <section className="mx-auto max-w-[1440px] px-4 pt-16 sm:px-6 sm:pt-24 lg:px-8">
+    <section className="mx-auto max-w-[1440px] px-4 pt-8 sm:px-6 sm:pt-16 lg:pt-24 lg:px-8">
       <SectionHeading eyebrow="Install inspiration" title="See what's possible" description="Ideas for your next upgrade, from a simple stereo swap to a full boot build." />
-      <div className="grid auto-rows-[180px] grid-cols-2 gap-3 sm:auto-rows-[220px] lg:grid-cols-4">
+      <div className="grid auto-rows-[140px] grid-cols-2 gap-3 sm:auto-rows-[220px] lg:grid-cols-4">
         {shots.map((s, i) => (
-          <Reveal key={s.src} delay={i * 70} className={cn(i === 0 && "col-span-2 row-span-2", s.className)}>
+          <Reveal key={s.src} delay={i * 70} className={cn(i === 0 && "col-span-2 sm:row-span-2", s.className)}>
             <Link href={s.href} className="group relative block size-full overflow-clip rounded-2xl bg-muted">
               <Image src={s.src} alt={s.title} fill sizes={i === 0 ? "(min-width: 1024px) 50vw, 100vw" : "(min-width: 1024px) 25vw, 50vw"} className="object-cover transition-transform duration-700 group-hover:scale-105" />
               <div className="absolute inset-0 bg-gradient-to-t from-ink/85 via-transparent to-transparent" />

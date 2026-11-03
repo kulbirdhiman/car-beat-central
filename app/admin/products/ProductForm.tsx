@@ -197,8 +197,8 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
       </Button>
       <PageHeader title={product ? `Edit ${product.name}` : "Add product"} description="Start with the required details, then add the extra product information. Prices are whole AUD, GST inclusive." />
 
-      <form ref={formRef} onSubmit={submit} noValidate className="mx-auto max-w-6xl space-y-6 pb-24">
-        <nav aria-label="Product form sections" className="no-scrollbar sticky top-16 z-10 -mx-2 flex gap-2 overflow-x-auto rounded-xl border bg-background/95 p-2 shadow-sm backdrop-blur sm:mx-0 sm:flex-wrap">
+      <form ref={formRef} onSubmit={submit} noValidate className="mx-auto max-w-6xl space-y-6 pb-40 sm:pb-24">
+        <nav aria-label="Product form sections" className="no-scrollbar sticky top-16 z-10 min-w-0 flex gap-2 overflow-x-auto rounded-xl border bg-background/95 p-2 shadow-sm backdrop-blur sm:mx-0 sm:flex-wrap">
           {[
             ["Basics", "#pf-basics"],
             ["Photos", "#pf-images"],
@@ -268,12 +268,12 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
                         </label>
                       </div>
                       <div className="grid gap-2">
-                        <div className="grid grid-cols-[2rem_minmax(0,1fr)_6rem_2.5rem] gap-2 text-xs font-medium text-muted-foreground">
+                        <div className="grid grid-cols-[1.5rem_minmax(0,1fr)_4.5rem_2rem] sm:grid-cols-[2rem_minmax(0,1fr)_6rem_2.5rem] gap-2 text-xs font-medium text-muted-foreground">
                           <span /><span>Choice</span><span>Add to price (AUD)</span><span />
                         </div>
                         <SortableList items={group.values} onChange={(values) => setOptionGroups((groups) => groups.map((item) => item.id === group.id ? { ...item, values } : item))} label={(choice, choiceIndex) => `${group.name || "option"} choice ${choice.name || choiceIndex + 1}`}>
                           {(choice, valueIndex, choiceHandle) => (
-                          <div className="grid grid-cols-[2rem_minmax(0,1fr)_6rem_2.5rem] items-center gap-2">
+                          <div className="grid grid-cols-[1.5rem_minmax(0,1fr)_4.5rem_2rem] sm:grid-cols-[2rem_minmax(0,1fr)_6rem_2.5rem] items-center gap-2">
                             {choiceHandle}
                             <Input value={choice.name} onChange={(event) => setOptionGroups((groups) => groups.map((item, i) => i === index ? { ...item, values: item.values.map((value, j) => j === valueIndex ? { ...value, name: event.target.value } : value) } : item))} placeholder={valueIndex === 0 ? "Red" : "Black"} aria-label={`${group.name || "Option"} choice ${valueIndex + 1}`} />
                             <div className="relative">
@@ -519,9 +519,9 @@ export function ProductForm({ product, onAddAnother }: { product: AdminProduct |
         </div>
 
         {/* Kept in view so the form can be saved from anywhere on the page. */}
-        <div className="fixed inset-x-0 bottom-0 z-20 border-t bg-background/95 backdrop-blur lg:left-60">
+        <div className="fixed inset-x-0 bottom-0 z-20 border-t bg-background/95 backdrop-blur pb-[env(safe-area-inset-bottom)]">
           {saveError && <p role="alert" className="px-4 pt-3 text-sm text-destructive sm:px-6 lg:px-10">{saveError}</p>}
-          <div className="flex justify-end gap-2 px-4 py-3 sm:px-6 lg:px-10">
+          <div className="mx-auto flex max-w-6xl flex-wrap justify-end gap-2 px-3 py-3 [&>button]:flex-1 sm:px-6 sm:[&>button]:flex-none lg:px-10">
             <Button variant="outline" asChild>
               <Link href={LIST}>Cancel</Link>
             </Button>

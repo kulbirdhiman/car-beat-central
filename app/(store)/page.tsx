@@ -55,9 +55,9 @@ export default async function Home() {
       <TodayDeals deals={deals} />
       <CategoryGrid departments={departments} />
       {steeringWheel && steeringDepartment && (
-        <section id="steering-wheels" aria-labelledby="steering-wheels-title" className="mx-auto max-w-[1440px] px-4 pt-16 sm:px-6 sm:pt-24 lg:px-8">
+        <section id="steering-wheels" aria-labelledby="steering-wheels-title" className="mx-auto max-w-[1440px] px-4 pt-8 sm:px-6 sm:pt-16 lg:pt-24 lg:px-8">
           <div className="rounded-[2rem] border bg-gradient-to-br from-card via-card to-primary/5 p-4 sm:p-8">
-            <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
+            <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
               <div>
                 <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-primary">Steering wheel collection</p>
                 <h2 id="steering-wheels-title" className="font-display text-3xl font-bold tracking-tight sm:text-5xl">Your drive. Your style.</h2>
