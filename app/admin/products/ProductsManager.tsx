@@ -46,7 +46,10 @@ function parseCsv(source: string) {
   if (quoted) throw new Error("The CSV has an unclosed quoted field.");
   if (rows.length < 2) throw new Error("The CSV needs a header row and at least one product row.");
   const headers = rows[0].map((value) => value.trim());
-  const missing = PRODUCT_COLUMNS.filter((column) => !["keywords", "optionGroups"].includes(column) && !headers.includes(column));
+  if (new Set(headers).size !== headers.length) throw new Error("Duplicate column headers. Use each column only once.");
+  const unknown = headers.filter((header) => !PRODUCT_COLUMNS.includes(header as typeof PRODUCT_COLUMNS[number]));
+  if (unknown.length) throw new Error(`Unknown columns: ${unknown.join(", ")}. Export Excel for the correct column names.`);
+  const missing = ["id", "sku"].some((column) => headers.includes(column)) ? [] : ["id or sku"];
   if (missing.length) throw new Error(`Missing columns: ${missing.join(", ")}. Export products first to get the right template.`);
   return rows.slice(1).map((values, index) => ({
     rowNumber: index + 2,
@@ -137,10 +140,10 @@ export function ProductsManager() {
   const [duplicating, setDuplicating] = useState<string | null>(null);
 
   const makeModels = new Set(makes.find((m) => m.id === make)?.models.flatMap((m) => [m.id, ...m.subModels.map((s) => s.id)]));
-  const q = query.trim().toLowerCase();
+  const words = query.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
   const rows = products.filter(
     (p) =>
-      (!q || p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q) || p.brand.toLowerCase().includes(q) || p.keywords.some((keyword) => keyword.toLowerCase().includes(q))) &&
+      words.every((word) => [p.name, p.sku, p.brand, ...p.keywords, departmentLabel(departments, p.departmentId) ?? "", fitsSummary(p.fits, makes, p.fitmentYears)].join(" ").toLowerCase().includes(word)) &&
       // Filtering by a department includes its sub-departments.
       (department === ALL || p.departmentId === department || departments.some((d) => d.id === p.departmentId && d.parentId === department)) &&
       (status === ALL || p.status === status) &&
@@ -191,17 +194,32 @@ export function ProductsManager() {
     }
   }
 
-  function exportCsv() {
+  async function exportCsv(excel = false) {
     const csvCell = (value: string | number | boolean | null) => {
       let text = value === null ? "" : String(value);
       if (/^[=+@\-\t\r]/.test(text)) text = `'${text}`;
       return `"${text.replaceAll('"', '""')}"`;
     };
-    const csv = [PRODUCT_COLUMNS, ...products.map((p) => [
+    const data = [Array.from(PRODUCT_COLUMNS), ...products.map((p) => [
       p.id, p.sku, p.name, p.brand, p.departmentId, p.category, p.price, p.rrp, p.stock, p.status,
       p.fits === "universal" ? "universal" : JSON.stringify(p.fits), p.image, JSON.stringify(p.images), p.description, p.badge,
       JSON.stringify(p.features), JSON.stringify(p.specs), JSON.stringify(p.addOnIds), p.dealPrice, p.trending, JSON.stringify(p.keywords), JSON.stringify(p.optionGroups), JSON.stringify(p.fitmentYears ?? {}),
-    ])].map((line) => line.map(csvCell).join(",")).join("\r\n");
+    ])];
+    if (excel) {
+      const { Workbook } = await import("exceljs");
+      const workbook = new Workbook();
+      const sheet = workbook.addWorksheet("Products");
+      sheet.addRows(data);
+      sheet.getRow(1).font = { bold: true };
+      sheet.views = [{ state: "frozen", ySplit: 1 }];
+      const buffer = await workbook.xlsx.writeBuffer();
+      const url = URL.createObjectURL(new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+      const anchor = Object.assign(document.createElement("a"), { href: url, download: "carbeat-products.xlsx" });
+      anchor.click();
+      URL.revokeObjectURL(url);
+      return;
+    }
+    const csv = data.map((line) => line.map(csvCell).join(",")).join("\r\n");
     const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" }));
     const anchor = Object.assign(document.createElement("a"), { href: url, download: `carbeat-products-${new Date().toISOString().slice(0, 10)}.csv` });
     anchor.click();
@@ -214,16 +232,62 @@ export function ProductsManager() {
     if (!file) return;
     setImporting(true);
     try {
-      const parsed = parseCsv(await file.text());
+      if (file.size > 10 * 1024 * 1024) throw new Error("Upload a file smaller than 10 MB.");
+      let source: string;
+      if (file.name.toLowerCase().endsWith(".xlsx")) {
+        const { Workbook } = await import("exceljs");
+        const workbook = new Workbook();
+        await workbook.xlsx.load(await file.arrayBuffer());
+        const sheet = workbook.worksheets[0];
+        if (!sheet) throw new Error("The workbook has no worksheets.");
+        if (sheet.rowCount > 501) throw new Error("Import up to 500 products at a time.");
+        const lines: string[] = [];
+        sheet.eachRow((row) => {
+          const cells: string[] = [];
+          for (let column = 1; column <= sheet.columnCount; column++) {
+            const cell = row.getCell(column);
+            if (cell.type === 6) throw new Error(`Row ${row.number}: replace formulas with values before uploading.`);
+            cells.push(`"${cell.text.replaceAll('"', '""')}"`);
+          }
+          lines.push(cells.join(","));
+        });
+        source = lines.join("\n");
+      } else if (file.name.toLowerCase().endsWith(".csv")) source = await file.text();
+      else throw new Error("Choose an .xlsx or .csv file.");
+      const parsed = parseCsv(source);
       if (parsed.length > 500) throw new Error("Import up to 500 products at a time.");
       const failures: string[] = [];
       const valid: { rowNumber: number; product: AdminProduct }[] = [];
+      const seen = new Set<string>();
       for (const row of parsed) {
-        try { valid.push({ rowNumber: row.rowNumber, product: importProduct(row.fields) }); }
+        try {
+          const id = row.fields.id?.trim();
+          const sku = row.fields.sku?.trim().toLowerCase();
+          const byId = id ? products.find((p) => p.id === id) : undefined;
+          const bySku = sku ? products.find((p) => p.sku.toLowerCase() === sku) : undefined;
+          if (id && !byId) throw new Error("Unknown product ID. Leave ID blank to create a product.");
+          if (byId && bySku && byId.id !== bySku.id) throw new Error("ID and SKU match different products.");
+          const existing = byId ?? bySku;
+          const defaults = Object.fromEntries(PRODUCT_COLUMNS.map((key) => {
+            const value = existing?.[key];
+            return [key, value == null ? "" : typeof value === "object" ? JSON.stringify(value) : String(value)];
+          }));
+          if (!existing) {
+            const required = ["sku", "name", "brand", "departmentId", "category", "price"];
+            const missing = required.filter((key) => !row.fields[key]?.trim());
+            if (missing.length) throw new Error(`New products need: ${missing.join(", ")}.`);
+          }
+          const fields = { ...defaults, ...row.fields, id: existing?.id ?? "" };
+          const product = importProduct(fields);
+          const identity = existing?.id ?? product.sku.toLowerCase();
+          if (seen.has(identity)) throw new Error("Duplicate product in this upload.");
+          seen.add(identity);
+          valid.push({ rowNumber: row.rowNumber, product });
+        }
         catch (error) { failures.push(`Row ${row.rowNumber}: ${error instanceof Error ? error.message : "Invalid product."}`); }
       }
       if (valid.length === 0) {
-        toast.error(failures[0] ?? "No valid products found in the CSV.");
+        toast.error(failures[0] ?? "No valid products found in the file.");
         return;
       }
       const updates = valid.filter(({ product }) => products.some((existing) => existing.id === product.id)).length;
@@ -237,7 +301,7 @@ export function ProductsManager() {
       if (succeeded) toast.success(`${succeeded} product${succeeded === 1 ? "" : "s"} imported.`);
       if (failures.length) toast.error(`${failures.length} row${failures.length === 1 ? "" : "s"} skipped. ${failures.slice(0, 2).join(" ")}`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Couldn't read the products CSV.");
+      toast.error(error instanceof Error ? error.message : "Couldn't read the products file.");
     } finally {
       setImporting(false);
     }
@@ -247,13 +311,14 @@ export function ProductsManager() {
     <>
       <PageHeader
         title="Products"
-        description={`${products.length} products across ${departments.length} departments. Import CSV, or download the Excel demo and save it as CSV first. Blank IDs create products; matching IDs update them.`}
+        description={`${products.length} products across ${departments.length} departments. Upload Excel or CSV to edit products by ID or SKU. Omitted columns keep their existing values; blank cells clear values. Prices are whole AUD. Export Excel to get started.`}
         actions={
           <>
-            <input ref={fileInput} type="file" accept=".csv,text/csv" className="hidden" onChange={handleImport} aria-label="Import products CSV" />
-            <Button variant="outline" onClick={() => fileInput.current?.click()} disabled={importing}><Upload /> {importing ? "Importing…" : "Import CSV"}</Button>
+            <input ref={fileInput} type="file" accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" className="hidden" onChange={handleImport} aria-label="Upload products Excel or CSV" />
+            <Button variant="outline" onClick={() => fileInput.current?.click()} disabled={importing}><Upload /> {importing ? "Importing…" : "Upload Excel / CSV"}</Button>
             <Button asChild variant="outline"><a href="/templates/products-import-demo.xlsx" download><Download /> Demo Excel</a></Button>
-            <Button variant="outline" onClick={exportCsv} disabled={!products.length}><Download /> Export CSV</Button>
+            <Button variant="outline" onClick={() => void exportCsv(true)} disabled={!products.length}><Download /> Export Excel</Button>
+            <Button variant="outline" onClick={() => void exportCsv()} disabled={!products.length}><Download /> Export CSV</Button>
             <Button asChild><Link href="/admin/products/new"><Plus /> Add product</Link></Button>
           </>
         }
