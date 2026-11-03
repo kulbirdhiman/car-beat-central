@@ -109,9 +109,12 @@ export async function listProducts(filters: ProductFilters = {}): Promise<Produc
     );
     const pattern = `%${word}%`;
     where.push(
-      models.length > 0
-        ? fitsAny(models.flatMap((m) => [m.id, ...(m.subModels ?? []).map((s) => s.id)]))
-        : or(ilike(products.name, pattern), ilike(products.brand, pattern), ilike(products.category, pattern), ilike(departments.name, pattern)),
+      or(
+        ilike(products.name, pattern), ilike(products.sku, pattern), ilike(products.brand, pattern),
+        ilike(products.category, pattern), ilike(departments.name, pattern),
+        sql`EXISTS (SELECT 1 FROM jsonb_array_elements_text(${products.keywords}) AS keyword(value) WHERE keyword.value ILIKE ${pattern})`,
+        models.length ? fitsAny(models.flatMap((m) => [m.id, ...(m.subModels ?? []).map((s) => s.id)])) : undefined,
+      ),
     );
   }
   if (filters.category) where.push(eq(products.category, filters.category));
@@ -147,8 +150,8 @@ function searchWords(q: string | undefined): string[] {
   if (!q) return [];
   return q
     .toLowerCase()
-    .split(/[^a-z0-9-]+/)
-    .filter((w) => w.length > 1)
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean)
     .map((w) => (w.length > 3 && w.endsWith("s") && !w.endsWith("ss") ? w.slice(0, -1) : w))
     .slice(0, 6);
 }
