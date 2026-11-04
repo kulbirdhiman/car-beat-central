@@ -4,6 +4,9 @@ import { id, parseProduct } from "@/lib/server/admin/validate";
 
 type Ctx = RouteContext<"/api/admin/products/[id]">;
 
+// Product imports may copy a full gallery into Storage before saving.
+export const maxDuration = 300;
+
 /** PUT /api/admin/products/:id: create or update. Returns the saved product, including its store slug. */
 export const PUT = adminRoute(async (request, ctx: Ctx) => saveProduct(parseProduct(id((await ctx.params).id), await readJson(request))));
 
