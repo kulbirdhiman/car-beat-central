@@ -6,6 +6,7 @@ import { normalizeProductOptionGroups } from "@/lib/product-options";
 import { db, transaction } from "../db";
 import { deals, departments, productReviews, products, vehicleModels, vehicleSubmodels } from "../schema";
 import { AdminError, type ProductInput } from "./validate";
+import { storeProductImages } from "../product-images.mjs";
 
 /** The next `position` in a drag-ordered table, so new rows go last. */
 export const nextPosition = (table: PgTable, where = sql`true`) => sql`(SELECT COALESCE(MAX(position), -1) + 1 FROM ${table} WHERE ${where})`;
@@ -164,7 +165,13 @@ export async function saveProduct(p: ProductInput): Promise<AdminProduct> {
     if (known.n !== p.addOnIds.length) throw new AdminError("Some of the add-on products don't exist.");
   }
 
-  const { id, dealPrice, trending, badge, ...fields } = p;
+  let storedImages: { image: string; images: string[] };
+  try {
+    storedImages = await storeProductImages(p);
+  } catch (error) {
+    throw new AdminError(`Couldn't copy product images: ${error instanceof Error ? error.message : "Unknown error"}`, 502);
+  }
+  const { id, dealPrice, trending, badge, ...fields } = { ...p, ...storedImages };
   // A new product's slug is picked before the transaction, which mustn't query outside itself (on Vercel the pool has one connection).
   const [current] = await db.select({ id: products.id }).from(products).where(eq(products.id, id));
   const slug = current ? null : await uniqueSlug(p.name);

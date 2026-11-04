@@ -27,8 +27,8 @@ export function SteeringWheelGallery({ wheels, colours }: { wheels: Wheel[]; col
         <Link href={`/products/${selected.slug}`} className="shrink-0 text-xs font-semibold text-primary underline underline-offset-4">View details</Link>
       </div>
       <p className="mb-3 text-xs text-neutral-500">Select a design to preview</p>
-      <div role="group" aria-label="Steering wheel designs" className="grid max-h-48 grid-cols-[repeat(auto-fill,minmax(64px,1fr))] gap-2 overflow-y-auto p-1 sm:grid-cols-[repeat(auto-fill,minmax(80px,1fr))]">
-        {wheels.map((wheel) => (
+      <div role="group" aria-label="Steering wheel designs" className="grid grid-cols-4 gap-2 p-1">
+        {wheels.slice(0, 4).map((wheel) => (
           <button key={wheel.id} type="button" title={wheel.name} aria-label={wheel.name} aria-pressed={selected.id === wheel.id} onClick={() => setSelected(wheel)} className={cn("relative aspect-square w-full overflow-hidden rounded-xl border-2 bg-white transition-colors focus-visible:outline-2 focus-visible:outline-primary", selected.id === wheel.id ? "border-primary bg-primary/5" : "border-neutral-100 hover:border-neutral-300")}>
             <Image src={wheel.image} alt="" fill sizes="80px" className="object-contain p-1.5" />
           </button>
