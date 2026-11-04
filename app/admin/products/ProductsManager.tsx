@@ -1,7 +1,7 @@
 "use client";
 
 import { fitmentLabel } from "@/lib/fitment-years";
-import { Copy, Download, Pencil, Plus, Search, Trash2, Upload } from "lucide-react";
+import { Copy, Download, Eye, Pencil, Plus, Search, Trash2, Upload } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useRef, useState } from "react";
@@ -423,6 +423,19 @@ export function ProductsManager() {
                     </TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1">
+                        {p.status === "active" && p.slug ? (
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link href={`/products/${encodeURIComponent(p.slug)}`} target="_blank" rel="noopener noreferrer" prefetch={false} aria-label={`View ${p.name} (opens in a new tab)`}>
+                              <Eye />
+                              View
+                            </Link>
+                          </Button>
+                        ) : (
+                          <Button variant="ghost" size="sm" disabled title="Publish this product to view it on the store">
+                            <Eye />
+                            View
+                          </Button>
+                        )}
                         <Button variant="ghost" size="icon-sm" asChild>
                           <Link href={`/admin/products/${p.id}/edit`} aria-label={`Edit ${p.name}`}>
                             <Pencil />
