@@ -52,15 +52,15 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
     fits === "universal"
       ? null
       : brands.map((b) => ({
-          brand: b.name,
-          models: b.models.flatMap((m) => {
-            const subModels = m.subModels?.filter((s) => fits.includes(s.id)).map((s) => ({ ...s, name: fitmentLabel(product, s.id, s.name) })) ?? [];
-            return [
-              ...(fits.includes(m.id) ? [{ id: m.id, name: fitmentLabel(product, m.id, m.name), subModels: [] }] : []),
-              ...(subModels.length ? [{ id: m.id, name: m.name, subModels }] : []),
-            ];
-          }),
-        })).filter((g) => g.models.length > 0);
+        brand: b.name,
+        models: b.models.flatMap((m) => {
+          const subModels = m.subModels?.filter((s) => fits.includes(s.id)).map((s) => ({ ...s, name: fitmentLabel(product, s.id, s.name) })) ?? [];
+          return [
+            ...(fits.includes(m.id) ? [{ id: m.id, name: fitmentLabel(product, m.id, m.name), subModels: [] }] : []),
+            ...(subModels.length ? [{ id: m.id, name: m.name, subModels }] : []),
+          ];
+        }),
+      })).filter((g) => g.models.length > 0);
   // Breadcrumbs follow the product's department; products without one fall back to their type.
   const dept = product.departmentId ? findDepartment(departments, (d) => d.id === product.departmentId) : null;
   const section = dept
@@ -86,7 +86,6 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
         {/* Gallery and fitment stay in view while the details scroll. */}
         <div className="space-y-4 xl:sticky xl:top-28 xl:self-start">
           <ProductGallery images={images} name={product.name} flags={flags} />
-          <CompatibleVehicles groups={groups} product={{ fits: product.fits, fitmentYears: product.fitmentYears }} />
         </div>
 
         <div className="min-w-0">
@@ -168,7 +167,8 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
             <TabsList className="w-full">
               {hasDescription && <TabsTrigger value="description">Description</TabsTrigger>}
               <TabsTrigger value="specs">Specifications</TabsTrigger>
-              <TabsTrigger value="delivery">Delivery</TabsTrigger>
+              <TabsTrigger value="compatibility">Compatibility</TabsTrigger>
+              {/* <TabsTrigger value="delivery">Delivery</TabsTrigger> */}
             </TabsList>
             {hasDescription && (
               <TabsContent value="description" className="space-y-5 pt-4 text-sm leading-relaxed">
@@ -192,6 +192,9 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
                   </div>
                 ))}
               </dl>
+            </TabsContent>
+            <TabsContent value="compatibility" className="pt-4">
+              <CompatibleVehicles groups={groups} product={{ fits: product.fits, fitmentYears: product.fitmentYears }} />
             </TabsContent>
             <TabsContent value="delivery" className="space-y-3 pt-4 text-sm text-muted-foreground">
               <p>

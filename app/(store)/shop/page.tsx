@@ -1,13 +1,11 @@
 import type { Metadata } from "next";
-import { LayoutGrid, ShieldCheck, SlidersHorizontal, X } from "lucide-react";
+import { ArrowRight, ChevronDown, LayoutGrid, SlidersHorizontal, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import type { ReactNode } from "react";
 import { PageShell } from "@/components/layout/PageShell";
 import { ProductCard } from "@/components/product/ProductCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { CATEGORY_LABELS, findDepartment } from "@/lib/data";
 import { getDeals, getLiveOffers, SORTS } from "@/lib/server/queries";
 import { getStoreChromeData } from "@/lib/server/home-data";
@@ -82,120 +80,78 @@ export default async function ShopPage(props: PageProps<"/shop">) {
     filters.maxPrice && { label: `Under $${filters.maxPrice}`, key: "maxPrice" },
   ].filter(Boolean) as { label: string; key: string }[];
 
-  const filterPanel = (
-    <div className="space-y-4">
-      <VehicleFilter key={`${filters.model ?? "none"}:${filters.subModel ?? "none"}:${filters.year ?? "all"}`} modelId={filters.model} subModelId={filters.subModel} year={filters.year} fitCounts={fitCounts} />
-
-      <FilterCard title="Categories">
-        <CategoryLink href={hrefWith({ dept: null, category: null })} active={!filters.dept && !filters.category} label="All categories" count={total}>
-          <LayoutGrid className="size-4" />
-        </CategoryLink>
-        {departments.map((d) => (
-          <div key={d.id}>
-            <CategoryLink href={hrefWith({ dept: d.slug, category: null })} active={filters.dept === d.slug} label={d.name} count={d.count}>
-              <Image src={d.image} alt="" fill sizes="32px" className="object-cover" />
-            </CategoryLink>
-            {openDept?.id === d.id && d.children.length > 0 && (
-              <div className="mb-1 ml-[1.375rem] grid gap-0.5 border-l pl-3">
-                {d.children.map((c) => (
-                  <OptionLink key={c.id} href={hrefWith({ dept: filters.dept === c.slug ? d.slug : c.slug, category: null })} active={filters.dept === c.slug}>
-                    <span className="flex-1 truncate">{c.name}</span>
-                    <span className="text-xs tabular-nums text-muted-foreground">{c.count}</span>
-                  </OptionLink>
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
-      </FilterCard>
-
-      <FilterCard title="Price">
-        {PRICES.map((p) => (
-          <OptionLink key={p.label} href={hrefWith({ maxPrice: p.cap === null ? null : String(p.cap) })} active={(filters.maxPrice ?? null) === p.cap}>
-            {p.label}
-          </OptionLink>
-        ))}
-      </FilterCard>
-
-      <Link href="/returns#fitment" className="flex gap-3 rounded-2xl border bg-card p-4 text-sm transition-colors hover:border-foreground/20">
-        <ShieldCheck className="size-5 shrink-0 text-primary" />
-        <span>
-          <span className="block font-semibold">Fitment guarantee</span>
-          <span className="text-muted-foreground">Doesn&apos;t fit your car? We pay return postage.</span>
-        </span>
-      </Link>
-    </div>
-  );
-
   return (
     <PageShell crumbs={[{ label: "Home", href: "/" }, { label: "Shop" }]} className="pt-6">
-      <div className="grid gap-6 xl:grid-cols-[260px_1fr] 2xl:gap-8">
-        <aside className="no-scrollbar hidden xl:sticky xl:top-28 xl:block xl:max-h-[calc(100vh-8rem)] xl:self-start xl:overflow-y-auto xl:pb-4">{filterPanel}</aside>
+      <div className="mb-7 flex flex-wrap items-end justify-between gap-4 border-b pb-6 sm:mb-9">
+        <div>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-primary">The CarBeat collection</p>
+          <h1 className="font-display text-4xl font-bold tracking-tight sm:text-5xl">{title}</h1>
+          <p className="mt-3 text-sm text-muted-foreground">Find your next upgrade. Browse by category or match parts to your car.</p>
+        </div>
+        <span className="rounded-full border bg-card px-4 py-2 text-sm text-muted-foreground">{total} parts to explore</span>
+      </div>
+
+      <div className="grid gap-7 xl:grid-cols-[230px_minmax(0,1fr)] xl:gap-9">
+        <aside aria-label="Product categories" className="min-w-0 xl:sticky xl:top-32 xl:self-start">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-bold">Categories</h2>
+            <LayoutGrid className="size-4 text-muted-foreground" />
+          </div>
+          <nav aria-label="Browse categories" className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-2 xl:mx-0 xl:grid xl:overflow-visible xl:rounded-2xl xl:border xl:bg-card xl:p-2">
+            <Link href={hrefWith({ dept: null, category: null })} aria-current={!filters.dept && !filters.category ? "page" : undefined} className={cn("flex shrink-0 items-center gap-3 rounded-xl border px-3 py-3 text-sm transition-colors xl:border-0", !filters.dept && !filters.category ? "border-primary bg-primary/5 font-semibold text-primary" : "bg-card hover:bg-muted")}>
+              <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-muted"><LayoutGrid className="size-4" /></span>
+              <span className="flex-1 whitespace-nowrap">All categories</span><span className="text-xs text-muted-foreground">{total}</span>
+            </Link>
+            {departments.map((department) => (
+              <Link key={department.id} href={hrefWith({ dept: department.slug, category: null })} aria-current={openDept?.id === department.id ? "page" : undefined} className={cn("flex shrink-0 items-center gap-3 rounded-xl border px-3 py-3 text-sm transition-colors xl:border-0", openDept?.id === department.id ? "border-primary bg-primary/5 font-semibold text-primary" : "bg-card hover:bg-muted")}>
+                <span className="relative size-10 shrink-0 overflow-hidden rounded-lg bg-muted"><Image src={department.image} alt="" fill sizes="40px" className="object-cover" /></span>
+                <span className="flex-1 whitespace-nowrap xl:whitespace-normal">{department.name}</span><span className="text-xs text-muted-foreground">{department.count}</span>
+              </Link>
+            ))}
+          </nav>
+        </aside>
 
         <div className="min-w-0">
-          <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-            <div>
-              <h1 className="font-display text-3xl font-bold leading-[1.05] sm:text-4xl">{title}</h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {products.length} {products.length === 1 ? "product" : "products"} · All prices include GST
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button variant="outline" className="h-10 bg-card xl:hidden">
-                    <SlidersHorizontal /> Filters {active.length > 0 && <Badge className="ml-1">{active.length}</Badge>}
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="w-[340px] overflow-y-auto bg-background">
-                  <SheetHeader>
-                    <SheetTitle>Filters</SheetTitle>
-                  </SheetHeader>
-                  <div className="px-4 pb-8">{filterPanel}</div>
-                </SheetContent>
-              </Sheet>
-              <SortSelect value={filters.sort ?? "popular"} options={Object.entries(SORTS).map(([value, s]) => ({ value, label: s.label }))} />
+          <VehicleFilter key={`${filters.model ?? "none"}:${filters.subModel ?? "none"}:${filters.year ?? "all"}`} modelId={filters.model} subModelId={filters.subModel} year={filters.year} fitCounts={fitCounts} />
+
+          {openDept && openDept.children.length > 0 && (
+            <nav aria-label="Subcategories" className="mt-5 flex flex-wrap gap-2">
+              {openDept.children.map((child) => <Link key={child.id} href={hrefWith({ dept: child.slug, category: null })} aria-current={filters.dept === child.slug ? "page" : undefined} className={cn("rounded-full border px-4 py-2 text-sm", filters.dept === child.slug ? "border-primary bg-primary/5 font-semibold text-primary" : "bg-card hover:border-primary")}>{child.name} <span className="ml-1 text-xs text-muted-foreground">{child.count}</span></Link>)}
+            </nav>
+          )}
+
+          <div className="mt-7 flex flex-wrap items-center justify-between gap-3 border-b pb-4">
+            <p className="text-sm"><span className="font-semibold">{products.length} {products.length === 1 ? "product" : "products"}</span><span className="mt-1 block text-xs text-muted-foreground sm:ml-2 sm:mt-0 sm:inline">All prices include GST</span></p>
+            <div className="flex flex-wrap items-center gap-2">
+              <details className="group relative">
+                <summary className="flex h-10 cursor-pointer list-none items-center gap-2 rounded-lg border bg-card px-3 text-sm font-medium [&::-webkit-details-marker]:hidden"><SlidersHorizontal className="size-4" /> Price <ChevronDown className="size-3.5 transition-transform group-open:rotate-180" /></summary>
+                <nav aria-label="Price range" className="absolute right-0 z-20 mt-2 w-44 rounded-xl border bg-card p-1.5 shadow-lg">
+                  {PRICES.map((price) => <Link key={price.label} href={hrefWith({ maxPrice: price.cap === null ? null : String(price.cap) })} aria-current={(filters.maxPrice ?? null) === price.cap ? "page" : undefined} className={cn("block rounded-lg px-3 py-2.5 text-sm hover:bg-muted", (filters.maxPrice ?? null) === price.cap && "bg-primary/5 font-semibold text-primary")}>{price.label}</Link>)}
+                </nav>
+              </details>
+              <SortSelect value={filters.sort ?? "popular"} options={Object.entries(SORTS).map(([value, sort]) => ({ value, label: sort.label }))} />
             </div>
           </div>
 
           {active.length > 0 && (
             <div className="mt-4 flex flex-wrap items-center gap-2">
-              {active.map((f) => (
-                <Badge key={f.key} asChild variant="outline" className="h-8 gap-1.5 rounded-full bg-card px-3 text-sm hover:border-foreground/30">
-                  <Link href={hrefWith({ [f.key]: null })} scroll={false} aria-label={`Remove filter ${f.label}`}>
-                    {f.label} <X className="size-3.5!" />
-                  </Link>
-                </Badge>
-              ))}
-              {active.length > 1 && (
-                <Link href="/shop" className="px-2 text-sm text-primary underline-offset-4 hover:underline">
-                  Clear all
-                </Link>
-              )}
+              {active.map((filter) => <Badge key={filter.key} asChild variant="outline" className="h-auto min-h-9 max-w-full gap-2 rounded-full bg-card px-3 py-2 text-xs"><Link href={hrefWith({ [filter.key]: null })} scroll={false} aria-label={`Remove filter ${filter.label}`}><span className="truncate">{filter.label}</span><X className="size-3.5 shrink-0" /></Link></Badge>)}
+              <Link href="/shop" className="px-2 py-2 text-xs font-semibold text-primary hover:underline">Clear all</Link>
             </div>
           )}
 
+          {(offers.length > 0 || deals.length > 0) && <div className="mt-5"><OfferStrip offers={offers} dealCount={deals.length} /></div>}
           <div className="mt-5">
-            <OfferStrip offers={offers} dealCount={deals.length} />
-          </div>
-
-          <div className="mt-6">
             {products.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-foreground/20 bg-card px-6 py-16 text-center">
-                <p className="label-mono text-muted-foreground">0 results</p>
-                <p className="mt-3 font-display text-3xl font-bold">No parts match those filters</p>
-                <p className="mt-2 text-muted-foreground">Try removing a filter or searching for something broader.</p>
-                <Button asChild size="lg" className="mt-6 h-10 px-4">
-                  <Link href="/shop">Show all parts</Link>
-                </Button>
+              <div className="rounded-2xl border border-dashed bg-card px-6 py-16 text-center">
+                <LayoutGrid className="mx-auto size-8 text-muted-foreground" />
+                <h2 className="mt-4 font-display text-2xl font-bold">No parts match those filters</h2>
+                <p className="mt-2 text-sm text-muted-foreground">Try another category or remove a filter.</p>
+                <Button asChild className="mt-6"><Link href="/shop">Browse all parts <ArrowRight /></Link></Button>
               </div>
             ) : (
-              <ul className="grid grid-cols-2 gap-2 sm:gap-4 xl:grid-cols-4 2xl:grid-cols-4">
-                {visibleProducts.map((p) => (
-                  <li key={p.id}>
-                    <ProductCard product={p} sizes="(min-width: 1536px) 20vw, (min-width: 1280px) 25vw, (min-width: 1024px) 35vw, 50vw" />
-                  </li>
-                ))}
+              <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-4 xl:grid-cols-3 2xl:grid-cols-4">
+                {visibleProducts.map((product) => <li key={product.id}><ProductCard product={product} sizes="(min-width: 1536px) 20vw, (min-width: 1280px) 25vw, (min-width: 640px) 33vw, 50vw" /></li>)}
               </ul>
             )}
           </div>
@@ -209,52 +165,5 @@ export default async function ShopPage(props: PageProps<"/shop">) {
         </div>
       </div>
     </PageShell>
-  );
-}
-
-function FilterCard({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="rounded-2xl border bg-card p-4">
-      <h2 className="mb-2 text-sm font-semibold">{title}</h2>
-      <div className="grid gap-0.5">{children}</div>
-    </section>
-  );
-}
-
-function CategoryLink({ href, active, label, count, children }: { href: string; active: boolean; label: string; count: number; children: ReactNode }) {
-  return (
-    <Link
-      href={href}
-      scroll={false}
-      aria-current={active ? "page" : undefined}
-      className={cn("flex items-center gap-3 rounded-lg p-1.5 pr-2.5 text-sm transition-colors", active ? "bg-primary/10 font-semibold text-primary" : "hover:bg-muted")}
-    >
-      <span className={cn("relative grid size-8 shrink-0 place-items-center overflow-hidden rounded-md", active ? "bg-primary/15" : "bg-muted")}>{children}</span>
-      <span className="flex-1 truncate">{label}</span>
-      <span className={cn("text-xs", active ? "text-primary" : "text-muted-foreground")}>{count}</span>
-    </Link>
-  );
-}
-
-/** Single-choice option with a radio dot, or a checkbox when `checkbox` is set. */
-function OptionLink({ href, active, checkbox, children }: { href: string; active: boolean; checkbox?: boolean; children: ReactNode }) {
-  return (
-    <Link
-      href={href}
-      scroll={false}
-      aria-current={active ? "page" : undefined}
-      className={cn("flex items-center gap-2.5 rounded-lg px-2 py-2 text-sm transition-colors hover:bg-muted", active && "font-semibold")}
-    >
-      <span
-        className={cn(
-          "grid size-4 shrink-0 place-items-center border-2 transition-colors",
-          checkbox ? "rounded" : "rounded-full",
-          active ? "border-primary bg-primary" : "border-input bg-background",
-        )}
-      >
-        {active && <span className={cn("bg-white", checkbox ? "size-1.5 rounded-[1px]" : "size-1.5 rounded-full")} />}
-      </span>
-      <span className="flex flex-1 items-center gap-1.5">{children}</span>
-    </Link>
   );
 }

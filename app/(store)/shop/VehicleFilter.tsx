@@ -2,7 +2,7 @@
 
 import { vehicleOptionLabel, vehicleYearOptions } from "@/lib/fitment-years";
 
-import { CarFront, CheckCircle2, X } from "lucide-react";
+import { ArrowRight, CarFront, CheckCircle2, ChevronDown, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -11,7 +11,7 @@ import { findCar, useCarBrands, useGarage } from "@/lib/garage";
 import { cn } from "@/lib/utils";
 
 const selectClass =
-  "h-10 w-full appearance-none rounded-lg border border-input bg-background pl-3 pr-9 text-sm outline-none transition-colors focus:border-primary disabled:opacity-50";
+  "h-11 w-full min-w-0 appearance-none rounded-lg border border-input bg-background pl-3 pr-9 text-sm outline-none transition-colors focus:border-primary disabled:opacity-50";
 const chevron = {
   backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23888' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
   backgroundPosition: "right 10px center",
@@ -20,7 +20,7 @@ const chevron = {
 };
 
 /**
- * Sidebar "Shop by vehicle" filter: make → model, one-tap popular cars and the saved garage car.
+ * Expandable vehicle finder: make → model, one-tap popular cars and the saved garage car.
  * Keeps the shopper's other filters, and saves the choice to the garage.
  */
 export function VehicleFilter({ modelId, subModelId, year, fitCounts }: { modelId?: string; subModelId?: string; year?: number; fitCounts: Record<string, number> }) {
@@ -64,15 +64,17 @@ export function VehicleFilter({ modelId, subModelId, year, fitCounts }: { modelI
   const suggested = garage.car && (garage.car.model.id !== modelId || garage.car.subModel?.id !== subModelId) ? garage.car : null;
 
   return (
-    <div className="overflow-hidden rounded-2xl border bg-card">
-      <div className="flex items-center gap-2.5 bg-ink px-4 py-3 text-ink-foreground">
-        <span className="grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground">
-          <CarFront className="size-4" />
+    <details className="group/vehicle overflow-hidden rounded-2xl border bg-card" open={!!selected}>
+      <summary className="flex cursor-pointer list-none items-center gap-3 p-4 sm:gap-4 sm:p-5 [&::-webkit-details-marker]:hidden">
+        <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary"><CarFront className="size-5" /></span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-bold sm:text-base">Shop by vehicle</span>
+          <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground sm:text-sm">Choose your car. Find parts that fit.</span>
         </span>
-        <p className="font-semibold">Shop by vehicle</p>
-      </div>
-
-      <div className="p-4">
+        <span className="hidden text-xs font-semibold text-primary sm:block">{selected ? "Change vehicle" : "Choose vehicle"}</span>
+        <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-open/vehicle:rotate-180" />
+      </summary>
+      <div className="border-t bg-muted/25 p-4 sm:p-5">
         {selected && (
           <div className="mb-3 flex items-center gap-2 rounded-lg bg-success/10 px-3 py-2 text-sm">
             <CheckCircle2 className="size-4 shrink-0 text-success" />
@@ -86,13 +88,13 @@ export function VehicleFilter({ modelId, subModelId, year, fitCounts }: { modelI
         )}
 
         <form
-          className="grid gap-2"
+          className="grid items-end gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5"
           onSubmit={(e) => {
             e.preventDefault();
             if (pick) choose(pick, pickSubModel || undefined, Number(pickYear) || undefined);
           }}
         >
-          <select
+          <label className="grid min-w-0 gap-1.5 text-xs font-semibold">Make<select
             aria-label="Make"
             value={brandId}
             onChange={(e) => {
@@ -109,27 +111,27 @@ export function VehicleFilter({ modelId, subModelId, year, fitCounts }: { modelI
                 {b.name}
               </option>
             ))}
-          </select>
-          <select aria-label="Model" value={pick} onChange={(e) => { setPick(e.target.value); setPickSubModel(""); setPickYear(""); }} disabled={!brand} className={selectClass} style={chevron}>
+          </select></label>
+          <label className="grid min-w-0 gap-1.5 text-xs font-semibold">Model<select aria-label="Model" value={pick} onChange={(e) => { setPick(e.target.value); setPickSubModel(""); setPickYear(""); }} disabled={!brand} className={selectClass} style={chevron}>
             <option value="">{brand ? "Select model" : "Choose a make first"}</option>
             {brand?.models.map((m) => (
               <option key={m.id} value={m.id}>
                 {vehicleOptionLabel(m)} ({fitCounts[m.id] ?? 0} products)
               </option>
             ))}
-          </select>
+          </select></label>
           {model?.subModels && model.subModels.length > 0 && (
-            <select aria-label="Sub-model (optional)" value={pickSubModel} onChange={(e) => { setPickSubModel(e.target.value); setPickYear(""); }} className={selectClass} style={chevron}>
+            <label className="grid min-w-0 gap-1.5 text-xs font-semibold">Version (optional)<select aria-label="Sub-model (optional)" value={pickSubModel} onChange={(e) => { setPickSubModel(e.target.value); setPickYear(""); }} className={selectClass} style={chevron}>
               <option value="">Any {model.name} version ({fitCounts[model.id] ?? 0} products)</option>
               {model.subModels.map((sub) => <option key={sub.id} value={sub.id}>{vehicleOptionLabel(sub)} ({fitCounts[sub.id] ?? 0} products)</option>)}
-            </select>
+            </select></label>
           )}
-          <select aria-label="Year" value={pickYear} onChange={(e) => setPickYear(e.target.value)} disabled={!model} className={selectClass} style={chevron}>
+          <label className="grid min-w-0 gap-1.5 text-xs font-semibold">Year (optional)<select aria-label="Year" value={pickYear} onChange={(e) => setPickYear(e.target.value)} disabled={!model} className={selectClass} style={chevron}>
             <option value="">All years</option>
             {yearOptions.map((value) => <option key={value} value={value}>{value}</option>)}
-          </select>
-          <Button type="submit" className="h-10" disabled={!pick || (pick === modelId && (pickSubModel || undefined) === subModelId && (Number(pickYear) || undefined) === year)}>
-            {pick && (pick !== modelId || (pickSubModel || undefined) !== subModelId || (Number(pickYear) || undefined) !== year) ? pickYear ? "Show matching parts" : `Show ${fitCounts[pickSubModel || pick] ?? 0} parts` : "Find parts"}
+          </select></label>
+          <Button type="submit" className="h-11" disabled={!pick || (pick === modelId && (pickSubModel || undefined) === subModelId && (Number(pickYear) || undefined) === year)}>
+            {pick && (pick !== modelId || (pickSubModel || undefined) !== subModelId || (Number(pickYear) || undefined) !== year) ? pickYear ? "Show matching parts" : `Show ${fitCounts[pickSubModel || pick] ?? 0} parts` : "Find parts"}<ArrowRight className="size-4" />
           </Button>
         </form>
 
@@ -161,6 +163,6 @@ export function VehicleFilter({ modelId, subModelId, year, fitCounts }: { modelI
           ))}
         </div>
       </div>
-    </div>
+    </details>
   );
 }
