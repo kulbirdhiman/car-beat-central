@@ -1,5 +1,7 @@
 import { fitmentYearLabel } from "../fitment-years";
 import "server-only";
+import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { and, asc, count, desc, eq, ilike, inArray, isNotNull, lte, ne, or, sql, type SQL } from "drizzle-orm";
 import { productFitsModel } from "../data";
 import type { CarBrand, Category, Offer, Product, StoreDepartment } from "../types";
@@ -156,12 +158,12 @@ function searchWords(q: string | undefined): string[] {
     .slice(0, 6);
 }
 
-export async function getProductBySlug(slug: string): Promise<Product | null> {
+export const getProductBySlug = cache(async (slug: string): Promise<Product | null> => {
   const [row] = await selectProducts()
     .where(and(isActive, eq(products.slug, slug)))
     .limit(1);
   return row ? toProduct(row) : null;
-}
+});
 
 /** The product's add-ons that are live in the store, in the order the admin picked them. */
 export async function getAddOns(product: Product): Promise<Product[]> {
@@ -199,7 +201,7 @@ export async function getProductCount(): Promise<number> {
  * Active departments that have active products, in admin order, as the store's category navigation.
  * Sub-departments are listed under their parent and counted in its total; a hidden parent hides them too.
  */
-export async function getStoreDepartments(): Promise<StoreDepartment[]> {
+async function loadStoreDepartments(): Promise<StoreDepartment[]> {
   const countRows = await db
     .select({ id: products.departmentId, n: count() })
     .from(products)
@@ -223,6 +225,8 @@ export async function getStoreDepartments(): Promise<StoreDepartment[]> {
     .filter((d) => d.count > 0);
 }
 
+export const getStoreDepartments = cache(unstable_cache(loadStoreDepartments, ["store-departments-v1"], { revalidate: 60, tags: ["store-home-data"] }));
+
 /** Products that fit each model id, for the vehicle pickers' "Show N matching parts". */
 export async function getFitCounts(filters: ProductFilters = {}): Promise<Record<string, number>> {
   const [all, brands] = await Promise.all([listProducts({ ...filters, model: undefined, subModel: undefined, limit: undefined }), getCarBrands()]);
@@ -235,7 +239,7 @@ export async function getFitCounts(filters: ProductFilters = {}): Promise<Record
 }
 
 /** Makes and their models in admin order, for the store's vehicle pickers. Makes with no models are left out. */
-export async function getCarBrands(): Promise<CarBrand[]> {
+async function loadCarBrands(): Promise<CarBrand[]> {
   const [makes, models, subs, fitments] = await Promise.all([
     db.select({ id: vehicleMakes.id, name: vehicleMakes.name }).from(vehicleMakes).orderBy(vehicleMakes.position),
     db.select({ id: vehicleModels.id, makeId: vehicleModels.makeId, name: vehicleModels.name, position: vehicleModels.position }).from(vehicleModels).orderBy(vehicleModels.position),
@@ -262,6 +266,10 @@ export async function getCarBrands(): Promise<CarBrand[]> {
   }
   return brands.filter((brand) => brand.models.length > 0);
 }
+
+// Shared by filter validation, search, page content and the layout. Deduplicate
+// within a render and reuse the public vehicle catalogue across requests.
+export const getCarBrands = cache(unstable_cache(loadCarBrands, ["store-car-brands-v1"], { revalidate: 60, tags: ["store-home-data"] }));
 
 /** Offers that are switched on and within their dates, with their coupon code if that code is usable too. */
 export async function getLiveOffers(): Promise<Offer[]> {

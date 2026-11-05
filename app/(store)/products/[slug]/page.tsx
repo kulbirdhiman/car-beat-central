@@ -1,6 +1,6 @@
 import { fitmentLabel } from "@/lib/fitment-years";
 import type { Metadata } from "next";
-import { ArrowRight, MessageSquareText, RotateCcw, ShieldCheck, Star, Truck, Wrench } from "lucide-react";
+import { ArrowRight, RotateCcw, ShieldCheck, Star, Truck, Wrench } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/components/layout/PageShell";
@@ -8,18 +8,19 @@ import { ProductCard } from "@/components/product/ProductCard";
 import { ProductDescription, productDescriptionText } from "@/components/product/ProductDescription";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CATEGORY_LABELS, discountPercent, findDepartment, formatPrice } from "@/lib/data";
-import { getAddOns, getCarBrands, getProductBySlug, getRelated, getStoreDepartments } from "@/lib/server/queries";
-import { listReviews } from "@/lib/server/reviews";
+import { getStoreChromeData } from "@/lib/server/home-data";
+import { getBrowseProduct, getBrowseRelated, getBrowseAddOns } from "@/lib/server/browse-data";
+import { Suspense } from "react";
 import { getSpecs } from "@/lib/server/specs";
 import { cn } from "@/lib/utils";
 import { BuyBox } from "./BuyBox";
 import { CompatibleVehicles } from "./CompatibleVehicles";
 import { FitmentCheck } from "./FitmentCheck";
 import { ProductGallery } from "./ProductGallery";
-import { ReviewForm } from "./ReviewForm";
+import { ProductReviews } from "./ProductReviews";
 
 export async function generateMetadata(props: PageProps<"/products/[slug]">): Promise<Metadata> {
-  const product = await getProductBySlug((await props.params).slug);
+  const product = await getBrowseProduct((await props.params).slug);
   return product ? { title: `${product.name} · CarBeat`, description: productDescriptionText(product.description).slice(0, 160) } : {};
 }
 
@@ -31,14 +32,14 @@ const PERKS = [
 ];
 
 export default async function ProductPage(props: PageProps<"/products/[slug]">) {
-  const product = await getProductBySlug((await props.params).slug);
+  const [product, { brands, departments }] = await Promise.all([
+    getBrowseProduct((await props.params).slug),
+    getStoreChromeData(),
+  ]);
   if (!product) notFound();
-  const [brands, reviews, departments, related, addOns] = await Promise.all([
-    getCarBrands(),
-    listReviews(product.id),
-    getStoreDepartments(),
-    getRelated(product),
-    getAddOns(product),
+  const [related, addOns] = await Promise.all([
+    getBrowseRelated(product),
+    getBrowseAddOns(product),
   ]);
 
   const hasOptions = !!product.optionGroups?.length;
@@ -213,64 +214,9 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
         </div>
       </div>
 
-      <section id="reviews" className="mt-20 scroll-mt-28">
-        <div className="grid gap-6 xl:grid-cols-[320px_1fr] 2xl:gap-14 2xl:grid-cols-[360px_1fr]">
-          <div className="space-y-4 xl:sticky xl:top-28 xl:self-start">
-            <h2 className="font-display text-3xl font-bold">Customer reviews</h2>
-            <div className="rounded-2xl border bg-card p-6">
-              <div className="flex items-center gap-4">
-                <p className="font-display text-6xl font-bold leading-none">{product.rating}</p>
-                <div>
-                  <span className="flex">
-                    {Array.from({ length: 5 }, (_, i) => (
-                      <Star key={i} className={cn("size-5", i < Math.round(product.rating) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30")} />
-                    ))}
-                  </span>
-                  <p className="mt-1 text-sm text-muted-foreground">From {product.reviews.toLocaleString("en-AU")} ratings</p>
-                </div>
-              </div>
-              <p className="mt-4 border-t pt-4 text-sm text-muted-foreground">Bought this? Help other drivers by sharing how it fits and performs in your car.</p>
-              <div className="mt-4">
-                <ReviewForm productId={product.id} slug={product.slug} />
-              </div>
-            </div>
-          </div>
-
-          <div>
-            {reviews.length === 0 ? (
-              <div className="grid place-items-center rounded-2xl border border-dashed bg-card px-6 py-16 text-center">
-                <MessageSquareText className="size-8 text-muted-foreground" />
-                <p className="mt-3 font-display text-xl font-bold">No written reviews yet</p>
-                <p className="mt-1 max-w-sm text-sm text-muted-foreground">Be the first to tell other drivers what you think.</p>
-              </div>
-            ) : (
-              <ul className="grid gap-3">
-                {reviews.map((r) => (
-                  <li key={r.id} className="rounded-2xl border bg-card p-5">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="flex">
-                        {Array.from({ length: 5 }, (_, i) => (
-                          <Star key={i} className={cn("size-4", i < r.rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30")} />
-                        ))}
-                      </span>
-                      <time className="text-xs text-muted-foreground" dateTime={r.createdAt}>
-                        {new Date(`${r.createdAt}Z`).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}
-                      </time>
-                    </div>
-                    <p className="mt-3 font-semibold">{r.title}</p>
-                    <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">{r.body}</p>
-                    <p className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-                      <span className="grid size-6 place-items-center rounded-full bg-ink text-[11px] font-bold uppercase text-ink-foreground">{r.name.charAt(0)}</span>
-                      <span className="font-semibold">{r.name}</span>
-                      {r.vehicle && <span className="rounded-full bg-secondary px-2 py-0.5 text-muted-foreground">{r.vehicle}</span>}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
-      </section>
+      <Suspense fallback={<section id="reviews" className="mt-20 scroll-mt-28" role="status"><h2 className="font-display text-3xl font-bold">Customer reviews</h2><p className="mt-4 text-sm text-muted-foreground">Loading reviews…</p></section>}>
+        <ProductReviews product={product} />
+      </Suspense>
 
       <section className="mt-20">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
