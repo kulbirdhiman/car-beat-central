@@ -9,7 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { CATEGORY_LABELS, findDepartment } from "@/lib/data";
-import { getCarBrands, getDeals, getFitCounts, getLiveOffers, getProductCount, getStoreDepartments, listProducts, SORTS } from "@/lib/server/queries";
+import { getDeals, getLiveOffers, SORTS } from "@/lib/server/queries";
+import { getStoreChromeData } from "@/lib/server/home-data";
+import { getBrowseFitCounts, getBrowseProducts } from "@/lib/server/browse-data";
 import { parseFilters } from "@/lib/server/validate";
 import { cn } from "@/lib/utils";
 import { OfferStrip } from "./OfferStrip";
@@ -24,17 +26,16 @@ const PRICES = [
   { cap: 300, label: "Under $300" },
   { cap: 600, label: "Under $600" },
 ];
+const PAGE_SIZE = 12;
 
 export default async function ShopPage(props: PageProps<"/shop">) {
   const raw = await props.searchParams;
   const params = new URLSearchParams(Object.entries(raw).flatMap(([k, v]) => (typeof v === "string" ? [[k, v]] : [])));
   const filters = await parseFilters(params);
-  const [products, brands, departments, fitCounts, total, offers, deals] = await Promise.all([
-    listProducts(filters),
-    getCarBrands(),
-    getStoreDepartments(),
-    getFitCounts(filters),
-    getProductCount(),
+  const [products, { brands, departments, total }, fitCounts, offers, deals] = await Promise.all([
+    getBrowseProducts(filters),
+    getStoreChromeData(),
+    getBrowseFitCounts(filters),
     getLiveOffers(),
     getDeals(),
   ]);
@@ -43,10 +44,15 @@ export default async function ShopPage(props: PageProps<"/shop">) {
   const dept = filters.dept ? findDepartment(departments, (d) => d.slug === filters.dept) : null;
   // The top-level department whose sub-departments are shown in the sidebar.
   const openDept = dept?.parent ?? dept?.department;
+  const pageCount = Math.max(1, Math.ceil(products.length / PAGE_SIZE));
+  const requestedPage = Number(params.get("page"));
+  const page = Number.isSafeInteger(requestedPage) ? Math.max(1, Math.min(pageCount, requestedPage)) : 1;
+  const visibleProducts = products.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   /** Builds a /shop URL from the current filters with some keys changed (null removes). */
   const hrefWith = (changes: Record<string, string | null>) => {
     const next = new URLSearchParams(params);
+    next.delete("page");
     for (const [k, v] of Object.entries(changes)) {
       if (v === null) next.delete(k);
       else next.set(k, v);
@@ -185,14 +191,21 @@ export default async function ShopPage(props: PageProps<"/shop">) {
               </div>
             ) : (
               <ul className="grid grid-cols-2 gap-2 sm:gap-4 xl:grid-cols-4 2xl:grid-cols-4">
-                {products.map((p, i) => (
-                  <li key={p.id} className="animate-in fade-in slide-in-from-bottom-3 fill-mode-both duration-500" style={{ animationDelay: `${Math.min(i, 8) * 50}ms` }}>
+                {visibleProducts.map((p) => (
+                  <li key={p.id}>
                     <ProductCard product={p} sizes="(min-width: 1536px) 20vw, (min-width: 1280px) 25vw, (min-width: 1024px) 35vw, 50vw" />
                   </li>
                 ))}
               </ul>
             )}
           </div>
+          {pageCount > 1 && (
+            <nav aria-label="Product pages" className="mt-8 flex items-center justify-between gap-3 border-t pt-5 text-sm">
+              {page > 1 ? <Link href={hrefWith({ page: String(page - 1) })} className="rounded-lg border bg-card px-4 py-3 font-semibold">Previous</Link> : <span />}
+              <span className="text-muted-foreground">Page {page} of {pageCount}</span>
+              {page < pageCount ? <Link href={hrefWith({ page: String(page + 1) })} className="rounded-lg border bg-card px-4 py-3 font-semibold">Next</Link> : <span />}
+            </nav>
+          )}
         </div>
       </div>
     </PageShell>

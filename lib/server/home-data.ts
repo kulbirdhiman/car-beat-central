@@ -3,7 +3,8 @@ import { unstable_cache } from "next/cache";
 import type { Coupon } from "@/lib/admin/model";
 import { productFitsModel } from "@/lib/data";
 import type { Product } from "@/lib/types";
-import { getCarBrands, getLiveOffers, getProductCount, getStoreDepartments, getTrending, listProducts } from "@/lib/server/queries";
+import { getCarBrands, getLiveOffers, getProductCount, getStoreDepartments, getTrending } from "@/lib/server/queries";
+import { getBrowseCatalog } from "./browse-data";
 
 /** Lightweight data needed by every storefront page's header and vehicle picker. */
 export const getStoreChromeData = unstable_cache(
@@ -19,7 +20,7 @@ export const getStoreChromeData = unstable_cache(
 export const getHomeData = unstable_cache(
   async () => {
     const [products, trending, offers, coupons, chrome] = await Promise.all([
-      listProducts(),
+      getBrowseCatalog(),
       getTrending(),
       getLiveOffers(),
       Promise.resolve([] as Coupon[]),
@@ -44,7 +45,7 @@ export const getHomeData = unstable_cache(
       deals: products.filter((product) => product.deal),
     };
   },
-  ["store-home-data-v3"],
+  ["store-home-data-v4"],
   { revalidate: 60, tags: ["store-home-data"] },
 );
 

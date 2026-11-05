@@ -45,6 +45,7 @@ export function VehicleFilter({ modelId, subModelId, year, fitCounts }: { modelI
   const yearOptions = vehicleYearOptions(model?.subModels?.find((sub) => sub.id === pickSubModel) ?? model);
   const hrefFor = (id: string | null, subId?: string | null, selectedYear?: number) => {
     const next = new URLSearchParams(params);
+    next.delete("page");
     if (id) next.set("model", id);
     else next.delete("model");
     if (id && subId) next.set("submodel", subId);
