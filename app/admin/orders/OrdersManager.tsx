@@ -86,7 +86,7 @@ export function OrdersManager() {
         title="Orders"
         description={`${orders.length} orders · ${orders.filter((o) => ["processing", "paid", "confirmed", "preparing"].includes(o.status)).length} in dispatch · ${orders.filter(openReturn).length} open returns.`}
         actions={
-          <div className="flex gap-2">
+          <div className="col-span-2 grid min-w-0 grid-cols-2 gap-2 sm:flex [&>button]:px-2 [&>a]:px-2">
             <Button variant="outline" onClick={exportOrders} disabled={!rows.length}><Download /> Export CSV</Button>
             <Button asChild><Link href="/admin/orders/new"><Plus /> New invoice</Link></Button>
           </div>
@@ -94,10 +94,10 @@ export function OrdersManager() {
       />
 
       <Card>
-        <CardContent className="space-y-4">
+        <CardContent className="min-w-0 space-y-4 px-3 sm:px-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <Tabs value={status} onValueChange={(v) => setParam("status", v === ALL ? null : v)}>
-              <TabsList className="flex-wrap">
+            <Tabs className="w-full min-w-0" value={status} onValueChange={(v) => setParam("status", v === ALL ? null : v)}>
+              <TabsList aria-label="Filter orders by status" className="w-full flex-wrap justify-start gap-1 group-data-horizontal/tabs:h-auto [&>button]:h-auto [&>button]:min-h-9 [&>button]:flex-none [&>button]:px-2">
                 <TabsTrigger value={ALL}>All ({orders.length})</TabsTrigger>
                 <TabsTrigger value={DISPATCH}>Dispatch ({orders.filter((o) => ["processing", "paid", "confirmed", "preparing"].includes(o.status)).length})</TabsTrigger>
                 {STATUSES.map((s) => (
@@ -117,6 +117,33 @@ export function OrdersManager() {
           {rows.length === 0 ? (
             <Empty>No orders match.</Empty>
           ) : (
+            <>
+            <ul className="space-y-3 md:hidden" aria-label="Orders">
+              {rows.map((o) => (
+                <li key={o.id} className="min-w-0 rounded-xl border p-3 text-sm">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <Link href={`/admin/orders/${encodeURIComponent(o.id)}`} className="min-w-0 break-all font-mono font-semibold underline-offset-4 hover:underline">
+                      {o.number}
+                    </Link>
+                    <OrderStatusBadge status={o.status} />
+                  </div>
+                  {o.source === "invoice" && <p className="mt-1 text-xs text-muted-foreground">Invoice</p>}
+                  {o.source === "legacy" && <p className="mt-1 text-xs text-muted-foreground">Imported</p>}
+                  <p className="mt-3 break-words font-medium">{o.customer.name}</p>
+                  {o.customer.email && <a href={`mailto:${o.customer.email}`} className="block break-all text-xs text-muted-foreground hover:underline">{o.customer.email}</a>}
+                  <p className="mt-1 break-words text-xs text-muted-foreground">
+                    {[o.shipTo.address, [o.shipTo.suburb, o.shipTo.state, o.shipTo.postcode].filter(Boolean).join(" ")].filter(Boolean).join(", ") || "No address provided"}
+                  </p>
+                  <p className="mt-2 text-xs text-muted-foreground">{fmtDateTime(o.createdAt)} · {DELIVERY_LABEL[o.delivery]}</p>
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t pt-2">
+                    <span className="text-muted-foreground">{o.items.reduce((n, i) => n + i.qty, 0)} items</span>
+                    <span className="font-semibold tabular-nums">{formatCents(orderTotal(o))}</span>
+                  </div>
+                  {openReturn(o) && <p className="mt-2 text-xs font-medium text-amber-700 dark:text-amber-400">{RETURN_KIND_LABEL[openReturn(o)!.kind]} requested</p>}
+                </li>
+              ))}
+            </ul>
+            <div className="hidden min-w-0 md:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -164,6 +191,8 @@ export function OrdersManager() {
                 ))}
               </TableBody>
             </Table>
+            </div>
+            </>
           )}
         </CardContent>
       </Card>
@@ -206,8 +235,8 @@ export function OrderDetail({ order: initialOrder, standalone = false }: { order
         </header>
       ) : (
         <SheetHeader className="border-b pr-12">
-          <SheetTitle className="flex items-center gap-3">
-            <span className="font-mono text-lg">{order.number}</span>
+          <SheetTitle className="flex flex-wrap items-center gap-3">
+            <span className="break-all font-mono text-lg">{order.number}</span>
             <OrderStatusBadge status={order.status} />
             {order.source === "invoice" && <span className="text-xs font-normal text-muted-foreground">Invoice</span>}
             {order.source === "legacy" && <span className="text-xs font-normal text-muted-foreground">Imported from WooCommerce</span>}
@@ -376,7 +405,7 @@ export function OrderDetail({ order: initialOrder, standalone = false }: { order
 /** A titled block in the order panel. */
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-2xl border bg-card p-5 shadow-sm">
+    <section className="min-w-0 rounded-2xl border bg-card p-3 shadow-sm [overflow-wrap:anywhere] sm:p-5">
       <h3 className="mb-4 text-sm font-semibold tracking-tight">{title}</h3>
       {children}
     </section>
@@ -473,7 +502,7 @@ function Fulfilment({ order }: { order: AdminOrder }) {
     return (
       <Panel title={completed ? "Order completed" : pickup ? "Picked up" : "Shipped"}>
         <DispatchSteps active={completed ? 4 : 3} />
-        <div className="flex items-start justify-between gap-3 text-sm">
+        <div className="flex flex-col items-start justify-between gap-3 text-sm sm:flex-row">
           <div className="min-w-0 space-y-0.5">
             {order.shipment ? (
               <>
@@ -485,7 +514,7 @@ function Fulfilment({ order }: { order: AdminOrder }) {
             )}
             {order.shippedAt && <p className="text-xs text-muted-foreground">{fmtDateTime(order.shippedAt)}</p>}
           </div>
-          <div className="flex shrink-0 gap-2">
+          <div className="flex flex-wrap gap-2">
             {url && (
               <Button asChild size="sm" variant="outline">
                 <a href={url} target="_blank" rel="noreferrer">
