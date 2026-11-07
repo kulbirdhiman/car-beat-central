@@ -15,13 +15,14 @@ import type { StoreDepartment } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { SearchBox } from "../search/SearchBox";
 import { Logo } from "./Logo";
+import { DepartmentNav } from "./DepartmentNav";
 
 const productsLabel = (n: number) => `${n} ${n === 1 ? "product" : "products"}`;
 
 /**
  * Floating glass header: one rounded bar with logo, the "All products" mega menu, Deals, search,
- * booking and cart. It lifts with a deeper shadow once the page scrolls. On phones search drops
- * to a second row inside the same bar.
+ * booking and cart, with department links underneath. It lifts with a deeper shadow once the
+ * page scrolls. On phones search drops to a second row inside the same bar.
  */
 export function SiteHeader({ departments, total }: { departments: StoreDepartment[]; total: number }) {
   const cartCount = useCartCount();
@@ -95,6 +96,8 @@ export function SiteHeader({ departments, total }: { departments: StoreDepartmen
         <div className="px-3 pb-3 md:hidden">
           <SearchBox departments={departments} />
         </div>
+
+        <DepartmentNav departments={departments} />
       </div>
     </header>
   );

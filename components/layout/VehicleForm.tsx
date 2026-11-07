@@ -32,7 +32,7 @@ export function VehicleForm({
   department,
   productLabel = "parts",
 }: {
-  fitCounts: Record<string, number>;
+  fitCounts?: Record<string, number>;
   tone?: keyof typeof tones;
   onDone?: () => void;
   className?: string;
@@ -49,7 +49,7 @@ export function VehicleForm({
   const brand = brands.find((b) => b.id === brandId);
   const model = brand?.models.find((m) => m.id === modelId);
   const yearOptions = vehicleYearOptions(model?.subModels?.find((sub) => sub.id === subModelId) ?? model);
-  const count = modelId ? (fitCounts[subModelId || modelId] ?? 0) : null;
+  const count = modelId && fitCounts ? (fitCounts[subModelId || modelId] ?? 0) : null;
   const t = tones[tone];
   const selectClass = cn(selectBase, t.select, department && "h-11 rounded-xl bg-background text-base sm:h-14 focus:ring-2 focus:ring-primary/15");
   const style = { backgroundImage: chevron(t.stroke), backgroundPosition: "right 12px center", backgroundSize: 16, backgroundRepeat: "no-repeat" };
@@ -96,7 +96,7 @@ export function VehicleForm({
         <option value="">{brand ? "Select model" : "Choose a make first"}</option>
         {brand?.models.map((m) => (
           <option key={m.id} value={m.id}>
-            {vehicleOptionLabel(m)} ({fitCounts[m.id] ?? 0} products)
+            {vehicleOptionLabel(m)}{fitCounts ? ` (${fitCounts[m.id] ?? 0} products)` : ""}
           </option>
         ))}
       </select>
@@ -105,8 +105,8 @@ export function VehicleForm({
         <label className="min-w-0">
         {department && <span className="mb-2 block text-xs font-semibold">Version <span className="font-normal text-muted-foreground">(optional)</span></span>}
         <select aria-label="Sub-model (optional)" value={subModelId} onChange={(e) => { setSubModelId(e.target.value); setYear(""); }} className={selectClass} style={style}>
-          <option value="">Any {model.name} version ({fitCounts[model.id] ?? 0} products)</option>
-          {model.subModels.map((sub) => <option key={sub.id} value={sub.id}>{vehicleOptionLabel(sub)} ({fitCounts[sub.id] ?? 0} products)</option>)}
+          <option value="">Any {model.name} version{fitCounts ? ` (${fitCounts[model.id] ?? 0} products)` : ""}</option>
+          {model.subModels.map((sub) => <option key={sub.id} value={sub.id}>{vehicleOptionLabel(sub)}{fitCounts ? ` (${fitCounts[sub.id] ?? 0} products)` : ""}</option>)}
         </select>
         </label>
       )}
